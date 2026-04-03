@@ -52,6 +52,13 @@ knife4j:
   setting:
     language: zh_cn
 
+# 腾讯云 COS 配置（可选，MVP 阶段可以不配置）
+tencent:
+  cos:
+    secret-id: AKIDsb8SaUBg097tUr0xhGesvnTxFLE7vb5L
+    secret-key: 7DGAtPinrpicNxNbdeVI6yhHjHgLuKZb
+    region: ap-guangzhou
+    bucket: ai-passage-creator-1378417994
 
-
-
+pexels:
+  api-key: oUUSPpIkzXPdckFuvm5paH6jetvYfw9zOZPr6ncy3TzfAZ0LcLuKlrDC

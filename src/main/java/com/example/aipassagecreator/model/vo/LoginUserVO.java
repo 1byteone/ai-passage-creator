@@ -1,4 +1,4 @@
-package com.example.aipassagecreator.domain.vo;
+package com.example.aipassagecreator.model.vo;
 
 import lombok.Data;
 

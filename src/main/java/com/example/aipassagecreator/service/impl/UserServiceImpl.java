@@ -3,9 +3,9 @@ package com.example.aipassagecreator.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.example.aipassagecreator.constant.UserConstant;
-import com.example.aipassagecreator.domain.enums.UserRoleEnum;
-import com.example.aipassagecreator.domain.po.User;
-import com.example.aipassagecreator.domain.vo.LoginUserVO;
+import com.example.aipassagecreator.enums.UserRoleEnum;
+import com.example.aipassagecreator.model.po.User;
+import com.example.aipassagecreator.model.vo.LoginUserVO;
 import com.example.aipassagecreator.exception.BusinessException;
 import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.mapper.UserMapper;
@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
+
+import static com.example.aipassagecreator.constant.UserConstant.USER_LOGIN_STATE;
 
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
@@ -101,7 +103,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException(ErrorCode.PARAMS_ERROR,"用户不存在或密码错误");
         }
         //4.创建用户的登录态
-        request.getSession().setAttribute(UserConstant.USER_LOGIN_STATE,user);
+        request.getSession().setAttribute(USER_LOGIN_STATE,user);
         //5.返回脱敏的用户信息
         return this.getLoginUserVO(request);
     }
@@ -114,7 +116,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public LoginUserVO getLoginUserVO(HttpServletRequest request) {
         //先判断用户是否登录
-        Object userObj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
         User currentUser = (User) userObj;
         if(currentUser == null || currentUser.getId() == null){
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
@@ -129,6 +131,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
 
+    @Override
+    public User getLoginUser(HttpServletRequest request) {
+        // 先判断用户是否登录
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User currentUser = (User) userObj;
+        if (currentUser == null || currentUser.getId() == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        // 从数据库查询当前用户信息
+        long userId = currentUser.getId();
+        currentUser = this.getById(userId);
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        return currentUser;
+    }
+
     /**
      * 用户注销
      * @param request
@@ -136,10 +155,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public boolean userLogout(HttpServletRequest request) {
-        if(request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE) == null){
+        if(request.getSession().getAttribute(USER_LOGIN_STATE) == null){
             throw new BusinessException(ErrorCode.OPERATION_ERROR,"用户未登录");
         }
-        request.getSession().removeAttribute(UserConstant.USER_LOGIN_STATE);
+        request.getSession().removeAttribute(USER_LOGIN_STATE);
         return true;
     }
+
+
 }

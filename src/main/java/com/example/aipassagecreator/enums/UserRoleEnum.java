@@ -1,4 +1,4 @@
-package com.example.aipassagecreator.domain.enums;
+package com.example.aipassagecreator.enums;
 
 import cn.hutool.core.util.ObjUtil;
 import lombok.Getter;

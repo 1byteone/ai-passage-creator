@@ -1,7 +1,7 @@
 package com.example.aipassagecreator.service;
 
-import com.example.aipassagecreator.domain.po.User;
-import com.example.aipassagecreator.domain.vo.LoginUserVO;
+import com.example.aipassagecreator.model.po.User;
+import com.example.aipassagecreator.model.vo.LoginUserVO;
 import com.mybatisflex.core.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -48,4 +48,6 @@ public interface UserService extends IService<User> {
      * @return
      */
     boolean userLogout(HttpServletRequest request);
+
+    User getLoginUser(HttpServletRequest httpServletRequest);
 }

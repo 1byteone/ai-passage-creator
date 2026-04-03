@@ -1,8 +1,7 @@
 package com.example.aipassagecreator.aop;
 
-import com.example.aipassagecreator.domain.enums.UserRoleEnum;
-import com.example.aipassagecreator.domain.po.User;
-import com.example.aipassagecreator.domain.vo.LoginUserVO;
+import com.example.aipassagecreator.enums.UserRoleEnum;
+import com.example.aipassagecreator.model.vo.LoginUserVO;
 import com.example.aipassagecreator.exception.BusinessException;
 import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.service.UserService;

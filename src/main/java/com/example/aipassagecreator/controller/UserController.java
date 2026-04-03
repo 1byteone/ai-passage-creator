@@ -6,12 +6,12 @@ import com.example.aipassagecreator.common.BaseResponse;
 import com.example.aipassagecreator.common.DeleteRequest;
 import com.example.aipassagecreator.common.ResultUtils;
 import com.example.aipassagecreator.constant.UserConstant;
-import com.example.aipassagecreator.domain.po.User;
-import com.example.aipassagecreator.domain.request.UserAddRequest;
-import com.example.aipassagecreator.domain.request.UserLoginRequest;
-import com.example.aipassagecreator.domain.request.UserRegisterRequest;
-import com.example.aipassagecreator.domain.vo.LoginUserVO;
-import com.example.aipassagecreator.exception.BusinessException;
+import com.example.aipassagecreator.model.dto.user.UserAddRequest;
+import com.example.aipassagecreator.model.dto.user.UserLoginRequest;
+import com.example.aipassagecreator.model.dto.user.UserRegisterRequest;
+import com.example.aipassagecreator.model.po.User;
+
+import com.example.aipassagecreator.model.vo.LoginUserVO;
 import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.exception.ThrowUtils;
 import com.example.aipassagecreator.service.UserService;

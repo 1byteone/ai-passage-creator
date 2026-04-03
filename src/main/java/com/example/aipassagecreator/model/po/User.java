@@ -1,4 +1,4 @@
-package com.example.aipassagecreator.domain.po;
+package com.example.aipassagecreator.model.po;
 
 import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Id;
