@@ -63,6 +63,13 @@
 			<version>1.11.1</version>
 		</dependency>
 
+		<!-- MyBatis Spring Boot Starter (MyBatis-Flex 需要) -->
+		<dependency>
+			<groupId>org.mybatis.spring.boot</groupId>
+			<artifactId>mybatis-spring-boot-starter</artifactId>
+			<version>3.0.4</version>
+		</dependency>
+
 		<!-- Spring Data Redis -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -85,6 +92,19 @@
 			<artifactId>lombok</artifactId>
 			<version>1.18.36</version>
 			<optional>true</optional>
+		</dependency>
+
+		<!-- Spring AI Alibaba Agent Framework -->
+		<dependency>
+			<groupId>com.alibaba.cloud.ai</groupId>
+			<artifactId>spring-ai-alibaba-agent-framework</artifactId>
+			<version>1.1.0.0-RC2</version>
+		</dependency>
+		<!-- Spring AI Alibaba DashScope Starter -->
+		<dependency>
+			<groupId>com.alibaba.cloud.ai</groupId>
+			<artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+			<version>1.1.0.0-RC2</version>
 		</dependency>
 
 	</dependencies>
@@ -116,6 +136,17 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+				</configuration>
+			</plugin>
+			<!-- Maven Surefire Plugin - 配置 Mockito Agent 以解决 Java 21+ 的警告 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>-javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar</argLine>
+					<systemPropertyVariables>
+						<mockito.mock-maker>mock-maker-proxy</mockito.mock-maker>
+					</systemPropertyVariables>
 				</configuration>
 			</plugin>
 		</plugins>

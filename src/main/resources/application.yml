@@ -1,3 +1,13 @@
+# 服务器配置
+server:
+  port: 8567
+  servlet:
+    context-path:
+    # cookie 30 天过期
+    session:
+      cookie:
+        max-age: 2592000
+
 spring:
   application:
     name: ai-passage-creator
@@ -19,18 +29,16 @@ spring:
       port: 6379
       database: 0
       password:
-server:
-  port: 8567
-  servlet:
-    context-path: /api
-    # cookie 30 天过期
-    session:
-      cookie:
-        max-age: 2592000
+  ai:
+    dashscope:
+      api-key: sk-dcc26570fb6f4154a9fbbc4a979b31f0  # 通义千问 API Key
 
 mybatis-flex:
+  mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
-    map-underscore-to-camel-case: false
+    map-underscore-to-camel-case: true
+  global-config:
+    print-banner: false
 
 # springdoc-openapi 配置
 springdoc:
