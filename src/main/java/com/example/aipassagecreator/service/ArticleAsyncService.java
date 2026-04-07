@@ -27,14 +27,17 @@ public class ArticleAsyncService {
     @Resource
     private ArticleService articleService;
 
+
+
     /**
      * 异步执行文章生成任务
      *
      * @param taskId 任务 ID
      * @param topic  选题
+     * @param style
      */
     @Async("articleExecutor")
-    public void executeArticleGeneration(String taskId, String topic) {
+    public void executeArticleGeneration(String taskId, String topic, String style) {
         log.info("异步任务开始，taskId={},topic={}",taskId, topic);
 
         try{
@@ -45,6 +48,7 @@ public class ArticleAsyncService {
             ArticleState state = new ArticleState();
             state.setTaskId(taskId);
             state.setTopic(topic);
+            state.setStyle(style);
 
             //执行智能体编排，并通过 SSE 推送进度
             articleAgentService.executeArticleGeneration(state, message -> {

@@ -86,9 +86,6 @@ public enum ImageMethodEnum {
 
     /**
      * 根据值获取枚举
-     *
-     * @param value 方法值
-     * @return 枚举实例
      */
     public static ImageMethodEnum getByValue(String value) {
         if (value == null) {

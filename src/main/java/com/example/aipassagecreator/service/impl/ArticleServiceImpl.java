@@ -1,7 +1,9 @@
 package com.example.aipassagecreator.service.impl;
 
 import cn.hutool.core.util.IdUtil;
+import com.example.aipassagecreator.enums.ArticlePhaseEnum;
 import com.example.aipassagecreator.enums.ArticleStatusEnum;
+import com.example.aipassagecreator.enums.ImageMethodEnum;
 import com.example.aipassagecreator.exception.BusinessException;
 import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.exception.ThrowUtils;
@@ -12,22 +14,124 @@ import com.example.aipassagecreator.model.po.Article;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.model.vo.ArticleVO;
 import com.example.aipassagecreator.service.ArticleService;
+import com.example.aipassagecreator.service.QuotaService;
 import com.example.aipassagecreator.utils.GsonUtils;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.example.aipassagecreator.constant.UserConstant.ADMIN_ROLE;
+import static com.example.aipassagecreator.constant.UserConstant.VIP_ROLE;
 
 @Service
 @Slf4j
 public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> implements ArticleService {
+
+    @Resource
+    protected QuotaService quotaService;
+
+    /**
+     * 校验配图方式权限
+     * 普通用户不能使用 NANO_BANANA 和 SVG_DIAGRAM
+     */
+    private void validateImageMethods(List<String> enabledImageMethods, User loginUser) {
+        if (enabledImageMethods == null || enabledImageMethods.isEmpty()) {
+            return;
+        }
+
+        // VIP 和管理员无限制
+        if (isVipOrAdmin(loginUser)) {
+            return;
+        }
+
+        // 普通用户限制
+        for (String method : enabledImageMethods) {
+            if (ImageMethodEnum.NANO_BANANA.getValue().equals(method) ||
+                    ImageMethodEnum.SVG_DIAGRAM.getValue().equals(method)) {
+                throw new BusinessException(ErrorCode.NO_AUTH_ERROR,
+                        "高级配图功能（AI 生图、SVG 图表）仅限 VIP 会员使用");
+            }
+        }
+    }
+
+    /**
+     * 判断是否为 VIP 或管理员
+     */
+    private boolean isVipOrAdmin(User user) {
+        return ADMIN_ROLE.equals(user.getUserRole()) ||
+                VIP_ROLE.equals(user.getUserRole());
+    }
+
+    /**
+     * 处理配图方式
+     * 如果用户未选择，给普通用户设置默认的非 VIP 方式，VIP 用户不限制
+     */
+    private List<String> processImageMethods(List<String> enabledImageMethods, User loginUser) {
+        // 如果用户已选择，直接返回
+        if (enabledImageMethods != null && !enabledImageMethods.isEmpty()) {
+            return enabledImageMethods;
+        }
+
+        // VIP 和管理员：不限制，返回 null 表示支持所有方式
+        if (isVipOrAdmin(loginUser)) {
+            return null;
+        }
+
+        // 普通用户：返回默认的非 VIP 方式
+        return List.of(
+                ImageMethodEnum.PEXELS.getValue(),
+                ImageMethodEnum.MERMAID.getValue(),
+                ImageMethodEnum.ICONIFY.getValue(),
+                ImageMethodEnum.EMOJI_PACK.getValue()
+        );
+    }
+
+    @Override
+    public String createArticleTask(String topic, String style, List<String> enabledImageMethods, User loginUser) {
+        // 处理配图方式：如果用户未选择，给普通用户设置默认的非 VIP 方式
+        List<String> finalImageMethods = processImageMethods(enabledImageMethods, loginUser);
+
+        // 校验配图方式权限（普通用户不能使用 NANO_BANANA 和 SVG_DIAGRAM）
+        validateImageMethods(finalImageMethods, loginUser);
+
+        // 生成任务ID
+        String taskId = IdUtil.simpleUUID();
+
+        // 创建文章记录
+        Article article = new Article();
+        article.setTaskId(taskId);
+        article.setUserId(loginUser.getId());
+        article.setTopic(topic);
+        article.setStyle(style);
+        article.setEnabledImageMethods(finalImageMethods != null && !finalImageMethods.isEmpty()
+                ? GsonUtils.toJson(finalImageMethods) : null);
+        article.setStatus(ArticleStatusEnum.PENDING.getValue());
+        article.setPhase(ArticlePhaseEnum.PENDING.getValue());
+        article.setCreateTime(LocalDateTime.now());
+
+        this.save(article);
+
+        log.info("文章任务已创建, taskId={}, userId={}, style={}", taskId, loginUser.getId(), style);
+        return taskId;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String createArticleTaskWithQuotaCheck(String topic, String style,List< String> enableImageMehodies, User loginUser) {
+        //再同一事务中：先知配额，再创建任务
+        //如果任务创建失败，配额会自动回滚
+        quotaService.checkAndConsumeQuota(loginUser);
+        return createArticleTask(topic,style,enableImageMehodies,loginUser);
+    }
+
 
 
     @Override

@@ -1,7 +1,7 @@
 package com.example.aipassagecreator.service;
 
 import com.example.aipassagecreator.config.CosConfig;
-import com.example.aipassagecreator.model.dto.article.ImageData;
+import com.example.aipassagecreator.model.dto.image.ImageData;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicCOSCredentials;
@@ -10,14 +10,14 @@ import com.qcloud.cos.http.HttpProtocol;
 import com.qcloud.cos.model.ObjectMetadata;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.region.Region;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -38,17 +38,7 @@ public class CosService {
 
     private COSClient cosClient;
 
-    private OkHttpClient httpClient;
-
-    /**
-     * 懒加载 OkHttpClient，避免类加载时的初始化问题
-     */
-    private OkHttpClient getHttpClient() {
-        if (httpClient == null) {
-            httpClient = new OkHttpClient();
-        }
-        return httpClient;
-    }
+    private final OkHttpClient httpClient = new OkHttpClient();
 
     @PostConstruct
     public void init() {

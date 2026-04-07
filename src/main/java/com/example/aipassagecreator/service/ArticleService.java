@@ -9,6 +9,8 @@ import com.example.aipassagecreator.model.vo.ArticleVO;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.service.IService;
 
+import java.util.List;
+
 public interface ArticleService extends IService<Article> {
     String createArticle(String topic, User loginUser);
 
@@ -23,4 +25,8 @@ public interface ArticleService extends IService<Article> {
     boolean deleteArticle(Long id, User loginUser);
 
     ArticleVO getArticleDetail(String taskId, User loginUser);
+
+    String createArticleTask(String topic, String style, List<String> enabledImageMethods, User loginUser);
+
+    String createArticleTaskWithQuotaCheck(String topic, String style, List< String> enableImageMehodies, User loginUser);
 }

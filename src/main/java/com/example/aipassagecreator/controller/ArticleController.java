@@ -4,6 +4,7 @@ import com.example.aipassagecreator.aop.AuthCheck;
 import com.example.aipassagecreator.common.BaseResponse;
 import com.example.aipassagecreator.common.DeleteRequest;
 import com.example.aipassagecreator.common.ResultUtils;
+import com.example.aipassagecreator.enums.ArticleStyleEnum;
 import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.exception.ThrowUtils;
 import com.example.aipassagecreator.manager.SseEmitterManager;
@@ -25,7 +26,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/article")
-@Tag(name = "文章接口")
 @Slf4j
 public class ArticleController {
 
@@ -53,14 +53,20 @@ public class ArticleController {
         ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
         ThrowUtils.throwIf(request.getTopic() == null || request.getTopic().trim().isEmpty()
                 , ErrorCode.PARAMS_ERROR, "选题不能为空");
+        ThrowUtils.throwIf(!ArticleStyleEnum.isValid(request.getStyle()), ErrorCode.PARAMS_ERROR, "无效的文章风格");
 
         User  loginUser = userService.getLoginUser(httpServletRequest);
 
-        //创建文章任务
-        String taskId = articleService.createArticle(request.getTopic(), loginUser);
+        // 检查并消耗配额 + 创建文章任务（在同一事务中）
+        String taskId = articleService.createArticleTaskWithQuotaCheck(
+                request.getTopic(),
+                request.getStyle(),
+                request.getEnabledImageMethods(),
+                loginUser
+        );
 
-        //异步执行文章生成
-        articleAsyncService.executeArticleGeneration(taskId, request.getTopic());
+        // 异步执行阶段1：生成标题方案
+        articleAsyncService.executeArticleGeneration(taskId, request.getTopic(),request.getStyle());
 
         return ResultUtils.success(taskId);
     }

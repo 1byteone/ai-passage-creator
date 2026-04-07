@@ -169,6 +169,8 @@ public class ArticleState implements Serializable {
         private List<ImageRequirement> imageRequirements;
     }
 
+
+
     /**
      * 完整图文内容（合成后）
      */

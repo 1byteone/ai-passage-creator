@@ -102,8 +102,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if(user == null){
             throw new BusinessException(ErrorCode.PARAMS_ERROR,"用户不存在或密码错误");
         }
-        //4.创建用户的登录态
-        request.getSession().setAttribute(USER_LOGIN_STATE,user);
+        //4.创建用户的登录态（只存储用户ID，避免序列化问题）
+        request.getSession().setAttribute(USER_LOGIN_STATE, user.getId());
         //5.返回脱敏的用户信息
         return this.getLoginUserVO(request);
     }
@@ -116,14 +116,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public LoginUserVO getLoginUserVO(HttpServletRequest request) {
         //先判断用户是否登录
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User currentUser = (User) userObj;
-        if(currentUser == null || currentUser.getId() == null){
+        Object userIdObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        if(userIdObj == null){
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        //从 session 中获取用户ID
+        Long userId;
+        if (userIdObj instanceof Long) {
+            userId = (Long) userIdObj;
+        } else if (userIdObj instanceof Integer) {
+            userId = ((Integer) userIdObj).longValue();
+        } else {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
         //从数据库查询当前用户信息（保证数据更新）
-        long userId = currentUser.getId();
-        currentUser = this.getById(userId);
+        User currentUser = this.getById(userId);
         if(currentUser == null){
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
@@ -134,14 +141,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public User getLoginUser(HttpServletRequest request) {
         // 先判断用户是否登录
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User currentUser = (User) userObj;
-        if (currentUser == null || currentUser.getId() == null) {
+        Object userIdObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        if (userIdObj == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        // 从 session 中获取用户ID
+        Long userId;
+        if (userIdObj instanceof Long) {
+            userId = (Long) userIdObj;
+        } else if (userIdObj instanceof Integer) {
+            userId = ((Integer) userIdObj).longValue();
+        } else {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
         // 从数据库查询当前用户信息
-        long userId = currentUser.getId();
-        currentUser = this.getById(userId);
+        User currentUser = this.getById(userId);
         if (currentUser == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
