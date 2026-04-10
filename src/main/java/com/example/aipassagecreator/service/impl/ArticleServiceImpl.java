@@ -13,14 +13,17 @@ import com.example.aipassagecreator.model.dto.article.ArticleState;
 import com.example.aipassagecreator.model.po.Article;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.model.vo.ArticleVO;
+import com.example.aipassagecreator.service.ArticleAgentService;
 import com.example.aipassagecreator.service.ArticleService;
 import com.example.aipassagecreator.service.QuotaService;
 import com.example.aipassagecreator.utils.GsonUtils;
+import com.google.gson.reflect.TypeToken;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +40,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
     @Resource
     protected QuotaService quotaService;
+    @Autowired
+    private ArticleAgentService articleAgentService;
 
     /**
      * 校验配图方式权限
@@ -132,7 +137,105 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         return createArticleTask(topic,style,enableImageMehodies,loginUser);
     }
 
+    @Override
+    public void confirmTitle(String taskId,String mainTitle , String subTitle,String userDescription,User loginUser){
+        Article article = getByTaskId(taskId);
+        ThrowUtils.throwIf(article == null, ErrorCode.NOT_FOUND_ERROR, "文章不存在");
 
+        //校验权限
+        checkArticlePermission(article,loginUser);
+
+        //校验当前阶段（必须是 TITLE_SELECTING）
+        ArticlePhaseEnum currentPhase = ArticlePhaseEnum.getByValue(article.getPhase());
+        ThrowUtils.throwIf(!currentPhase.equals(ArticlePhaseEnum.TITLE_SELECTING),ErrorCode.OPERATION_ERROR,"当前阶段不允许此操作");
+
+        //保存用户选择的标题和补充描述
+        article.setMainTitle(mainTitle);
+        article.setSubTitle(subTitle);
+        article.setUserDescription(userDescription);
+        article.setPhase(ArticlePhaseEnum.OUTLINE_GENERATING.getValue());
+
+        this.updateById(article);
+        log.info("用户确认标题，taskId={},mainTitle={}",taskId,mainTitle);
+    }
+
+    @Override
+    public void confirmOutline(String taskId,List<ArticleState.OutlineSection>  outline,User loginUser){
+        Article article = getByTaskId(taskId);
+        ThrowUtils.throwIf(article == null, ErrorCode.NOT_FOUND_ERROR, "文章不存在");
+
+        //校验权限
+        checkArticlePermission(article,loginUser);
+
+        //校验当前阶段（必须是 OUTLINE_EDITING）
+        ArticlePhaseEnum currentPhase = ArticlePhaseEnum.getByValue(article.getPhase());
+        ThrowUtils.throwIf(!currentPhase.equals(ArticlePhaseEnum.OUTLINE_EDITING),ErrorCode.OPERATION_ERROR,"当前阶段不允许此操作");
+
+        //保存用户编辑后的大纲
+        article.setOutline(GsonUtils.toJson(outline));
+        article.setPhase(ArticlePhaseEnum.CONTENT_GENERATING.getValue());
+
+        this.updateById(article);
+        log.info("用户确认大纲，taskId={},sectionsCount={}",taskId,outline.size());
+    }
+
+    @Override
+    public void updatePhase(String taskId, ArticlePhaseEnum phase){
+        Article article = getByTaskId(taskId);
+        if(article == null){
+            log.error("文章不存在，taskId={}",taskId);
+            return;
+        }
+
+        article.setPhase(phase.getValue());
+        this.updateById(article);
+        log.info("文章阶段已更新，taskId={},phase={}",taskId,phase.getValue());
+    }
+
+    @Override
+    public void saveTitleOptions(String taskId, List<ArticleState.TitleOption> titleOptions){
+        Article article = getByTaskId(taskId);
+        if(article == null){
+            log.error("文章不存在，taskId={}",taskId);
+            return;
+        }
+
+        article.setTitleOptions(GsonUtils.toJson(titleOptions));
+        this.updateById(article);
+        log.info("文章标题选项已保存，taskId={},optionsCount={}",taskId,titleOptions.size());
+    }
+
+    @Override
+    public List<ArticleState.OutlineSection> aiModifyOutline(String taskId, String modifySuggestion , User loginUser){
+        Article article = getByTaskId(taskId);
+        ThrowUtils.throwIf(article == null, ErrorCode.NOT_FOUND_ERROR, "文章不存在");
+
+        //校验权限
+        checkArticlePermission(article,loginUser);
+
+        //校验当前阶段（必须是 OUTLINE_EDITING）
+        ArticlePhaseEnum currentPhase = ArticlePhaseEnum.getByValue(article.getPhase());
+        ThrowUtils.throwIf(!currentPhase.equals(ArticlePhaseEnum.OUTLINE_EDITING),ErrorCode.OPERATION_ERROR,"当前阶段不允许此操作");
+
+        //获取当前大纲
+        List<ArticleState.OutlineSection> currentOutline = GsonUtils.fromJson(
+                article.getOutline(), new TypeToken<List<ArticleState.OutlineSection>>() {} );
+
+        //调用 AI 修改大纲
+        List<ArticleState.OutlineSection> modifiedOutline = articleAgentService.aiModifyOutline(
+                article.getMainTitle(),
+                article.getSubTitle(),
+                currentOutline,
+                modifySuggestion
+        );
+
+        //保存修改后的大纲
+        article.setOutline(GsonUtils.toJson(modifiedOutline));
+        this.updateById(article);
+
+        log.info("AI修改大纲完成，taskId={},sectionsCount={}",taskId,modifiedOutline.size());
+        return modifiedOutline;
+    }
 
     @Override
     public  String createArticle(String topic, User loginUser){

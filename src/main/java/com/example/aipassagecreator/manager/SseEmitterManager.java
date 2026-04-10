@@ -27,7 +27,8 @@ public class SseEmitterManager {
      * @return SseEmitter
      */
     public SseEmitter createEmitter(String taskId) {
-        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
+        // 设置超时时间为 10 分钟，避免长时间无输出导致超时
+        SseEmitter emitter = new SseEmitter(10 * 60 * 1000L);
         
         // 设置超时回调
         emitter.onTimeout(() -> {
@@ -70,9 +71,32 @@ public class SseEmitterManager {
             emitter.send(SseEmitter.event()
                     .data(message)
                     .reconnectTime(SSE_RECONNECT_TIME_MS));
-            log.debug("SSE 消息发送成功, taskId={}, message={}", taskId, message);
         } catch (IOException e) {
             log.error("SSE 消息发送失败, taskId={}", taskId, e);
+            emitterMap.remove(taskId);
+        }
+    }
+
+    /**
+     * 发送心跳消息（保持连接活跃）
+     *
+     * @param taskId 任务ID
+     */
+    public void sendHeartbeat(String taskId) {
+        SseEmitter emitter = emitterMap.get(taskId);
+        if (emitter == null) {
+            log.debug("SSE Emitter 不存在，无法发送心跳, taskId={}", taskId);
+            return;
+        }
+        
+        try {
+            // 发送注释作为心跳，不会触发前端的事件处理
+            emitter.send(SseEmitter.event()
+                    .comment("heartbeat")
+                    .reconnectTime(SSE_RECONNECT_TIME_MS));
+            log.debug("SSE 心跳发送成功, taskId={}", taskId);
+        } catch (IOException e) {
+            log.warn("SSE 心跳发送失败, taskId={}", taskId, e);
             emitterMap.remove(taskId);
         }
     }

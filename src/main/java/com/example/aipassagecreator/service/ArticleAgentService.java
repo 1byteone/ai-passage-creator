@@ -36,6 +36,9 @@ public class ArticleAgentService {
     @Resource
     private CosService cosService;
 
+    @Resource
+    private com.example.aipassagecreator.manager.SseEmitterManager sseEmitterManager;
+
     /**
      * 执行完整的文章生成流程
      *
@@ -48,31 +51,37 @@ public class ArticleAgentService {
             log.info("智能体1：开始生成标题, taskId={}", state.getTaskId());
             agent1GenerateTitle(state);
             streamHandler.accept(SseMessageTypeEnum.AGENT1_COMPLETE.getValue());
+            sseEmitterManager.sendHeartbeat(state.getTaskId());
 
             // 智能体2：生成大纲（流式输出）
             log.info("智能体2：开始生成大纲, taskId={}", state.getTaskId());
             agent2GenerateOutline(state, streamHandler);
             streamHandler.accept(SseMessageTypeEnum.AGENT2_COMPLETE.getValue());
+            sseEmitterManager.sendHeartbeat(state.getTaskId());
 
             // 智能体3：生成正文（流式输出）
             log.info("智能体3：开始生成正文, taskId={}", state.getTaskId());
             agent3GenerateContent(state, streamHandler);
             streamHandler.accept(SseMessageTypeEnum.AGENT3_COMPLETE.getValue());
+            sseEmitterManager.sendHeartbeat(state.getTaskId());
 
             // 智能体4：分析配图需求
             log.info("智能体4：开始分析配图需求, taskId={}", state.getTaskId());
             agent4AnalyzeImageRequirements(state);
             streamHandler.accept(SseMessageTypeEnum.AGENT4_COMPLETE.getValue());
+            sseEmitterManager.sendHeartbeat(state.getTaskId());
 
             // 智能体5：生成配图
             log.info("智能体5：开始生成配图, taskId={}", state.getTaskId());
             agent5GenerateImages(state, streamHandler);
             streamHandler.accept(SseMessageTypeEnum.AGENT5_COMPLETE.getValue());
+            sseEmitterManager.sendHeartbeat(state.getTaskId());
 
             // 图文合成：将配图插入正文
             log.info("开始图文合成, taskId={}", state.getTaskId());
             mergeImagesIntoContent(state);
             streamHandler.accept(SseMessageTypeEnum.MERGE_COMPLETE.getValue());
+            sseEmitterManager.sendHeartbeat(state.getTaskId());
 
             log.info("文章生成完成, taskId={}", state.getTaskId());
         } catch (Exception e) {
@@ -82,6 +91,103 @@ public class ArticleAgentService {
     }
 
 
+    /**
+     * 阶段1：生成标题方案（3-5个）
+     *
+     * @param state         文章状态
+     * @param streamHandler 流式输出处理器
+     */
+    public void executePhase1_GenerateTitles(ArticleState state, Consumer<String> streamHandler) {
+        try {
+            // 智能体1：生成标题方案
+            log.info("阶段1：开始生成标题方案, taskId={}", state.getTaskId());
+            agent1GenerateTitleOptions(state);
+            streamHandler.accept(SseMessageTypeEnum.AGENT1_COMPLETE.getValue());
+            sseEmitterManager.sendHeartbeat(state.getTaskId());
+            log.info("阶段1：标题方案生成完成, taskId={}, optionsCount={}",
+                    state.getTaskId(), state.getTitleOptions().size());
+        } catch (Exception e) {
+            log.error("阶段1：标题方案生成失败, taskId={}", state.getTaskId(), e);
+            throw new RuntimeException("标题方案生成失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 阶段2：生成大纲（用户选择标题后）
+     *
+     * @param state         文章状态
+     * @param streamHandler 流式输出处理器
+     */
+    public void executePhase2_GenerateOutline(ArticleState state, Consumer<String> streamHandler) {
+        try {
+            // 智能体2：生成大纲（流式输出）
+            log.info("阶段2：开始生成大纲, taskId={}", state.getTaskId());
+            agent2GenerateOutline(state, streamHandler);
+            streamHandler.accept(SseMessageTypeEnum.AGENT2_COMPLETE.getValue());
+            sseEmitterManager.sendHeartbeat(state.getTaskId());
+            log.info("阶段2：大纲生成完成, taskId={}", state.getTaskId());
+        } catch (Exception e) {
+            log.error("阶段2：大纲生成失败, taskId={}", state.getTaskId(), e);
+            throw new RuntimeException("大纲生成失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 阶段3：生成正文+配图（用户确认大纲后）
+     *
+     * @param state         文章状态
+     * @param streamHandler 流式输出处理器
+     */
+    public void executePhase3_GenerateContent(ArticleState state, Consumer<String> streamHandler) {
+        try {
+            // 智能体3：生成正文（流式输出）
+            log.info("阶段3：开始生成正文, taskId={}", state.getTaskId());
+            agent3GenerateContent(state, streamHandler);
+            streamHandler.accept(SseMessageTypeEnum.AGENT3_COMPLETE.getValue());
+            sseEmitterManager.sendHeartbeat(state.getTaskId());
+
+            // 智能体4：分析配图需求
+            log.info("阶段3：开始分析配图需求, taskId={}", state.getTaskId());
+            agent4AnalyzeImageRequirements(state);
+            streamHandler.accept(SseMessageTypeEnum.AGENT4_COMPLETE.getValue());
+            sseEmitterManager.sendHeartbeat(state.getTaskId());
+
+            // 智能体5：生成配图
+            log.info("阶段3：开始生成配图, taskId={}", state.getTaskId());
+            agent5GenerateImages(state, streamHandler);
+            streamHandler.accept(SseMessageTypeEnum.AGENT5_COMPLETE.getValue());
+            sseEmitterManager.sendHeartbeat(state.getTaskId());
+
+            // 图文合成：将配图插入正文
+            log.info("阶段3：开始图文合成, taskId={}", state.getTaskId());
+            mergeImagesIntoContent(state);
+            streamHandler.accept(SseMessageTypeEnum.MERGE_COMPLETE.getValue());
+            sseEmitterManager.sendHeartbeat(state.getTaskId());
+
+            log.info("阶段3：正文生成完成, taskId={}", state.getTaskId());
+        } catch (Exception e) {
+            log.error("阶段3：正文生成失败, taskId={}", state.getTaskId(), e);
+            throw new RuntimeException("正文生成失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 智能体1：生成标题方案（3-5个）
+     */
+    private void agent1GenerateTitleOptions(ArticleState state) {
+        String prompt = PromptConstant.AGENT1_TITLE_PROMPT
+                .replace("{topic}", state.getTopic())
+                + getStylePrompt(state.getStyle());
+
+        String content = callLlm(prompt);
+        List<ArticleState.TitleOption> titleOptions = parseJsonListResponse(
+                content,
+                new TypeToken<List<ArticleState.TitleOption>>(){},
+                "标题方案"
+        );
+        state.setTitleOptions(titleOptions);
+        log.info("智能体1：标题方案生成成功, optionsCount={}", titleOptions.size());
+    }
 
     /**
      * 智能体1：生成标题
@@ -89,7 +195,8 @@ public class ArticleAgentService {
      * @param state 文章状态
      */
     private void agent1GenerateTitle(ArticleState state) {
-        String prompt = PromptConstant.AGENT1_TITLE_PROMPT
+        // 使用单个标题 Prompt（返回对象格式）
+        String prompt = PromptConstant.AGENT1_SINGLE_TITLE_PROMPT
                 .replace("{topic}", state.getTopic())
                 +getStylePrompt(state.getStyle());  //添加风格Prompt
 
@@ -307,6 +414,34 @@ public class ArticleAgentService {
         log.info("图文合成完成，fullContentLength={}",fullContent.length());
     }
 
+    /**
+     * AI 修改大纲
+     *
+     * @param mainTitle        主标题
+     * @param subTitle         副标题
+     * @param currentOutline   当前大纲
+     * @param modifySuggestion 用户修改建议
+     * @return 修改后的大纲
+     */
+    public List<ArticleState.OutlineSection> aiModifyOutline(String mainTitle, String subTitle,
+                                                             List<ArticleState.OutlineSection> currentOutline,
+                                                             String modifySuggestion) {
+        String currentOutlineJson = GsonUtils.toJson(currentOutline);
+
+        String prompt = PromptConstant.AI_MODIFY_OUTLINE_PROMPT
+                .replace("{mainTitle}", mainTitle)
+                .replace("{subTitle}", subTitle)
+                .replace("{currentOutline}", currentOutlineJson)
+                .replace("{modifySuggestion}", modifySuggestion);
+
+        String content = callLlm(prompt);
+        ArticleState.OutlineResult outlineResult = parseJsonResponse(content, ArticleState.OutlineResult.class, "修改后的大纲");
+
+        log.info("AI修改大纲成功, sectionsCount={}", outlineResult.getSections().size());
+        return outlineResult.getSections();
+    }
+
+
     // region 辅助方法
 
     /**
@@ -397,6 +532,9 @@ public class ArticleAgentService {
         }
     }
 
+    /**
+     * 获取风格提示
+     */
     private String getStylePrompt(String  style){
         if(style == null|| style.isEmpty()){
             return "";
@@ -414,6 +552,8 @@ public class ArticleAgentService {
             case HUMOROUS -> PromptConstant.STYLE_HUMOROUS_PROMPT;
         };
     }
+
+
 // endregion
 
 }
