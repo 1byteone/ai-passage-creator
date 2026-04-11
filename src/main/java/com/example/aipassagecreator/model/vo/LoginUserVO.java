@@ -13,6 +13,12 @@ public class LoginUserVO implements Serializable {
     private String userAvatar;
     private String userProfile;
     private String userRole;
+    /**
+     * 剩余配额
+     */
+    private Integer quota;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+    private LocalDateTime vipTime;
+
 }

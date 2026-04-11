@@ -213,6 +213,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         //校验权限
         checkArticlePermission(article,loginUser);
 
+        ThrowUtils.throwIf(!isVipOrAdmin(loginUser),ErrorCode.NO_AUTH_ERROR,"AI 修改大纲功能仅限 VIP 会员使用");
+
         //校验当前阶段（必须是 OUTLINE_EDITING）
         ArticlePhaseEnum currentPhase = ArticlePhaseEnum.getByValue(article.getPhase());
         ThrowUtils.throwIf(!currentPhase.equals(ArticlePhaseEnum.OUTLINE_EDITING),ErrorCode.OPERATION_ERROR,"当前阶段不允许此操作");

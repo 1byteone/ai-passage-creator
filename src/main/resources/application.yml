@@ -89,3 +89,10 @@ svg-diagram:
   default-width: 800
   default-height: 600
   folder: svg-diagrams  # COS 存储文件夹
+
+# Stripe 支付配置（测试模式）
+stripe:
+  api-key: sk_test_51TKtQdJa5kQib6pSvFj5jWw3DWXygRK1d7jUTKyW3brUbPoTQOrjw5k8bxmr0y8Idl7YaSjARloeokLf0IcZxrBZ00AdwQN1MU  # 请在 https://dashboard.stripe.com/test/apikeys 获取
+  webhook-secret: whsec_86269cdfb65806a3446d5edd5879f447e70a3dc6ed81e3215c8751342c1a16c9  # Webhook 签名密钥
+  success-url: http://localhost:5173/vip?success=true  # 支付成功回调 URL
+  cancel-url: http://localhost:5173/vip?cancelled=true  # 支付取消回调 URL

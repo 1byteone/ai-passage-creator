@@ -160,6 +160,13 @@
 			<version>1.15.3</version>
 		</dependency>
 
+		<!-- Stripe Java SDK -->
+		<dependency>
+			<groupId>com.stripe</groupId>
+			<artifactId>stripe-java</artifactId>
+			<version>31.2.0</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

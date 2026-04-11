@@ -46,6 +46,12 @@ public class User implements Serializable {
     private LocalDateTime updateTime;
 
     /**
+     * 成为会员时间
+     */
+    private LocalDateTime vipTime;
+
+
+    /**
      * 逻辑删除
      */
     @Column(isLogicDelete = true)

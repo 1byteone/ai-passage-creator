@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import static com.example.aipassagecreator.constant.UserConstant.ADMIN_ROLE;
+import static com.example.aipassagecreator.constant.UserConstant.VIP_ROLE;
 
 @Service
 @Slf4j
@@ -41,8 +42,8 @@ public class QuotaServiceImpl implements QuotaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void consumeQuota(User user) {
-        // 管理员不消耗配额
-        if (isAdmin(user)) {
+        // 管理员和VIP用户不消耗配额
+        if (isAdmin(user) || isVip(user)) {
             return;
         }
 
@@ -60,8 +61,8 @@ public class QuotaServiceImpl implements QuotaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void checkAndConsumeQuota(User user) {
-        // 管理员跳过检查
-        if (isAdmin(user)) {
+        // 管理员和VIP跳过检查
+        if (isAdmin(user) || isVip(user)) {
             return;
         }
 
@@ -82,5 +83,12 @@ public class QuotaServiceImpl implements QuotaService {
      */
     private boolean isAdmin(User user) {
         return ADMIN_ROLE.equals(user.getUserRole());
+    }
+
+    /**
+     * 判断是否为VIP
+     */
+    private boolean isVip(User user) {
+        return VIP_ROLE.equals(user.getUserRole());
     }
 }
