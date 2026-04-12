@@ -10,7 +10,9 @@ import com.example.aipassagecreator.exception.ThrowUtils;
 import com.example.aipassagecreator.manager.SseEmitterManager;
 import com.example.aipassagecreator.model.dto.article.*;
 import com.example.aipassagecreator.model.po.User;
+import com.example.aipassagecreator.model.vo.AgentExecutionStats;
 import com.example.aipassagecreator.model.vo.ArticleVO;
+import com.example.aipassagecreator.service.AgentLogService;
 import com.example.aipassagecreator.service.ArticleAsyncService;
 import com.example.aipassagecreator.service.ArticleService;
 import com.example.aipassagecreator.service.UserService;
@@ -156,6 +158,23 @@ public class ArticleController {
 
         return ResultUtils.success(modifiedOutline);
     }
+
+    @Resource
+    private AgentLogService agentLogService;
+
+    /**
+     * 获取任务执行日志
+     */
+    @GetMapping("/execution-logs/{taskId}")
+    @Operation(summary = "获取任务执行日志")
+    public BaseResponse<AgentExecutionStats> getExecutionLogs(@PathVariable String taskId) {
+        ThrowUtils.throwIf(taskId == null || taskId.trim().isEmpty(),
+                ErrorCode.PARAMS_ERROR, "任务ID不能为空");
+
+        AgentExecutionStats stats = agentLogService.getExecutionStats(taskId);
+        return ResultUtils.success(stats);
+    }
+
 
 
     /**
