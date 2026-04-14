@@ -47,9 +47,6 @@ public class ArticleAgentOrchestrator {
     @Resource
     private ContentMergerAgent contentMergerAgent;
 
-    // ObjectMapper 用于 StateGraph 类型转换
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-
     // region 状态键常量
 
     private static final String KEY_TASK_ID = "taskId";
@@ -139,16 +136,30 @@ public class ArticleAgentOrchestrator {
                 OverAllState finalState = result.get();
 
                 log.info("阶段2执行完成，finalState.data().keys={}", finalState.data().keySet());
+                
+                // 尝试多种方式获取outline
+                Object outlineObj = finalState.data().get(KEY_OUTLINE);
+                log.info("阶段2从data().get()获取outline, key={}, value类型={}, value={}",
+                        KEY_OUTLINE,
+                        outlineObj != null ? outlineObj.getClass().getName() : "null",
+                        outlineObj);
 
-                // 使用 ObjectMapper 进行类型转换
                 ArticleState.OutlineResult outline = finalState.value(KEY_OUTLINE)
                         .map(v -> {
+                            log.info("阶段2从value()获取outline, value类型={}", 
+                                    v != null ? v.getClass().getName() : "null");
+                            // 直接尝试强制转换，因为 instanceof 可能因类加载器问题失败
                             try {
-                                return objectMapper.convertValue(v, ArticleState.OutlineResult.class);
+                                if (v != null && v.getClass().getName().equals(ArticleState.OutlineResult.class.getName())) {
+                                    return (ArticleState.OutlineResult) v;
+                                }
                             } catch (Exception e) {
-                                log.error("阶段2 outline转换失败", e);
-                                return null;
+                                log.warn("阶段2 outline转换失败", e);
                             }
+                            log.warn("阶段2 outline类型不匹配, 期望类型={}, 实际类型={}",
+                                    ArticleState.OutlineResult.class.getName(),
+                                    v != null ? v.getClass().getName() : "null");
+                            return null;
                         })
                         .orElse(null);
 
@@ -209,19 +220,14 @@ public class ArticleAgentOrchestrator {
                         .map(Object::toString)
                         .orElse(null);
 
-                // 使用 ObjectMapper 进行类型转换
+                @SuppressWarnings("unchecked")
                 List<ArticleState.ImageRequirement> imageRequirements = finalState.value(KEY_IMAGE_REQUIREMENTS)
-                        .map(v -> objectMapper.convertValue(
-                                v,
-                                new TypeReference<List<ArticleState.ImageRequirement>>() {}
-                        ))
+                        .map(v -> (List<ArticleState.ImageRequirement>) v)
                         .orElse(null);
 
+                @SuppressWarnings("unchecked")
                 List<ArticleState.ImageResult> images = finalState.value(KEY_IMAGES)
-                        .map(v -> objectMapper.convertValue(
-                                v,
-                                new TypeReference<List<ArticleState.ImageResult>>() {}
-                        ))
+                        .map(v -> (List<ArticleState.ImageResult>) v)
                         .orElse(null);
 
                 String fullContent = finalState.value(KEY_FULL_CONTENT)
