@@ -1,6 +1,8 @@
 package com.example.aipassagecreator.service;
 
 import cn.hutool.json.JSONUtil;
+import com.example.aipassagecreator.agent.ArticleAgentOrchestrator;
+import com.example.aipassagecreator.agent.config.AgentConfig;
 import com.example.aipassagecreator.enums.ArticlePhaseEnum;
 import com.example.aipassagecreator.enums.ArticleStatusEnum;
 import com.example.aipassagecreator.enums.SseMessageTypeEnum;
@@ -31,7 +33,11 @@ public class ArticleAsyncService {
     @Resource
     private ArticleService articleService;
 
+    @Resource
+    private ArticleAgentOrchestrator articleAgentOrchestrator;
 
+    @Resource
+    private AgentConfig agentConfig;
 
     /**
      * 异步执行文章生成任务
@@ -96,6 +102,7 @@ public class ArticleAsyncService {
      * */
     @Async("articleExecutor")
     public void executePhase1(String taskId, String topic, String style){
+        boolean orchestratorEnabled = agentConfig.isOrchestratorEnabled();
         log.info("阶段1异步任务开始，taskId={},topic={},style={}",taskId, topic, style);
 
         try{
@@ -110,9 +117,15 @@ public class ArticleAsyncService {
             state.setStyle(style);
 
             //执行阶段1：生成标题方案
-            articleAgentService.executePhase1_GenerateTitles(state, message -> {
-                handleAgentMessage(taskId,message, state);
-            });
+            if(orchestratorEnabled){
+                articleAgentOrchestrator.executePhase1_GenerateTitles(state, message -> {
+                    handleAgentMessage(taskId,message, state);
+                });
+            }else {
+                articleAgentService.executePhase1_GenerateTitles(state, message -> {
+                    handleAgentMessage(taskId,message, state);
+                });
+            }
 
             //保存标题方案到数据库
             articleService.saveTitleOptions(taskId,state.getTitleOptions());
@@ -143,6 +156,7 @@ public class ArticleAsyncService {
 
     @Async("articleExecutor")
     public void executePhase2(String taskId){
+        boolean orchestratorEnabled = agentConfig.isOrchestratorEnabled();
         log.info("阶段2异步任务开始，taskId={}",taskId);
 
         try{
@@ -165,9 +179,15 @@ public class ArticleAsyncService {
             state.setTitle(title);
 
             //执行阶段2：生成大纲
-            articleAgentService.executePhase2_GenerateOutline(state, message -> {
-                handleAgentMessage(taskId,message, state);
-            });
+            if(orchestratorEnabled){
+                articleAgentOrchestrator.executePhase2_GenerateOutline(state, message -> {
+                    handleAgentMessage(taskId,message, state);
+                });
+            }else{
+                articleAgentService.executePhase2_GenerateOutline(state, message -> {
+                    handleAgentMessage(taskId,message, state);
+                });
+            }
 
             //保存大纲到数据库
             Article articleToUpdate = articleService.getByTaskId(taskId);
@@ -204,6 +224,7 @@ public class ArticleAsyncService {
      */
     @Async("articleExecutor")
     public void executePhase3(String taskId) {
+        boolean orchestratorEnabled = agentConfig.isOrchestratorEnabled();
         log.info("阶段3异步任务开始, taskId={}", taskId);
 
         try {
@@ -244,9 +265,15 @@ public class ArticleAsyncService {
             state.setOutline(outlineResult);
 
             // 执行阶段3：生成正文+配图
-            articleAgentService.executePhase3_GenerateContent(state, message -> {
-                handleAgentMessage(taskId, message, state);
-            });
+            if (orchestratorEnabled) {
+                articleAgentOrchestrator.executePhase3_GenerateContent(state, message -> {
+                    handleAgentMessage(taskId, message, state);
+                });
+            }else {
+                articleAgentService.executePhase3_GenerateContent(state, message -> {
+                    handleAgentMessage(taskId, message, state);
+                });
+            }
 
             // 保存完整文章到数据库
             articleService.saveArticleContent(taskId, state);
