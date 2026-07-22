@@ -33,6 +33,24 @@ spring:
     dashscope:
       api-key: sk-dcc26570fb6f4154a9fbbc4a979b31f0  # 通义千问 API Key
 
+    # AGNES AI 模型 (OpenAI 兼容)
+    openai:
+      api-key: ${AGNES_AI_API_KEY:sk-H2xBJlVMLMLiM9tplNS4zeBchkmVa87ZyAZjZWJVfkLLYWHq}
+      base-url: https://apihub.agnes-ai.com
+      chat:
+        options:
+          model: agnes-2.0-flash
+          temperature: 0.7
+
+# 模型路由配置
+model:
+  router:
+    default: agnes                    # 全局默认模型
+    skill-default: agnes              # Skill 引擎默认模型
+    article-default: dashscope         # 文章写作默认模型
+    fallback: dashscope               # AGNES 不可用时降级
+    image-model: agnes-image-2.1-flash  # 图片生成模型
+
 mybatis-flex:
   mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
