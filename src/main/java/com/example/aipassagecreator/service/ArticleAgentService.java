@@ -1,6 +1,7 @@
 package com.example.aipassagecreator.service;
 
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.beans.factory.annotation.Qualifier;
 import com.example.aipassagecreator.annotation.AgentExecution;
 import com.example.aipassagecreator.constant.PromptConstant;
 import com.example.aipassagecreator.enums.ArticleStyleEnum;
@@ -31,7 +32,8 @@ import java.util.function.Consumer;
 public class ArticleAgentService {
 
     @Resource
-    private DashScopeChatModel chatModel;
+    @Qualifier("dashScopeChatModel")
+    private ChatModel chatModel;
 
     @Resource
     private ImageServiceStrategy imageServiceStrategy;
