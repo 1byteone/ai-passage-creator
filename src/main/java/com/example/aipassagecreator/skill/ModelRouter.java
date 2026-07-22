@@ -43,7 +43,7 @@ public class ModelRouter {
     public ChatModel resolveWithFallback(String phaseModel, String skillDefault) {
         try {
             ChatModel primary = resolve(phaseModel, skillDefault);
-            // 简单探活：尝试 call 一个空消息（超时短）
+            // 主模型已由 resolve() 完成解析，无需额外探活
             return primary;
         } catch (Exception e) {
             log.warn("模型 {} 不可用, 降级到 {}", phaseModel, config.getFallback());
