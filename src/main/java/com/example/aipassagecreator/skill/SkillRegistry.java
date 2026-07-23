@@ -6,6 +6,7 @@ import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
 import com.alibaba.cloud.ai.graph.StateGraph;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
+import com.example.aipassagecreator.mapper.SkillExecutionMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
@@ -35,15 +36,18 @@ public class SkillRegistry {
     private final PromptTemplateEngine templateEngine;
     private final ModelRouter modelRouter;
     private final OutputParserRegistry parserRegistry;
+    private final SkillExecutionMapper skillExecutionMapper;
 
     public SkillRegistry(ResourceLoader resourceLoader,
                          PromptTemplateEngine templateEngine,
                          ModelRouter modelRouter,
-                         OutputParserRegistry parserRegistry) {
+                         OutputParserRegistry parserRegistry,
+                         SkillExecutionMapper skillExecutionMapper) {
         this.resourceLoader = resourceLoader;
         this.templateEngine = templateEngine;
         this.modelRouter = modelRouter;
         this.parserRegistry = parserRegistry;
+        this.skillExecutionMapper = skillExecutionMapper;
     }
 
     @PostConstruct
@@ -93,7 +97,7 @@ public class SkillRegistry {
     public SkillExecution createExecution(String skillName, Map<String, Object> inputs) {
         SkillDefinition def = getSkill(skillName);
         String executionId = UUID.randomUUID().toString();
-        return new SkillExecution(executionId, def, inputs, graphCache.get(skillName), modelRouter);
+        return new SkillExecution(executionId, def, inputs, graphCache.get(skillName), modelRouter, skillExecutionMapper);
     }
 
     public SkillExecutionChain createChain(String... skillNames) {
