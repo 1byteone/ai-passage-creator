@@ -1,0 +1,27 @@
+name: topic-gen
+description: 快速生成3-4个选题方向，含标题、大纲和优劣分析
+category: writing
+requiredRoles: [user]
+multiRound: true
+
+variables:
+  direction:
+    description: 选题方向描述
+    required: true
+    source: INPUT
+  style:
+    description: 文章风格偏好
+    required: false
+    source: INPUT
+
+phases:
+  - name: generate_topics
+    promptFile: skills/topic-gen/prompts/phase1_generate_topics.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: topicOptions
+    variables:
+      - name: direction
+      - name: style
+    requireConfirmation: true
