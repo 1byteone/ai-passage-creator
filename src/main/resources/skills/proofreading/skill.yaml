@@ -1,0 +1,53 @@
+name: proofreading
+description: 三遍审校降低AI检测率，让文章更有人味
+category: writing
+requiredRoles: [user]
+multiRound: false
+
+variables:
+  articleContent:
+    description: 待审校的文章内容
+    required: true
+    source: INPUT
+  style:
+    description: 文章风格（tech/emotional/educational/humorous）
+    required: false
+    source: INPUT
+
+phases:
+  - name: content_review
+    promptFile: skills/proofreading/prompts/phase1_content_review.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: reviewResult
+    variables:
+      - name: articleContent
+      - name: style
+    requireConfirmation: false
+
+  - name: ai_tone_fix
+    promptFile: skills/proofreading/prompts/phase2_ai_tone_fix.md
+    model: agnes
+    streaming: true
+    outputParser: markdown
+    outputKey: polishedContent
+    variables:
+      - name: articleContent
+      - name: style
+    requireConfirmation: true
+
+  - name: rhythm_polish
+    promptFile: skills/proofreading/prompts/phase3_rhythm_polish.md
+    model: agnes
+    streaming: true
+    outputParser: markdown
+    outputKey: finalContent
+    variables:
+      - name: articleContent
+        ref: content_review
+      - name: reviewResult
+        ref: content_review
+      - name: polishedContent
+        ref: ai_tone_fix
+    requireConfirmation: false
