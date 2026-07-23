@@ -2,10 +2,13 @@ package com.example.aipassagecreator.skill;
 
 import com.example.aipassagecreator.common.BaseResponse;
 import com.example.aipassagecreator.common.ResultUtils;
+import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.manager.SseEmitterManager;
 import com.example.aipassagecreator.model.dto.skill.SkillConfirmRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillExecuteRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillExecuteResponse;
+import com.example.aipassagecreator.model.vo.LoginUserVO;
+import com.example.aipassagecreator.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,17 +27,35 @@ public class SkillController {
 
     private final SkillRegistry skillRegistry;
     private final SseEmitterManager sseEmitterManager;
+    private final UserService userService;
 
     /**
      * 执行 Skill
      */
     @PostMapping("/{skillName}/execute")
-    public BaseResponse<SkillExecuteResponse> executeSkill(
+    public BaseResponse<?> executeSkill(
             @PathVariable String skillName,
             @RequestBody SkillExecuteRequest request,
             HttpServletRequest servletRequest) {
 
         SkillDefinition def = skillRegistry.getSkill(skillName);
+
+        // 权限校验：检查用户角色
+        LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
+        if (loginUser == null) {
+            return ResultUtils.error(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        List<String> requiredRoles = def.getRequiredRoles();
+        if (requiredRoles != null && !requiredRoles.isEmpty()) {
+            boolean hasRole = requiredRoles.stream()
+                    .anyMatch(role -> "admin".equals(role) && "admin".equals(loginUser.getUserRole())
+                            || "vip".equals(role) && "vip".equals(loginUser.getUserRole())
+                            || "user".equals(role));
+            if (!hasRole) {
+                return ResultUtils.error(ErrorCode.NO_AUTH_ERROR, "需要 " + requiredRoles + " 角色才能使用此 Skill");
+            }
+        }
+
         SkillExecution execution = skillRegistry.createExecution(skillName, request.getInputs());
 
         // 创建 SSE 连接
