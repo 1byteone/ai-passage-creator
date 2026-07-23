@@ -18,7 +18,7 @@ public class SkillDefinition {
     /** 所需角色：user/vip/admin */
     private List<String> requiredRoles;
     /** 是否多轮交互 */
-    private boolean isMultiRound;
+    private boolean multiRound;
     /** 全局变量声明 */
     private Map<String, VariableDef> variables;
     /** 阶段定义列表 */

@@ -7,16 +7,14 @@ import com.example.aipassagecreator.model.po.SkillExecutionPo;
 import com.google.gson.Gson;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
- * Skill 执行器
- * 管理单个 Skill 的异步执行生命周期
+ * Skill 执行器 — 纯 POJO，封装一次 Skill 执行的完整上下文
+ * 异步执行由 SkillExecutionService 负责
  */
 @Slf4j
 public class SkillExecution {
@@ -45,48 +43,49 @@ public class SkillExecution {
         this.mapper = mapper;
     }
 
-    @Async("skillExecutor")
-    public void executeAsync(Consumer<String> streamHandler, Long userId) {
+    /**
+     * 同步执行 — 由 SkillExecutionService 异步调度
+     */
+    public void execute(Consumer<String> streamHandler, Long userId) {
         this.status = "RUNNING";
-        SseEmitter emitter = new SseEmitter(10 * 60 * 1000L);
-        this.context = SkillContext.create(executionId, emitter);
+        this.context = SkillContext.create(executionId, null);
         context.setStreamHandler(streamHandler);
         context.setTotalPhases(definition.getPhases().size());
 
         // 持久化初始状态
-        SkillExecutionPo po = buildPo("RUNNING", null, null);
+        SkillExecutionPo po = buildPo("RUNNING", null, null, userId);
         mapper.insert(po);
 
         try {
-            // 构建 StateGraph 输入（使用 Map<String, Object>，与现有编排器一致）
             Map<String, Object> stateInputs = new java.util.HashMap<>();
             stateInputs.putAll(inputs);
             stateInputs.put("skillExecutionId", executionId);
             stateInputs.put("skillName", definition.getName());
             stateInputs.put("skillDefaultModel", "agnes");
 
-            // 推送开始事件
             streamHandler.accept("{\"type\":\"skill.started\",\"skillExecutionId\":\"" + executionId
                     + "\",\"skillName\":\"" + definition.getName() + "\"}");
 
-            // 执行 StateGraph（invoke 接受 Map<String, Object>，返回 Optional<OverAllState>）
             Optional<OverAllState> result = graph.invoke(stateInputs);
 
-            // 提取结果
             Object resultData = null;
             PhaseDefinition lastPhase = definition.getPhases().get(definition.getPhases().size() - 1);
             if (result.isPresent()) {
                 resultData = result.get().value(lastPhase.getOutputKey()).orElse(null);
             }
 
-            // 持久化成功
+            // 保存结果到共享上下文，供链式执行使用
+            if (resultData != null) {
+                context.getSharedData().put("output", resultData);
+                context.getSharedData().put(lastPhase.getOutputKey(), resultData);
+            }
+
             this.status = "SUCCESS";
             po.setStatus("SUCCESS");
             po.setOutputData(resultData != null ? gson.toJson(resultData) : null);
             po.setDurationMs((int) (System.currentTimeMillis() - context.getStartTime()));
             mapper.update(po);
 
-            // 推送完成事件
             streamHandler.accept("{\"type\":\"skill.complete\",\"skillExecutionId\":\"" + executionId
                     + "\",\"skillName\":\"" + definition.getName() + "\",\"status\":\"SUCCESS\"}");
 
@@ -105,10 +104,11 @@ public class SkillExecution {
         }
     }
 
-    private SkillExecutionPo buildPo(String status, String outputData, String errorMessage) {
+    private SkillExecutionPo buildPo(String status, String outputData, String errorMessage, Long userId) {
         return SkillExecutionPo.builder()
                 .skillExecutionId(executionId)
                 .skillName(definition.getName())
+                .userId(userId)
                 .status(status)
                 .inputData(gson.toJson(inputs))
                 .outputData(outputData)

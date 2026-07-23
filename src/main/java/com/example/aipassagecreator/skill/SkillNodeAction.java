@@ -14,6 +14,7 @@ import reactor.core.publisher.Flux;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -23,22 +24,25 @@ import java.util.concurrent.atomic.AtomicReference;
 @Slf4j
 @Component
 @Scope("prototype")
-@Configurable
 public class SkillNodeAction implements NodeAction {
 
     private final PhaseDefinition phase;
     private final PromptTemplateEngine templateEngine;
     private final ModelRouter modelRouter;
     private final OutputParserRegistry parserRegistry;
+    /** phase name → outputKey 映射，用于变量引用解析 */
+    private final Map<String, String> phaseOutputKeyMap;
 
     public SkillNodeAction(PhaseDefinition phase,
                            PromptTemplateEngine templateEngine,
                            ModelRouter modelRouter,
-                           OutputParserRegistry parserRegistry) {
+                           OutputParserRegistry parserRegistry,
+                           Map<String, String> phaseOutputKeyMap) {
         this.phase = phase;
         this.templateEngine = templateEngine;
         this.modelRouter = modelRouter;
         this.parserRegistry = parserRegistry;
+        this.phaseOutputKeyMap = phaseOutputKeyMap;
     }
 
     @Override
@@ -130,11 +134,16 @@ public class SkillNodeAction implements NodeAction {
         Map<String, Object> inputs = new HashMap<>();
         if (phase.getVariables() != null) {
             for (PhaseDefinition.VariableRef varRef : phase.getVariables()) {
-                if (varRef.getRef() != null && !varRef.getRef().isEmpty()) {
+                String refKey = varRef.getRef();
+                if (refKey != null && !refKey.isEmpty()) {
+                    // 将 phase name 映射到 outputKey
+                    String actualKey = phaseOutputKeyMap.getOrDefault(refKey, refKey);
+                    if (!actualKey.equals(refKey)) {
+                        log.debug("变量引用映射: {} -> {}", refKey, actualKey);
+                    }
                     // 从上一阶段输出获取
-                    Object prevOutput = state.value(varRef.getRef()).orElse(null);
+                    Object prevOutput = state.value(actualKey).orElse(null);
                     if (prevOutput != null) {
-                        // 如果 prevOutput 是 Map，尝试提取 varRef.name
                         if (prevOutput instanceof Map) {
                             inputs.put(varRef.getName(), ((Map<String, Object>) prevOutput).get(varRef.getName()));
                         } else {

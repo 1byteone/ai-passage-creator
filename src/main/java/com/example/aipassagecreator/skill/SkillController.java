@@ -4,9 +4,11 @@ import com.example.aipassagecreator.common.BaseResponse;
 import com.example.aipassagecreator.common.ResultUtils;
 import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.manager.SseEmitterManager;
+import com.example.aipassagecreator.mapper.SkillExecutionMapper;
 import com.example.aipassagecreator.model.dto.skill.SkillConfirmRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillExecuteRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillExecuteResponse;
+import com.example.aipassagecreator.model.po.SkillExecutionPo;
 import com.example.aipassagecreator.model.vo.LoginUserVO;
 import com.example.aipassagecreator.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,6 +30,8 @@ public class SkillController {
     private final SkillRegistry skillRegistry;
     private final SseEmitterManager sseEmitterManager;
     private final UserService userService;
+    private final SkillExecutionService skillExecutionService;
+    private final SkillExecutionMapper skillExecutionMapper;
 
     /**
      * 执行 Skill
@@ -61,10 +65,12 @@ public class SkillController {
         // 创建 SSE 连接
         sseEmitterManager.createEmitter(execution.getExecutionId());
 
-        // 异步执行
-        execution.executeAsync(
+        // 异步执行（通过 SkillExecutionService 确保 @Async 生效）
+        skillExecutionService.executeAsync(
+                skillName,
+                request.getInputs(),
                 msg -> sseEmitterManager.send(execution.getExecutionId(), msg),
-                null // userId 待从 session 获取
+                loginUser.getId()
         );
 
         SkillExecuteResponse response = SkillExecuteResponse.builder()
@@ -99,19 +105,23 @@ public class SkillController {
     }
 
     /**
-     * 获取 Skill 执行结果
+     * 获取 Skill 执行结果（从数据库查询）
      */
     @GetMapping("/{executionId}/result")
     public BaseResponse<Map<String, Object>> getResult(@PathVariable String executionId) {
-        // 简化：从 SkillContext 获取共享数据
-        var ctx = SkillContext.get(executionId);
-        if (ctx == null) {
+        // 从数据库查询实际状态
+        SkillExecutionPo po = skillExecutionMapper.selectOneByQuery(
+                com.mybatisflex.core.query.QueryWrapper.create()
+                        .eq("skill_execution_id", executionId));
+        if (po == null) {
             return ResultUtils.success(Map.of("status", "NOT_FOUND"));
         }
         return ResultUtils.success(Map.of(
-                "status", "RUNNING",
-                "phase", ctx.getCurrentPhase(),
-                "sharedData", ctx.getSharedData()
+                "status", po.getStatus(),
+                "skillName", po.getSkillName(),
+                "phase", po.getPhase() != null ? po.getPhase() : "",
+                "durationMs", po.getDurationMs(),
+                "errorMessage", po.getErrorMessage() != null ? po.getErrorMessage() : ""
         ));
     }
 

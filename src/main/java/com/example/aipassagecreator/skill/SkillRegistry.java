@@ -9,6 +9,8 @@ import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.example.aipassagecreator.mapper.SkillExecutionMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.ResourcePatternUtils;
@@ -37,6 +39,7 @@ public class SkillRegistry {
     private final ModelRouter modelRouter;
     private final OutputParserRegistry parserRegistry;
     private final SkillExecutionMapper skillExecutionMapper;
+    private SkillExecutionService skillExecutionService;
 
     public SkillRegistry(ResourceLoader resourceLoader,
                          PromptTemplateEngine templateEngine,
@@ -48,6 +51,11 @@ public class SkillRegistry {
         this.modelRouter = modelRouter;
         this.parserRegistry = parserRegistry;
         this.skillExecutionMapper = skillExecutionMapper;
+    }
+
+    @Autowired
+    public void setSkillExecutionService(@Lazy SkillExecutionService skillExecutionService) {
+        this.skillExecutionService = skillExecutionService;
     }
 
     @PostConstruct
@@ -101,18 +109,25 @@ public class SkillRegistry {
     }
 
     public SkillExecutionChain createChain(String... skillNames) {
-        return new SkillExecutionChain(skillNames, this);
+        return new SkillExecutionChain(skillNames, this, skillExecutionService);
     }
 
     private CompiledGraph buildGraph(SkillDefinition def) {
         StateGraph graph = new StateGraph(createKeyStrategy(def));
+
+        // 构建 phase name → outputKey 映射表
+        Map<String, String> phaseOutputKeyMap = new HashMap<>();
+        for (PhaseDefinition phase : def.getPhases()) {
+            phaseOutputKeyMap.put(phase.getName(), phase.getOutputKey());
+        }
+
         try {
             // 添加节点
             String previousNode = START;
             for (int i = 0; i < def.getPhases().size(); i++) {
                 PhaseDefinition phase = def.getPhases().get(i);
                 String nodeName = phase.getName();
-                SkillNodeAction action = new SkillNodeAction(phase, templateEngine, modelRouter, parserRegistry);
+                SkillNodeAction action = new SkillNodeAction(phase, templateEngine, modelRouter, parserRegistry, phaseOutputKeyMap);
                 graph.addNode(nodeName, node_async(action));
                 graph.addEdge(previousNode, nodeName);
                 previousNode = nodeName;

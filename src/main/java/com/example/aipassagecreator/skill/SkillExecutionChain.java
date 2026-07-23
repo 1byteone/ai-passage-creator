@@ -14,34 +14,46 @@ public class SkillExecutionChain {
 
     private final List<String> skillNames;
     private final SkillRegistry registry;
-    private final Map<String, Object> chainContext = new HashMap<>();
+    private final SkillExecutionService executionService;
 
-    public SkillExecutionChain(String[] skillNames, SkillRegistry registry) {
+    public SkillExecutionChain(String[] skillNames, SkillRegistry registry, SkillExecutionService executionService) {
         this.skillNames = Arrays.asList(skillNames);
         this.registry = registry;
+        this.executionService = executionService;
     }
 
     public void executeAsync(Consumer<String> streamHandler, Map<String, Object> initialInputs, Long userId) {
-        chainContext.putAll(initialInputs);
-        Map<String, Object> currentInputs = initialInputs;
+        Map<String, Object> accumulatedInputs = new HashMap<>(initialInputs);
 
         for (String skillName : skillNames) {
             log.info("链式执行 Skill: {}", skillName);
             SkillDefinition def = registry.getSkill(skillName);
 
-            // 前一个 skill 的输出自动映射到当前 skill 的输入
-            PhaseDefinition lastPhase = def.getPhases().get(def.getPhases().size() - 1);
-            String outputKey = lastPhase.getOutputKey();
-            if (chainContext.containsKey(outputKey)) {
-                currentInputs = new HashMap<>(chainContext);
+            // 将累积的输出作为当前 skill 的输入
+            Map<String, Object> currentInputs = new HashMap<>(accumulatedInputs);
+
+            // 收集前一个 skill 的输出（从 sharedData 中获取）
+            String lastOutputKey = null;
+            if (!skillNames.isEmpty() && !skillNames.get(0).equals(skillName)) {
+                // 查找前一个 skill 的最后一个 phase 的 outputKey
+                int prevIndex = skillNames.indexOf(skillName) - 1;
+                if (prevIndex >= 0) {
+                    SkillDefinition prevDef = registry.getSkill(skillNames.get(prevIndex));
+                    PhaseDefinition lastPhase = prevDef.getPhases().get(prevDef.getPhases().size() - 1);
+                    lastOutputKey = lastPhase.getOutputKey();
+                }
             }
 
             // 执行当前 skill
             SkillExecution execution = registry.createExecution(skillName, currentInputs);
-            execution.executeAsync(streamHandler, userId);
+            execution.execute(streamHandler, userId);
 
-            // 收集输出（简化：实际需要从数据库或上下文获取）
-            chainContext.put(skillName + "_executed", true);
+            // 收集输出到累积上下文
+            var ctx = SkillContext.get(execution.getExecutionId());
+            if (ctx != null && ctx.getSharedData().containsKey("output")) {
+                accumulatedInputs.put(lastOutputKey != null ? lastOutputKey : skillName + "_output",
+                        ctx.getSharedData().get("output"));
+            }
         }
 
         streamHandler.accept("{\"type\":\"skill.chain_complete\",\"skills\":" + skillNames + "}");
