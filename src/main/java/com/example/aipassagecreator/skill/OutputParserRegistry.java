@@ -12,8 +12,7 @@ public class OutputParserRegistry {
 
     private final Map<String, SkillOutputParser<?>> parserMap = new HashMap<>();
 
-    @PostConstruct
-    public void init(List<SkillOutputParser<?>> parsers) {
+    public OutputParserRegistry(List<SkillOutputParser<?>> parsers) {
         for (SkillOutputParser<?> parser : parsers) {
             parserMap.put(parser.getType(), parser);
         }
