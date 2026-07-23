@@ -88,7 +88,18 @@ public class SkillController {
      * SSE 进度推送
      */
     @GetMapping("/{executionId}/progress")
-    public SseEmitter progress(@PathVariable String executionId) {
+    public SseEmitter progress(@PathVariable String executionId, HttpServletRequest servletRequest) {
+        LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
+        if (loginUser == null) {
+            return null;
+        }
+        // 验证执行记录属于当前用户
+        SkillExecutionPo po = skillExecutionMapper.selectOneByQuery(
+                com.mybatisflex.core.query.QueryWrapper.create()
+                        .eq("skill_execution_id", executionId));
+        if (po == null || !po.getUserId().equals(loginUser.getId())) {
+            return null;
+        }
         return sseEmitterManager.createEmitter(executionId);
     }
 
@@ -96,10 +107,21 @@ public class SkillController {
      * 多轮交互确认
      */
     @PostMapping("/{executionId}/confirm")
-    public BaseResponse<String> confirm(
+    public BaseResponse<?> confirm(
             @PathVariable String executionId,
-            @RequestBody SkillConfirmRequest request) {
-        // 现阶段返回确认已接收，实际逻辑在后续实现
+            @RequestBody SkillConfirmRequest request,
+            HttpServletRequest servletRequest) {
+        LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
+        if (loginUser == null) {
+            return ResultUtils.error(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        // 验证执行记录属于当前用户
+        SkillExecutionPo po = skillExecutionMapper.selectOneByQuery(
+                com.mybatisflex.core.query.QueryWrapper.create()
+                        .eq("skill_execution_id", executionId));
+        if (po == null || !po.getUserId().equals(loginUser.getId())) {
+            return ResultUtils.error(ErrorCode.NO_AUTH_ERROR, "无权操作此执行记录");
+        }
         log.info("Skill 确认: executionId={}, phase={}, action={}", executionId, request.getPhase(), request.getAction());
         return ResultUtils.success("确认已接收");
     }
@@ -108,11 +130,16 @@ public class SkillController {
      * 获取 Skill 执行结果（从数据库查询）
      */
     @GetMapping("/{executionId}/result")
-    public BaseResponse<Map<String, Object>> getResult(@PathVariable String executionId) {
-        // 从数据库查询实际状态
+    public BaseResponse<?> getResult(@PathVariable String executionId, HttpServletRequest servletRequest) {
+        LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
+        if (loginUser == null) {
+            return ResultUtils.error(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        // 从数据库查询实际状态，并验证所有权
         SkillExecutionPo po = skillExecutionMapper.selectOneByQuery(
                 com.mybatisflex.core.query.QueryWrapper.create()
-                        .eq("skill_execution_id", executionId));
+                        .eq("skill_execution_id", executionId)
+                        .eq("user_id", loginUser.getId()));
         if (po == null) {
             return ResultUtils.success(Map.of("status", "NOT_FOUND"));
         }
