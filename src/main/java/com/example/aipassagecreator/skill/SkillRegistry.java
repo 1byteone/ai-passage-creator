@@ -54,7 +54,7 @@ public class SkillRegistry {
     public void init() {
         try {
             Resource[] resources = ResourcePatternUtils.getResourcePatternResolver(resourceLoader)
-                    .getResources("classpath:skills/*/skill.yaml");
+                    .getResources("classpath*:skills/*/skill.yaml");
             Yaml yaml = new Yaml();
             for (Resource resource : resources) {
                 try {
