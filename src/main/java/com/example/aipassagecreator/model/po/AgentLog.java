@@ -40,6 +40,11 @@ public class AgentLog implements Serializable {
     private String agentName;
 
     /**
+     * 关联 Skill 执行 ID
+     */
+    private String skillExecutionId;
+
+    /**
      * 开始时间
      */
     private LocalDateTime startTime;
@@ -55,6 +60,11 @@ public class AgentLog implements Serializable {
     private Integer durationMs;
 
     /**
+     * Token 消耗
+     */
+    private Integer tokenUsage;
+
+    /**
      * 状态：SUCCESS/FAILED
      */
     private String status;
@@ -68,6 +78,11 @@ public class AgentLog implements Serializable {
      * 使用的Prompt
      */
     private String prompt;
+
+    /**
+     * 使用的模型
+     */
+    private String modelUsed;
 
     /**
      * 输入数据（JSON格式）
