@@ -28,6 +28,19 @@ const router = createRouter({
       component: () => import('@/pages/article/ArticleDetailPage.vue'),
     },
     {
+      path: '/skill',
+      name: 'AI 技能中心',
+      component: () => import('@/pages/skill/SkillCenterPage.vue'),
+    },
+    {
+      path: '/skill/:skillName',
+      name: '执行 AI 技能',
+      component: () => import('@/pages/skill/SkillExecutePage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/user/login',
       name: '用户登录',
       component: UserLoginPage,

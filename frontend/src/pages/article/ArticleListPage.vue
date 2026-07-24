@@ -152,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import {
@@ -253,8 +253,8 @@ const loadData = async () => {
 
     dataSource.value = records
     pagination.value.total = pageData?.totalRow || 0
-  } catch (error: any) {
-    message.error(error.message || '加载失败')
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '加载失败')
   } finally {
     loading.value = false
   }
@@ -284,9 +284,9 @@ const handleStatusChange = () => {
 }
 
 // 表格变化
-const handleTableChange = (pag: any) => {
-  pagination.value.current = pag.current
-  pagination.value.pageSize = pag.pageSize
+const handleTableChange = (pag: { current?: number; pageSize?: number }) => {
+  pagination.value.current = pag.current || 1
+  pagination.value.pageSize = pag.pageSize || pagination.value.pageSize
   loadData()
 }
 

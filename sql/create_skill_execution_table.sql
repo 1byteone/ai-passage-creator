@@ -1,0 +1,25 @@
+-- 创建 skill_execution 表
+CREATE TABLE IF NOT EXISTS `skill_execution` (
+    `id`                  BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
+    `skill_execution_id`  VARCHAR(64) NOT NULL UNIQUE COMMENT '唯一执行 ID',
+    `skill_name`          VARCHAR(64) NOT NULL COMMENT 'Skill 名称',
+    `task_id`             VARCHAR(64) DEFAULT NULL COMMENT '关联文章 taskId（可选）',
+    `user_id`             BIGINT NOT NULL COMMENT '执行用户',
+    `status`              VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/RUNNING/SUCCESS/FAILED',
+    `phase`               VARCHAR(64) DEFAULT NULL COMMENT '当前阶段',
+    `input_data`          JSON DEFAULT NULL COMMENT '输入数据',
+    `output_data`         JSON DEFAULT NULL COMMENT '输出数据（异构）',
+    `result_url`          VARCHAR(512) DEFAULT NULL COMMENT '结果文件 URL（PPTX/HTML 等）',
+    `token_usage`         INT DEFAULT 0 COMMENT 'Token 消耗',
+    `model_used`          VARCHAR(64) DEFAULT NULL COMMENT '使用的模型',
+    `duration_ms`         INT DEFAULT 0 COMMENT '总耗时（毫秒）',
+    `error_message`       TEXT DEFAULT NULL COMMENT '错误信息',
+    `create_time`         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `is_delete`           TINYINT DEFAULT 0 COMMENT '逻辑删除',
+    INDEX `idx_skill_name` (`skill_name`),
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_task_id` (`task_id`),
+    INDEX `idx_status` (`status`),
+    INDEX `idx_skill_execution_id` (`skill_execution_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Skill 执行记录';

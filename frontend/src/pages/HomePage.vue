@@ -12,8 +12,12 @@ import {
   PictureOutlined,
   ThunderboltOutlined,
   ClockCircleOutlined,
-  RightOutlined
+  RightOutlined,
+  BulbOutlined,
+  FileDoneOutlined,
+  ShareAltOutlined
 } from '@ant-design/icons-vue'
+import { getSkillUiConfig } from '@/config/skill'
 
 const router = useRouter()
 const loginUserStore = useLoginUserStore()
@@ -39,6 +43,16 @@ const goToList = () => {
 
 const viewArticle = (article: API.ArticleVO) => {
   router.push(`/article/${article.taskId}`)
+}
+
+const quickSkills = [
+  { name: 'topic-gen', icon: BulbOutlined },
+  { name: 'proofreading', icon: FileDoneOutlined },
+  { name: 'article-to-x', icon: ShareAltOutlined },
+]
+
+const openSkill = (skillName: string) => {
+  router.push(`/skill/${skillName}`)
 }
 
 // 加载最近文章
@@ -142,6 +156,38 @@ onMounted(() => {
         <p class="hero-tips">工作总结、心得体会、演讲稿、分析报告... 一键生成</p>
       </div>
     </div>
+
+    <section class="skill-strip-section">
+      <div class="container skill-strip-container">
+        <div class="skill-strip-heading">
+          <div>
+            <span>AI 工具箱</span>
+            <h2>从当前任务直接开始</h2>
+          </div>
+          <a-button type="link" @click="router.push('/skill')">
+            查看全部
+            <RightOutlined />
+          </a-button>
+        </div>
+        <div class="skill-strip">
+          <button
+            v-for="skill in quickSkills"
+            :key="skill.name"
+            type="button"
+            @click="openSkill(skill.name)"
+          >
+            <span :class="['quick-skill-icon', getSkillUiConfig(skill.name).accent]">
+              <component :is="skill.icon" />
+            </span>
+            <span class="quick-skill-copy">
+              <strong>{{ getSkillUiConfig(skill.name).title }}</strong>
+              <small>{{ getSkillUiConfig(skill.name).description }}</small>
+            </span>
+            <RightOutlined class="quick-skill-arrow" />
+          </button>
+        </div>
+      </div>
+    </section>
 
     <!-- Features Section -->
     <div class="features-section">
@@ -358,6 +404,123 @@ onMounted(() => {
 }
 
 /* Features Section */
+.skill-strip-section {
+  padding: 0 20px 56px;
+  background: var(--color-background);
+}
+
+.skill-strip-container {
+  max-width: 1100px;
+}
+
+.skill-strip-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.skill-strip-heading span {
+  color: var(--color-primary-dark);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.skill-strip-heading h2 {
+  margin: 4px 0 0;
+  color: var(--color-text);
+  font-size: 22px;
+}
+
+.skill-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: white;
+  overflow: hidden;
+}
+
+.skill-strip button {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 12px;
+  min-height: 112px;
+  padding: 18px;
+  border: 0;
+  border-right: 1px solid var(--color-border);
+  background: white;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.skill-strip button:last-child {
+  border-right: 0;
+}
+
+.skill-strip button:hover,
+.skill-strip button:focus-visible {
+  background: var(--color-background-secondary);
+  outline: none;
+}
+
+.quick-skill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  font-size: 19px;
+}
+
+.quick-skill-icon.blue {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.quick-skill-icon.green {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.quick-skill-icon.amber {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.quick-skill-copy {
+  min-width: 0;
+}
+
+.quick-skill-copy strong,
+.quick-skill-copy small {
+  display: block;
+}
+
+.quick-skill-copy strong {
+  margin-bottom: 5px;
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.quick-skill-copy small {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.quick-skill-arrow {
+  color: var(--color-text-muted);
+}
+
 .features-section {
   padding: 80px 20px;
   background: var(--color-background-secondary);
@@ -594,6 +757,20 @@ onMounted(() => {
 
 /* Responsive */
 @media (max-width: 992px) {
+  .skill-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .skill-strip button {
+    min-height: 92px;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .skill-strip button:last-child {
+    border-bottom: 0;
+  }
+
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -642,6 +819,11 @@ onMounted(() => {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
+  }
+
+  .skill-strip-heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

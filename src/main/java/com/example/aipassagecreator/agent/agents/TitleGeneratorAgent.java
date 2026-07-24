@@ -1,6 +1,7 @@
 package com.example.aipassagecreator.agent.agents;
 
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.beans.factory.annotation.Qualifier;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.example.aipassagecreator.constant.PromptConstant;
@@ -8,7 +9,6 @@ import com.example.aipassagecreator.enums.ArticleStyleEnum;
 import com.example.aipassagecreator.model.dto.article.ArticleState;
 import com.example.aipassagecreator.utils.GsonUtils;
 import com.google.gson.reflect.TypeToken;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -25,10 +25,13 @@ import java.util.Map;
  */
 @Component
 @Slf4j
-@RequiredArgsConstructor
 public class TitleGeneratorAgent implements NodeAction {
 
-    private final DashScopeChatModel chatModel;
+    private final ChatModel chatModel;
+
+    public TitleGeneratorAgent(@Qualifier("dashScopeChatModel") ChatModel chatModel) {
+        this.chatModel = chatModel;
+    }
 
     public static final String INPUT_TOPIC = "topic";
     private static final String INPUT_STYLE = "style";

@@ -11,6 +11,16 @@
           </a-button>
           <div class="right-actions">
             <a-button
+              v-if="article?.fullContent || article?.content"
+              @click="skillLauncherOpen = true"
+              class="skill-btn"
+            >
+              <template #icon>
+                <ShareAltOutlined />
+              </template>
+              转为社交文案
+            </a-button>
+            <a-button
               v-if="article?.status === 'FAILED'"
               type="primary"
               danger
@@ -170,6 +180,12 @@
         </a-card>
       </a-spin>
     </div>
+    <SkillLauncher
+      v-if="article"
+      v-model:open="skillLauncherOpen"
+      skill-name="article-to-x"
+      :initial-inputs="{ articleContent: article.fullContent || article.content || '' }"
+    />
   </div>
 </template>
 
@@ -188,11 +204,13 @@ import {
   CloseCircleOutlined,
   LoadingOutlined,
   RedoOutlined,
-  ThunderboltOutlined
+  ThunderboltOutlined,
+  ShareAltOutlined,
 } from '@ant-design/icons-vue'
 import { getArticle, getExecutionLogs } from '@/api/articleController'
 import { marked } from 'marked'
 import dayjs from 'dayjs'
+import SkillLauncher from '@/pages/skill/components/SkillLauncher.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -202,6 +220,7 @@ const article = ref<API.ArticleVO | null>(null)
 const executionStats = ref<API.AgentExecutionStats | null>(null)
 const logsLoading = ref(false)
 const showExecutionLogs = ref(false)
+const skillLauncherOpen = ref(false)
 
 // Markdown 转 HTML
 const markdownToHtml = (markdown: string) => {
@@ -424,6 +443,17 @@ onMounted(() => {
     &:hover {
       opacity: 0.9;
       transform: translateY(-1px);
+    }
+  }
+
+  .skill-btn {
+    border-color: var(--color-border);
+    color: var(--color-text);
+    font-weight: 600;
+
+    &:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary-dark);
     }
   }
 
@@ -850,6 +880,17 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .article-detail-page {
+    .header-actions {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .right-actions {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+
     .article-card {
       :deep(.ant-card-body) {
         padding: 24px;

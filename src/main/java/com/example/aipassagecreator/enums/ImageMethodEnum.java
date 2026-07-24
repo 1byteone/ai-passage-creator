@@ -25,6 +25,11 @@ public enum ImageMethodEnum {
     NANO_BANANA("NANO_BANANA", "Nano Banana AI 生图", true, false),
 
     /**
+     * AGNES AI 生图
+     */
+    AGNES("AGNES", "AGNES AI 生图", true, false),
+
+    /**
      * Mermaid 流程图生成
      */
     MERMAID("MERMAID", "Mermaid 流程图生成", true, false),

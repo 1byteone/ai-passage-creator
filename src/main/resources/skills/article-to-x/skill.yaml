@@ -1,0 +1,53 @@
+name: article-to-x
+description: 将3000-5000字长文浓缩成200-500字社交媒体内容
+category: writing
+requiredRoles: [user]
+multiRound: false
+
+variables:
+  articleContent:
+    description: 原始长文内容
+    required: true
+    source: INPUT
+    uiType: textarea
+    placeholder: 粘贴需要转写的长文
+    maxLength: 20000
+  platform:
+    description: 目标平台（weibo/xiaohongshu/twitter）
+    required: false
+    source: INPUT
+    uiType: select
+    defaultValue: weibo
+    options:
+      - label: 微博
+        value: weibo
+      - label: 小红书
+        value: xiaohongshu
+      - label: X / Twitter
+        value: twitter
+  style:
+    description: 开头风格（金句型/数据型/价值主张型）
+    required: false
+    source: INPUT
+    uiType: select
+    defaultValue: value-proposition
+    options:
+      - label: 价值主张型
+        value: value-proposition
+      - label: 金句型
+        value: quote
+      - label: 数据型
+        value: data
+
+phases:
+  - name: condense
+    promptFile: skills/article-to-x/prompts/phase1_condense.md
+    model: agnes
+    streaming: false
+    outputParser: markdown
+    outputKey: condensedContent
+    variables:
+      - name: articleContent
+      - name: platform
+      - name: style
+    requireConfirmation: false

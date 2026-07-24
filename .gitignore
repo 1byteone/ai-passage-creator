@@ -38,3 +38,7 @@ frontend/dist/
 frontend/.env.local
 frontend/.env.*.local
 
+### Local secrets ###
+.env
+.env.*
+!.env.example

@@ -3,6 +3,10 @@
     <div class="success-header">
       <CheckCircleFilled class="success-icon" />
       <span>文章创作完成！</span>
+      <a-button class="proofread-button" @click="launcherOpen = true">
+        <FileDoneOutlined />
+        文章审校
+      </a-button>
     </div>
 
     <div class="preview-header">
@@ -12,16 +16,26 @@
     <div class="content-preview">
       <div v-html="markdownToHtml(article.fullContent || article.content || '')" class="markdown-body"></div>
     </div>
+    <SkillLauncher
+      v-model:open="launcherOpen"
+      skill-name="proofreading"
+      :initial-inputs="{ articleContent: article.fullContent || article.content || '' }"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { CheckCircleFilled } from '@ant-design/icons-vue'
+import { ref } from 'vue'
+import { CheckCircleFilled, FileDoneOutlined } from '@ant-design/icons-vue'
 import { markdownToHtml } from '@/utils/markdown'
+import SkillLauncher from '@/pages/skill/components/SkillLauncher.vue'
 
-defineProps<{
+const props = defineProps<{
   article: Partial<API.ArticleVO>
 }>()
+
+const article = props.article
+const launcherOpen = ref(false)
 </script>
 
 <style scoped lang="scss">
@@ -43,6 +57,27 @@ defineProps<{
 
   .success-icon {
     font-size: 16px;
+  }
+}
+
+.proofread-button {
+  margin-left: 8px;
+  border-color: rgba(255, 255, 255, 0.7);
+  background: white;
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .success-header {
+    width: 100%;
+    flex-wrap: wrap;
+    border-radius: var(--radius-md);
+  }
+
+  .proofread-button {
+    width: 100%;
+    margin: 4px 0 0;
   }
 }
 

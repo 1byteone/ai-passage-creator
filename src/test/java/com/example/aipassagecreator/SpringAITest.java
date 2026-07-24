@@ -3,12 +3,14 @@ package com.example.aipassagecreator;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.boot.test.context.SpringBootTest;
 import reactor.core.publisher.Flux;
 
 @SpringBootTest
+@EnabledIfEnvironmentVariable(named = "RUN_LIVE_AI_TESTS", matches = "true")
 public class SpringAITest {
     
     @Resource
