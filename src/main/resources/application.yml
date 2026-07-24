@@ -14,9 +14,9 @@ spring:
   # MySQL 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/ai_passage_creator
-    username: root
-    password: yang801578546yjs
+    url: ${DB_URL:jdbc:mysql://localhost:3306/ai_passage_creator}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
   # session 配置
   session:
     store-type: redis
@@ -31,11 +31,11 @@ spring:
       password:
   ai:
     dashscope:
-      api-key: sk-dcc26570fb6f4154a9fbbc4a979b31f0  # 通义千问 API Key
+      api-key: ${DASHSCOPE_API_KEY:}
 
     # AGNES AI 模型 (OpenAI 兼容)
     openai:
-      api-key: ${AGNES_AI_API_KEY:sk-H2xBJlVMLMLiM9tplNS4zeBchkmVa87ZyAZjZWJVfkLLYWHq}
+      api-key: ${AGNES_AI_API_KEY:}
       base-url: https://apihub.agnes-ai.com
       chat:
         options:
@@ -73,13 +73,13 @@ knife4j:
 # 腾讯云 COS 配置（可选，MVP 阶段可以不配置）
 tencent:
   cos:
-    secret-id: AKIDsb8SaUBg097tUr0xhGesvnTxFLE7vb5L
-    secret-key: 7DGAtPinrpicNxNbdeVI6yhHjHgLuKZb
-    region: ap-guangzhou
-    bucket: ai-passage-creator-1378417994
+    secret-id: ${TENCENT_COS_SECRET_ID:}
+    secret-key: ${TENCENT_COS_SECRET_KEY:}
+    region: ${TENCENT_COS_REGION:ap-guangzhou}
+    bucket: ${TENCENT_COS_BUCKET:}
 
 pexels:
-  api-key: oUUSPpIkzXPdckFuvm5paH6jetvYfw9zOZPr6ncy3TzfAZ0LcLuKlrDC
+  api-key: ${PEXELS_API_KEY:}
 
 # Mermaid 图表生成配置
 mermaid:
@@ -110,10 +110,10 @@ svg-diagram:
 
 # Stripe 支付配置（测试模式）
 stripe:
-  api-key: sk_test_51TKtQdJa5kQib6pSvFj5jWw3DWXygRK1d7jUTKyW3brUbPoTQOrjw5k8bxmr0y8Idl7YaSjARloeokLf0IcZxrBZ00AdwQN1MU  # 请在 https://dashboard.stripe.com/test/apikeys 获取
-  webhook-secret: whsec_86269cdfb65806a3446d5edd5879f447e70a3dc6ed81e3215c8751342c1a16c9  # Webhook 签名密钥
-  success-url: http://localhost:5173/vip?success=true  # 支付成功回调 URL
-  cancel-url: http://localhost:5173/vip?cancelled=true  # 支付取消回调 URL
+  api-key: ${STRIPE_API_KEY:}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  success-url: ${STRIPE_SUCCESS_URL:http://localhost:5173/vip?success=true}
+  cancel-url: ${STRIPE_CANCEL_URL:http://localhost:5173/vip?cancelled=true}
 
 # 文章智能体配置
 article:

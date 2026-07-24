@@ -127,7 +127,15 @@ public class SkillRegistry {
             for (int i = 0; i < def.getPhases().size(); i++) {
                 PhaseDefinition phase = def.getPhases().get(i);
                 String nodeName = phase.getName();
-                SkillNodeAction action = new SkillNodeAction(phase, templateEngine, modelRouter, parserRegistry, phaseOutputKeyMap);
+                SkillNodeAction action = new SkillNodeAction(
+                        phase,
+                        i + 1,
+                        def.getPhases().size(),
+                        templateEngine,
+                        modelRouter,
+                        parserRegistry,
+                        phaseOutputKeyMap
+                );
                 graph.addNode(nodeName, node_async(action));
                 graph.addEdge(previousNode, nodeName);
                 previousNode = nodeName;

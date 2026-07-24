@@ -9,10 +9,26 @@ variables:
     description: 待审校的文章内容
     required: true
     source: INPUT
+    uiType: textarea
+    placeholder: 粘贴需要审校的文章正文
+    maxLength: 20000
   style:
     description: 文章风格（tech/emotional/educational/humorous）
     required: false
     source: INPUT
+    uiType: select
+    defaultValue: ""
+    options:
+      - label: 自动匹配
+        value: ""
+      - label: 科技
+        value: tech
+      - label: 情感
+        value: emotional
+      - label: 教育
+        value: educational
+      - label: 轻松幽默
+        value: humorous
 
 phases:
   - name: content_review
@@ -35,7 +51,7 @@ phases:
     variables:
       - name: articleContent
       - name: style
-    requireConfirmation: true
+    requireConfirmation: false
 
   - name: rhythm_polish
     promptFile: skills/proofreading/prompts/phase3_rhythm_polish.md

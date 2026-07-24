@@ -17,12 +17,17 @@ import java.util.function.Consumer;
 @RequiredArgsConstructor
 public class SkillExecutionService {
 
-    private final SkillRegistry skillRegistry;
+    private final SkillSseEmitterManager sseEmitterManager;
 
     @Async("skillExecutor")
-    public void executeAsync(String skillName, Map<String, Object> inputs,
-                             Consumer<String> streamHandler, Long userId) {
-        SkillExecution execution = skillRegistry.createExecution(skillName, inputs);
-        execution.execute(streamHandler, userId);
+    public void executeAsync(SkillExecution execution, Long userId) {
+        try {
+            execution.execute(
+                    event -> sseEmitterManager.publish(execution.getExecutionId(), event),
+                    userId
+            );
+        } finally {
+            sseEmitterManager.complete(execution.getExecutionId());
+        }
     }
 }

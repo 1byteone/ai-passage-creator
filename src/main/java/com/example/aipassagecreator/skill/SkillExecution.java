@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.function.Consumer;
 
 /**
@@ -25,36 +27,48 @@ public class SkillExecution {
     private final SkillDefinition definition;
     private final Map<String, Object> inputs;
     private final CompiledGraph graph;
-    private final ModelRouter modelRouter;
     private final SkillExecutionMapper mapper;
     private final Gson gson = new Gson();
 
     private SkillContext.RuntimeContext context;
     private volatile String status = "PENDING";
+    private SkillExecutionPo persistedExecution;
 
     public SkillExecution(String executionId, SkillDefinition definition,
                           Map<String, Object> inputs, CompiledGraph graph,
                           ModelRouter modelRouter, SkillExecutionMapper mapper) {
         this.executionId = executionId;
         this.definition = definition;
-        this.inputs = inputs;
+        this.inputs = inputs == null ? new HashMap<>() : new HashMap<>(inputs);
         this.graph = graph;
-        this.modelRouter = modelRouter;
         this.mapper = mapper;
+    }
+
+    public synchronized void prepare(Long userId) {
+        if (persistedExecution != null) {
+            return;
+        }
+        persistedExecution = buildPo("PENDING", null, null, userId);
+        mapper.insert(persistedExecution);
     }
 
     /**
      * 同步执行 — 由 SkillExecutionService 异步调度
      */
     public void execute(Consumer<String> streamHandler, Long userId) {
+        prepare(userId);
         this.status = "RUNNING";
         this.context = SkillContext.create(executionId, null);
         context.setStreamHandler(streamHandler);
         context.setTotalPhases(definition.getPhases().size());
+        context.setPhaseHandler(phase -> {
+            persistedExecution.setPhase(phase);
+            mapper.update(persistedExecution);
+        });
 
-        // 持久化初始状态
-        SkillExecutionPo po = buildPo("RUNNING", null, null, userId);
-        mapper.insert(po);
+        SkillExecutionPo po = persistedExecution;
+        po.setStatus("RUNNING");
+        mapper.update(po);
 
         try {
             Map<String, Object> stateInputs = new java.util.HashMap<>();
@@ -63,42 +77,46 @@ public class SkillExecution {
             stateInputs.put("skillName", definition.getName());
             stateInputs.put("skillDefaultModel", "agnes");
 
-            streamHandler.accept("{\"type\":\"skill.started\",\"skillExecutionId\":\"" + executionId
-                    + "\",\"skillName\":\"" + definition.getName() + "\"}");
+            streamHandler.accept(SkillEventFactory.started(
+                    executionId, definition.getName(), definition.getPhases().size()));
 
             Optional<OverAllState> result = graph.invoke(stateInputs);
 
-            Object resultData = null;
-            PhaseDefinition lastPhase = definition.getPhases().get(definition.getPhases().size() - 1);
+            Map<String, Object> resultData = new LinkedHashMap<>();
             if (result.isPresent()) {
-                resultData = result.get().value(lastPhase.getOutputKey()).orElse(null);
+                for (PhaseDefinition phase : definition.getPhases()) {
+                    result.get().value(phase.getOutputKey())
+                            .ifPresent(value -> resultData.put(phase.getOutputKey(), value));
+                }
             }
 
-            // 保存结果到共享上下文，供链式执行使用
-            if (resultData != null) {
-                context.getSharedData().put("output", resultData);
-                context.getSharedData().put(lastPhase.getOutputKey(), resultData);
+            if (!resultData.isEmpty()) {
+                PhaseDefinition lastPhase = definition.getPhases().get(definition.getPhases().size() - 1);
+                context.getSharedData().putAll(resultData);
+                context.getSharedData().put("output", resultData.get(lastPhase.getOutputKey()));
             }
 
             this.status = "SUCCESS";
             po.setStatus("SUCCESS");
-            po.setOutputData(resultData != null ? gson.toJson(resultData) : null);
+            po.setPhase(definition.getPhases().get(definition.getPhases().size() - 1).getName());
+            po.setOutputData(gson.toJson(resultData));
             po.setDurationMs((int) (System.currentTimeMillis() - context.getStartTime()));
             mapper.update(po);
 
-            streamHandler.accept("{\"type\":\"skill.complete\",\"skillExecutionId\":\"" + executionId
-                    + "\",\"skillName\":\"" + definition.getName() + "\",\"status\":\"SUCCESS\"}");
+            streamHandler.accept(SkillEventFactory.complete(
+                    executionId, definition.getName(), definition.getPhases().size(), resultData));
 
         } catch (Exception e) {
             log.error("Skill 执行失败: executionId={}, skillName={}", executionId, definition.getName(), e);
             this.status = "FAILED";
+            String errorMessage = e.getMessage() == null ? "Skill 执行失败" : e.getMessage();
             po.setStatus("FAILED");
-            po.setErrorMessage(e.getMessage());
+            po.setErrorMessage(errorMessage);
             po.setDurationMs((int) (System.currentTimeMillis() - context.getStartTime()));
             mapper.update(po);
 
-            streamHandler.accept("{\"type\":\"skill.error\",\"skillExecutionId\":\"" + executionId
-                    + "\",\"errorMessage\":\"" + e.getMessage() + "\"}");
+            streamHandler.accept(SkillEventFactory.error(
+                    executionId, definition.getName(), context.getCurrentPhase(), errorMessage));
         } finally {
             SkillContext.remove(executionId);
         }

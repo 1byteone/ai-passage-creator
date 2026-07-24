@@ -28,12 +28,10 @@ outputType: json
   {
     "title": "吸引人的标题",
     "type": "深度评测型",
-    "coreAngle": "核心角度描述",
     "workload": "⭐⭐⭐",
     "outline": ["开头要点", "核心章节1", "核心章节2", "结尾要点"],
-    "estimatedWords": 3000,
-    "advantages": ["优势1", "优势2"],
-    "disadvantages": ["劣势1", "劣势2"]
+    "pros": ["优势1", "优势2"],
+    "cons": ["劣势1", "劣势2"]
   }
 ]
 ```

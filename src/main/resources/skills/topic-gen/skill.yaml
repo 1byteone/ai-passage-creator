@@ -2,26 +2,42 @@ name: topic-gen
 description: 快速生成3-4个选题方向，含标题、大纲和优劣分析
 category: writing
 requiredRoles: [user]
-multiRound: true
+multiRound: false
 
 variables:
   direction:
     description: 选题方向描述
     required: true
     source: INPUT
+    uiType: textarea
+    placeholder: 描述行业、受众、目标或你正在关注的问题
+    maxLength: 1000
   style:
     description: 文章风格偏好
     required: false
     source: INPUT
+    uiType: select
+    defaultValue: ""
+    options:
+      - label: 自动匹配
+        value: ""
+      - label: 科技
+        value: tech
+      - label: 情感
+        value: emotional
+      - label: 教育
+        value: educational
+      - label: 轻松幽默
+        value: humorous
 
 phases:
   - name: generate_topics
     promptFile: skills/topic-gen/prompts/phase1_generate_topics.md
     model: agnes
     streaming: false
-    outputParser: json
+    outputParser: topic-options
     outputKey: topicOptions
     variables:
       - name: direction
       - name: style
-    requireConfirmation: true
+    requireConfirmation: false

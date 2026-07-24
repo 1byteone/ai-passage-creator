@@ -7,14 +7,12 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -27,6 +25,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class SkillNodeAction implements NodeAction {
 
     private final PhaseDefinition phase;
+    private final int phaseIndex;
+    private final int totalPhases;
     private final PromptTemplateEngine templateEngine;
     private final ModelRouter modelRouter;
     private final OutputParserRegistry parserRegistry;
@@ -34,11 +34,15 @@ public class SkillNodeAction implements NodeAction {
     private final Map<String, String> phaseOutputKeyMap;
 
     public SkillNodeAction(PhaseDefinition phase,
+                           int phaseIndex,
+                           int totalPhases,
                            PromptTemplateEngine templateEngine,
                            ModelRouter modelRouter,
                            OutputParserRegistry parserRegistry,
                            Map<String, String> phaseOutputKeyMap) {
         this.phase = phase;
+        this.phaseIndex = phaseIndex;
+        this.totalPhases = totalPhases;
         this.templateEngine = templateEngine;
         this.modelRouter = modelRouter;
         this.parserRegistry = parserRegistry;
@@ -56,9 +60,14 @@ public class SkillNodeAction implements NodeAction {
             throw new IllegalStateException("SkillContext 不存在: " + executionId);
         }
 
+        String skillName = state.value("skillName").map(Object::toString).orElse("unknown");
         ctx.setCurrentPhase(phase.getName());
+        ctx.setCurrentPhaseIndex(phaseIndex);
+        ctx.getPhaseHandler().accept(phase.getName());
+        ctx.getStreamHandler().accept(SkillEventFactory.phaseStarted(
+                executionId, skillName, phase.getName(), phaseIndex, totalPhases));
         log.info("SkillNodeAction 开始执行: skill={}, phase={}, executionId={}",
-                state.value("skillName").orElse("?"), phase.getName(), executionId);
+                skillName, phase.getName(), executionId);
 
         // 解析模型
         ChatModel model = modelRouter.resolveWithFallback(
@@ -66,7 +75,7 @@ public class SkillNodeAction implements NodeAction {
                 state.value("skillDefaultModel").map(Object::toString).orElse(null));
 
         // 解析输入变量
-        Map<String, Object> inputs = resolveInputs(state, ctx);
+        Map<String, Object> inputs = resolveInputs(state);
 
         // 渲染 Prompt
         String prompt = templateEngine.render(phase.getPromptFile(), inputs);
@@ -81,7 +90,7 @@ public class SkillNodeAction implements NodeAction {
         String output;
         long startTime = System.currentTimeMillis();
         if (phase.isStreaming()) {
-            output = callStreaming(model, prompt, ctx);
+            output = callStreaming(model, prompt, ctx, executionId, skillName);
         } else {
             output = callNonStreaming(model, prompt);
         }
@@ -91,6 +100,9 @@ public class SkillNodeAction implements NodeAction {
 
         // 解析输出
         Object parsed = parserRegistry.parse(phase.getOutputParser(), output, phase);
+        ctx.getSharedData().put(phase.getOutputKey(), parsed);
+        ctx.getStreamHandler().accept(SkillEventFactory.phaseComplete(
+                executionId, skillName, phase.getName(), phaseIndex, totalPhases, parsed));
 
         // 写入 State
         Map<String, Object> result = new HashMap<>();
@@ -105,7 +117,8 @@ public class SkillNodeAction implements NodeAction {
         return response.getResult().getOutput().getText();
     }
 
-    private String callStreaming(ChatModel model, String prompt, SkillContext.RuntimeContext ctx) {
+    private String callStreaming(ChatModel model, String prompt, SkillContext.RuntimeContext ctx,
+                                 String executionId, String skillName) {
         StringBuilder sb = new StringBuilder();
         Flux<ChatResponse> flux = model.stream(new Prompt(new UserMessage(prompt)));
         AtomicReference<Throwable> error = new AtomicReference<>();
@@ -114,7 +127,8 @@ public class SkillNodeAction implements NodeAction {
                     String chunk = response.getResult().getOutput().getText();
                     if (chunk != null) {
                         sb.append(chunk);
-                        ctx.getStreamHandler().accept("STREAMING:" + chunk);
+                        ctx.getStreamHandler().accept(SkillEventFactory.progress(
+                                executionId, skillName, phase.getName(), phaseIndex, totalPhases, chunk));
                     }
                 })
                 .doOnError(e -> {
@@ -129,8 +143,7 @@ public class SkillNodeAction implements NodeAction {
         return sb.toString();
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> resolveInputs(OverAllState state, SkillContext.RuntimeContext ctx) {
+    Map<String, Object> resolveInputs(OverAllState state) {
         Map<String, Object> inputs = new HashMap<>();
         if (phase.getVariables() != null) {
             for (PhaseDefinition.VariableRef varRef : phase.getVariables()) {
@@ -144,11 +157,7 @@ public class SkillNodeAction implements NodeAction {
                     // 从上一阶段输出获取
                     Object prevOutput = state.value(actualKey).orElse(null);
                     if (prevOutput != null) {
-                        if (prevOutput instanceof Map) {
-                            inputs.put(varRef.getName(), ((Map<String, Object>) prevOutput).get(varRef.getName()));
-                        } else {
-                            inputs.put(varRef.getName(), prevOutput.toString());
-                        }
+                        inputs.put(varRef.getName(), prevOutput);
                     }
                 } else {
                     // 从全局输入获取

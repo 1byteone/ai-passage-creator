@@ -2,15 +2,18 @@ package com.example.aipassagecreator.skill;
 
 import com.example.aipassagecreator.common.BaseResponse;
 import com.example.aipassagecreator.common.ResultUtils;
+import com.example.aipassagecreator.exception.BusinessException;
 import com.example.aipassagecreator.exception.ErrorCode;
-import com.example.aipassagecreator.manager.SseEmitterManager;
 import com.example.aipassagecreator.mapper.SkillExecutionMapper;
 import com.example.aipassagecreator.model.dto.skill.SkillConfirmRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillExecuteRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillExecuteResponse;
+import com.example.aipassagecreator.model.dto.skill.SkillResultResponse;
 import com.example.aipassagecreator.model.po.SkillExecutionPo;
 import com.example.aipassagecreator.model.vo.LoginUserVO;
 import com.example.aipassagecreator.service.UserService;
+import com.example.aipassagecreator.utils.GsonUtils;
+import com.google.gson.reflect.TypeToken;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -27,8 +31,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SkillController {
 
+    private static final List<String> PUBLIC_SKILLS = List.of("topic-gen", "proofreading", "article-to-x");
+
     private final SkillRegistry skillRegistry;
-    private final SseEmitterManager sseEmitterManager;
+    private final SkillSseEmitterManager sseEmitterManager;
     private final UserService userService;
     private final SkillExecutionService skillExecutionService;
     private final SkillExecutionMapper skillExecutionMapper;
@@ -42,7 +48,7 @@ public class SkillController {
             @RequestBody SkillExecuteRequest request,
             HttpServletRequest servletRequest) {
 
-        SkillDefinition def = skillRegistry.getSkill(skillName);
+        SkillDefinition def = getPublicSkill(skillName);
 
         // 权限校验：检查用户角色
         LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
@@ -60,18 +66,14 @@ public class SkillController {
             }
         }
 
-        SkillExecution execution = skillRegistry.createExecution(skillName, request.getInputs());
-
-        // 创建 SSE 连接
-        sseEmitterManager.createEmitter(execution.getExecutionId());
+        Map<String, Object> inputs = request == null || request.getInputs() == null
+                ? Map.of()
+                : request.getInputs();
+        SkillExecution execution = skillRegistry.createExecution(skillName, inputs);
+        execution.prepare(loginUser.getId());
 
         // 异步执行（通过 SkillExecutionService 确保 @Async 生效）
-        skillExecutionService.executeAsync(
-                skillName,
-                request.getInputs(),
-                msg -> sseEmitterManager.send(execution.getExecutionId(), msg),
-                loginUser.getId()
-        );
+        skillExecutionService.executeAsync(execution, loginUser.getId());
 
         SkillExecuteResponse response = SkillExecuteResponse.builder()
                 .skillExecutionId(execution.getExecutionId())
@@ -91,16 +93,16 @@ public class SkillController {
     public SseEmitter progress(@PathVariable String executionId, HttpServletRequest servletRequest) {
         LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
         if (loginUser == null) {
-            return null;
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
         // 验证执行记录属于当前用户
         SkillExecutionPo po = skillExecutionMapper.selectOneByQuery(
                 com.mybatisflex.core.query.QueryWrapper.create()
                         .eq("skill_execution_id", executionId));
         if (po == null || !po.getUserId().equals(loginUser.getId())) {
-            return null;
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "执行记录不存在");
         }
-        return sseEmitterManager.createEmitter(executionId);
+        return sseEmitterManager.subscribe(executionId);
     }
 
     /**
@@ -143,13 +145,24 @@ public class SkillController {
         if (po == null) {
             return ResultUtils.success(Map.of("status", "NOT_FOUND"));
         }
-        return ResultUtils.success(Map.of(
-                "status", po.getStatus(),
-                "skillName", po.getSkillName(),
-                "phase", po.getPhase() != null ? po.getPhase() : "",
-                "durationMs", po.getDurationMs(),
-                "errorMessage", po.getErrorMessage() != null ? po.getErrorMessage() : ""
-        ));
+        Map<String, Object> outputData = po.getOutputData() == null || po.getOutputData().isBlank()
+                ? Map.of()
+                : GsonUtils.fromJson(po.getOutputData(), new TypeToken<Map<String, Object>>() {
+                });
+        Map<String, Object> inputData = po.getInputData() == null || po.getInputData().isBlank()
+                ? Map.of()
+                : GsonUtils.fromJson(po.getInputData(), new TypeToken<Map<String, Object>>() {
+                });
+        return ResultUtils.success(SkillResultResponse.builder()
+                .skillExecutionId(executionId)
+                .skillName(po.getSkillName())
+                .status(po.getStatus())
+                .phase(po.getPhase() != null ? po.getPhase() : "")
+                .durationMs(po.getDurationMs())
+                .errorMessage(po.getErrorMessage() != null ? po.getErrorMessage() : "")
+                .inputData(inputData != null ? inputData : Map.of())
+                .outputData(outputData != null ? outputData : Map.of())
+                .build());
     }
 
     /**
@@ -157,14 +170,17 @@ public class SkillController {
      */
     @GetMapping("/list")
     public BaseResponse<List<Map<String, Object>>> listSkills() {
-        List<Map<String, Object>> skills = skillRegistry.getAllSkills().stream()
-                .map(def -> Map.<String, Object>of(
-                        "name", def.getName(),
-                        "description", def.getDescription(),
-                        "category", def.getCategory(),
-                        "phases", def.getPhases().size(),
-                        "multiRound", def.isMultiRound()
-                ))
+        List<Map<String, Object>> skills = PUBLIC_SKILLS.stream()
+                .map(skillRegistry::getSkill)
+                .map(def -> {
+                    Map<String, Object> summary = new LinkedHashMap<>();
+                    summary.put("name", def.getName());
+                    summary.put("description", def.getDescription());
+                    summary.put("category", def.getCategory());
+                    summary.put("phases", def.getPhases().size());
+                    summary.put("multiRound", def.isMultiRound());
+                    return summary;
+                })
                 .collect(Collectors.toList());
         return ResultUtils.success(skills);
     }
@@ -174,6 +190,13 @@ public class SkillController {
      */
     @GetMapping("/{skillName}/definition")
     public BaseResponse<SkillDefinition> getDefinition(@PathVariable String skillName) {
-        return ResultUtils.success(skillRegistry.getSkill(skillName));
+        return ResultUtils.success(getPublicSkill(skillName));
+    }
+
+    private SkillDefinition getPublicSkill(String skillName) {
+        if (!PUBLIC_SKILLS.contains(skillName)) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "Skill 暂未公开: " + skillName);
+        }
+        return skillRegistry.getSkill(skillName);
     }
 }

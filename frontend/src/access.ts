@@ -19,10 +19,25 @@ router.beforeEach(async (to, from, next) => {
     firstFetchLoginUser = false
   }
   const toUrl = to.fullPath
+  if (to.meta.requiresAuth && !loginUser?.id) {
+    message.warning('请先登录后执行 AI 技能')
+    next({
+      path: '/user/login',
+      query: {
+        redirect: to.fullPath,
+      },
+    })
+    return
+  }
   if (toUrl.startsWith('/admin')) {
     if (!loginUser || loginUser.userRole !== USER_ROLE_ADMIN) {
       message.error('没有权限')
-      next(`/user/login?redirect=${to.fullPath}`)
+      next({
+        path: '/user/login',
+        query: {
+          redirect: to.fullPath,
+        },
+      })
       return
     }
   }

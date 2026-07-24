@@ -1,9 +1,33 @@
 declare namespace API {
+  type BaseResponseSkillDefinition = {
+    code?: number
+    data?: SkillDefinition
+    message?: string
+  }
+
+  type BaseResponseSkillExecuteResponse = {
+    code?: number
+    data?: SkillExecuteResponse
+    message?: string
+  }
+
+  type BaseResponseSkillResultResponse = {
+    code?: number
+    data?: SkillResultResponse
+    message?: string
+  }
+
+  type BaseResponseSkillSummaryList = {
+    code?: number
+    data?: SkillSummary[]
+    message?: string
+  }
+
   type AgentExecutionStats = {
     taskId?: string
     totalDurationMs?: number
     agentCount?: number
-    agentDurations?: Record<string, any>
+    agentDurations?: Record<string, unknown>
     overallStatus?: string
     logs?: AgentLog[]
   }
@@ -158,7 +182,7 @@ declare namespace API {
 
   type BaseResponseVoid = {
     code?: number
-    data?: Record<string, any>
+    data?: Record<string, unknown>
     message?: string
   }
 
@@ -273,6 +297,104 @@ declare namespace API {
     totalUserCount?: number
     vipUserCount?: number
     quotaUsed?: number
+  }
+
+  type SkillDefinition = {
+    name: string
+    description?: string
+    category?: string
+    requiredRoles?: string[]
+    multiRound?: boolean
+    variables?: Record<string, SkillVariableDef>
+    phases?: SkillPhaseDefinition[]
+  }
+
+  type SkillExecuteRequest = {
+    inputs: Record<string, unknown>
+  }
+
+  type SkillExecuteResponse = {
+    skillExecutionId: string
+    skillName: string
+    status: string
+    totalPhases: number
+    progressUrl: string
+  }
+
+  type SkillPhaseDefinition = {
+    name: string
+    promptFile?: string
+    model?: string
+    streaming?: boolean
+    outputParser?: string
+    outputKey: string
+    requireConfirmation?: boolean
+  }
+
+  type SkillProgressEvent = {
+    type:
+      | 'skill.started'
+      | 'skill.phase_started'
+      | 'skill.progress'
+      | 'skill.phase_complete'
+      | 'skill.complete'
+      | 'skill.error'
+    skillExecutionId: string
+    skillName: string
+    timestamp?: number
+    status?: string
+    phase?: string
+    phaseIndex?: number
+    totalPhases?: number
+    data?: string
+    outputData?: unknown
+    errorMessage?: string
+  }
+
+  type SkillResultResponse = {
+    skillExecutionId?: string
+    skillName?: string
+    status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'NOT_FOUND'
+    phase?: string
+    durationMs?: number
+    errorMessage?: string
+    inputData?: Record<string, unknown>
+    outputData?: Record<string, unknown>
+  }
+
+  type SkillSummary = {
+    name: string
+    description?: string
+    category?: string
+    phases?: number
+    multiRound?: boolean
+  }
+
+  type SkillVariableDef = {
+    name?: string
+    description?: string
+    required?: boolean
+    source?: string
+    phaseRef?: string
+    uiType?: 'input' | 'textarea' | 'select' | 'radio'
+    options?: SkillVariableOption[]
+    defaultValue?: unknown
+    placeholder?: string
+    maxLength?: number
+  }
+
+  type SkillVariableOption = {
+    label: string
+    value: unknown
+  }
+
+  type TopicOption = {
+    title: string
+    type?: string
+    workload?: string
+    outline?: string[]
+    pros?: string[]
+    cons?: string[]
   }
 
   type TitleOption = {

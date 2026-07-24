@@ -16,11 +16,27 @@
           v-for="item in menuItems"
           :key="item.key"
           :to="item.key"
-          :class="['nav-item', { active: selectedKeys.includes(item.key) }]"
+          :class="[
+            'nav-item',
+            { active: isActive(item.key), 'low-frequency': item.lowFrequency },
+          ]"
         >
           <component :is="item.icon" class="nav-icon" />
           <span>{{ item.label }}</span>
         </RouterLink>
+        <a-dropdown v-if="overflowItems.length" class="mobile-more" trigger="click">
+          <button class="more-button" type="button" aria-label="更多导航">
+            <MoreOutlined />
+          </button>
+          <template #overlay>
+            <a-menu @click="handleOverflowClick">
+              <a-menu-item v-for="item in overflowItems" :key="item.key">
+                <component :is="item.icon" />
+                <span>{{ item.label }}</span>
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
       </nav>
 
       <!-- 右侧：用户操作区域 -->
@@ -67,8 +83,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, h } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { userLogout } from '@/api/userController.ts'
@@ -79,18 +95,15 @@ import {
   UnorderedListOutlined,
   SettingOutlined,
   CrownOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  AppstoreOutlined,
+  MoreOutlined,
 } from '@ant-design/icons-vue'
 import { isVip as checkIsVip } from '@/utils/permission'
 
 const loginUserStore = useLoginUserStore()
 const router = useRouter()
-// 当前选中菜单
-const selectedKeys = ref<string[]>(['/'])
-// 监听路由变化，更新当前选中菜单
-router.afterEach((to) => {
-  selectedKeys.value = [to.path]
-})
+const route = useRoute()
 
 // 判断是否为 VIP（管理员也视为 VIP）
 const isVip = computed(() => checkIsVip(loginUserStore.loginUser))
@@ -108,21 +121,29 @@ const originItems = [
     label: '创作',
   },
   {
+    key: '/skill',
+    icon: AppstoreOutlined,
+    label: 'AI 工具',
+  },
+  {
     key: '/article/list',
     icon: UnorderedListOutlined,
     label: '历史',
+    lowFrequency: true,
   },
   {
     key: '/admin/userManage',
     icon: SettingOutlined,
     label: '管理',
     admin: true,
+    lowFrequency: true,
   },
   {
     key: '/admin/statistics',
     icon: BarChartOutlined,
     label: '数据',
     admin: true,
+    lowFrequency: true,
   },
 ]
 
@@ -136,6 +157,19 @@ const menuItems = computed(() => {
     return true
   })
 })
+
+const overflowItems = computed(() => menuItems.value.filter((item) => item.lowFrequency))
+
+const isActive = (path: string) => {
+  if (path === '/') {
+    return route.path === '/'
+  }
+  return route.path === path || route.path.startsWith(`${path}/`)
+}
+
+const handleOverflowClick = ({ key }: { key: string | number }) => {
+  router.push(String(key))
+}
 
 // 退出登录
 const doLogout = async () => {
@@ -218,6 +252,24 @@ const doLogout = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.mobile-more {
+  display: none;
+}
+
+.more-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 18px;
 }
 
 .nav-item {
@@ -399,6 +451,56 @@ const doLogout = async () => {
 
   .user-name {
     display: none;
+  }
+
+  .upgrade-vip-btn,
+  .vip-badge {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-container {
+    gap: 6px;
+    padding: 0 10px;
+  }
+
+  .logo-img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .nav-center {
+    gap: 2px;
+  }
+
+  .nav-item {
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .nav-item.low-frequency {
+    display: none;
+  }
+
+  .mobile-more {
+    display: inline-flex;
+  }
+
+  .user-info {
+    padding: 4px;
+  }
+
+  .user-avatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .login-btn {
+    height: 36px;
+    padding: 0 12px;
   }
 }
 </style>

@@ -26,9 +26,12 @@ public class SkillContext {
         private String taskId;
         private SseEmitter emitter;
         private transient Consumer<String> streamHandler;
+        private transient Consumer<String> phaseHandler = phase -> {
+        };
         private final Map<String, Object> sharedData = new ConcurrentHashMap<>();
         private volatile boolean cancelled = false;
         private volatile String currentPhase;
+        private volatile int currentPhaseIndex;
         private int totalPhases;
         private long startTime;
     }

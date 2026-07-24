@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.Map;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -40,6 +41,11 @@ public class SkillEngineIntegrationTest {
         SkillDefinition def = skillRegistry.getSkill("topic-gen");
         assertNotNull(def);
         assertEquals("topic-gen", def.getName());
+        assertFalse(def.isMultiRound());
+        assertEquals("topic-options", def.getPhases().get(0).getOutputParser());
+        assertFalse(def.getPhases().get(0).isRequireConfirmation());
+        assertEquals("textarea", def.getVariables().get("direction").getUiType());
+        assertNotNull(def.getVariables().get("style").getOptions());
     }
 
     @Test
@@ -59,5 +65,20 @@ public class SkillEngineIntegrationTest {
         assertNotNull(parser);
         assertEquals(85.0, parser.get("score"));
         assertEquals(true, parser.get("valid"));
+    }
+
+    @Test
+    void testPublicSkillFieldMetadata() {
+        SkillDefinition proofreading = skillRegistry.getSkill("proofreading");
+        VariableDef articleContent = proofreading.getVariables().get("articleContent");
+        assertEquals("textarea", articleContent.getUiType());
+        assertEquals(20000, articleContent.getMaxLength());
+        assertTrue(proofreading.getPhases().stream().noneMatch(PhaseDefinition::isRequireConfirmation));
+
+        SkillDefinition articleToX = skillRegistry.getSkill("article-to-x");
+        VariableDef platform = articleToX.getVariables().get("platform");
+        assertEquals("weibo", platform.getDefaultValue());
+        assertEquals(List.of("weibo", "xiaohongshu", "twitter"),
+                platform.getOptions().stream().map(option -> option.getValue().toString()).toList());
     }
 }

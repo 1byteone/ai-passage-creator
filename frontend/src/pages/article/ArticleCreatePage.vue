@@ -239,20 +239,11 @@
           </div>
 
           <!-- 创作完成 -->
-          <div v-else-if="currentPhase === 'COMPLETED'" key="completed" class="completed-state">
-          <div class="success-header">
-            <CheckCircleFilled class="success-icon" />
-            <span>文章创作完成！</span>
-          </div>
-
-          <div class="preview-header">
-            <h1 class="article-title">{{ article.mainTitle }}</h1>
-            <p class="article-subtitle">{{ article.subTitle }}</p>
-          </div>
-          <div class="content-preview">
-            <div v-html="markdownToHtml(article.fullContent || article.content || '')" class="markdown-body"></div>
-          </div>
-          </div>
+          <CompletedState
+            v-else-if="currentPhase === 'COMPLETED'"
+            key="completed"
+            :article="article"
+          />
         </Transition>
       </main>
 
@@ -542,7 +533,6 @@ import {
   RocketOutlined,
   LoadingOutlined,
   CheckCircleOutlined,
-  CheckCircleFilled,
   CopyOutlined,
   EyeOutlined,
   RedoOutlined,
@@ -565,6 +555,7 @@ import { isAdmin as checkIsAdmin, isVip as checkIsVip, hasQuota as checkHasQuota
 import { marked } from 'marked'
 import TitleSelectingStage from './components/TitleSelectingStage.vue'
 import OutlineEditingStage from './components/OutlineEditingStage.vue'
+import CompletedState from './components/CompletedState.vue'
 
 const router = useRouter()
 const route = useRoute()

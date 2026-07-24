@@ -120,8 +120,8 @@
 		<!-- AGNES AI (OpenAI 兼容) -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-openai-spring-boot-starter</artifactId>
-			<version>1.0.0-M6</version>
+			<artifactId>spring-ai-starter-model-openai</artifactId>
+			<version>1.1.0</version>
 		</dependency>
 
 		<!-- 显式声明 Kotlin 和 OkHttp 版本以解决兼容性问题 -->
