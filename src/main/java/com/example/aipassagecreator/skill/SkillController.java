@@ -8,12 +8,19 @@ import com.example.aipassagecreator.mapper.SkillExecutionMapper;
 import com.example.aipassagecreator.model.dto.skill.SkillConfirmRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillExecuteRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillExecuteResponse;
+import com.example.aipassagecreator.model.dto.skill.SkillExecutionQueryRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillResultResponse;
+import com.example.aipassagecreator.enums.UserRoleEnum;
 import com.example.aipassagecreator.model.po.SkillExecutionPo;
+import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.model.vo.LoginUserVO;
+import com.example.aipassagecreator.model.vo.SkillExecutionVO;
+import com.example.aipassagecreator.service.QuotaService;
 import com.example.aipassagecreator.service.UserService;
 import com.example.aipassagecreator.utils.GsonUtils;
 import com.google.gson.reflect.TypeToken;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +45,7 @@ public class SkillController {
     private final UserService userService;
     private final SkillExecutionService skillExecutionService;
     private final SkillExecutionMapper skillExecutionMapper;
+    private final QuotaService quotaService;
 
     /**
      * 执行 Skill
@@ -50,30 +58,37 @@ public class SkillController {
 
         SkillDefinition def = getPublicSkill(skillName);
 
-        // 权限校验：检查用户角色
-        LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
-        if (loginUser == null) {
-            return ResultUtils.error(ErrorCode.NOT_LOGIN_ERROR);
-        }
+        // 权限校验：检查用户角色（未登录时 getLoginUser 抛出 NOT_LOGIN_ERROR）
+        User loginUser = userService.getLoginUser(servletRequest);
         List<String> requiredRoles = def.getRequiredRoles();
         if (requiredRoles != null && !requiredRoles.isEmpty()) {
+            // 满足任一所需角色即可（admin 豁免 + vip 为 user 超集，与 AuthInterceptor 同语义）
             boolean hasRole = requiredRoles.stream()
-                    .anyMatch(role -> "admin".equals(role) && "admin".equals(loginUser.getUserRole())
-                            || "vip".equals(role) && "vip".equals(loginUser.getUserRole())
-                            || "user".equals(role));
+                    .anyMatch(role -> UserRoleEnum.satisfies(loginUser.getUserRole(), role));
             if (!hasRole) {
                 return ResultUtils.error(ErrorCode.NO_AUTH_ERROR, "需要 " + requiredRoles + " 角色才能使用此 Skill");
             }
         }
 
+        // 配额校验与扣减：每次执行消耗 1 配额，admin/VIP 豁免（与文章生成同规则）
+        quotaService.checkAndConsumeQuota(loginUser, "配额不足，无法执行此 Skill");
+
         Map<String, Object> inputs = request == null || request.getInputs() == null
                 ? Map.of()
                 : request.getInputs();
-        SkillExecution execution = skillRegistry.createExecution(skillName, inputs);
-        execution.prepare(loginUser.getId());
 
-        // 异步执行（通过 SkillExecutionService 确保 @Async 生效）
-        skillExecutionService.executeAsync(execution, loginUser.getId());
+        SkillExecution execution;
+        try {
+            execution = skillRegistry.createExecution(skillName, inputs);
+            execution.prepare(loginUser.getId());
+            // 异步执行（通过 SkillExecutionService 确保 @Async 生效）
+            skillExecutionService.executeAsync(execution, loginUser.getId());
+        } catch (Exception e) {
+            // 派发失败说明未真正消耗算力，退还配额避免白扣
+            log.error("Skill 派发失败，退还配额: skillName={}, userId={}", skillName, loginUser.getId(), e);
+            quotaService.refundQuota(loginUser);
+            throw e;
+        }
 
         SkillExecuteResponse response = SkillExecuteResponse.builder()
                 .skillExecutionId(execution.getExecutionId())
@@ -163,6 +178,47 @@ public class SkillController {
                 .inputData(inputData != null ? inputData : Map.of())
                 .outputData(outputData != null ? outputData : Map.of())
                 .build());
+    }
+
+    /**
+     * 分页查询 Skill 执行历史
+     * <p>
+     * 普通用户仅能查看本人记录，管理员可查看全部。
+     */
+    @PostMapping("/executions")
+    public BaseResponse<Page<SkillExecutionVO>> listExecutions(
+            @RequestBody(required = false) SkillExecutionQueryRequest request,
+            HttpServletRequest servletRequest) {
+        User loginUser = userService.getLoginUser(servletRequest);
+        SkillExecutionQueryRequest query = request == null ? new SkillExecutionQueryRequest() : request;
+
+        QueryWrapper queryWrapper = QueryWrapper.create()
+                .eq("is_delete", 0)
+                .orderBy("create_time", false);
+
+        // 非管理员只能查看自己的执行记录
+        if (!UserRoleEnum.ADMIN.getValue().equals(loginUser.getUserRole())) {
+            queryWrapper.eq("user_id", loginUser.getId());
+        }
+        if (query.getSkillName() != null && !query.getSkillName().isBlank()) {
+            queryWrapper.eq("skill_name", query.getSkillName());
+        }
+        if (query.getStatus() != null && !query.getStatus().isBlank()) {
+            queryWrapper.eq("status", query.getStatus());
+        }
+
+        Page<SkillExecutionPo> poPage = skillExecutionMapper.paginate(
+                new Page<>(query.getCurrent(), query.getPageSize()), queryWrapper);
+
+        Page<SkillExecutionVO> voPage = new Page<>();
+        voPage.setPageNumber(poPage.getPageNumber());
+        voPage.setPageSize(poPage.getPageSize());
+        voPage.setTotalRow(poPage.getTotalRow());
+        voPage.setRecords(poPage.getRecords().stream()
+                .map(SkillExecutionVO::objToVo)
+                .collect(Collectors.toList()));
+
+        return ResultUtils.success(voPage);
     }
 
     /**

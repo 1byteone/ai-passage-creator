@@ -27,20 +27,16 @@ public class AuthInterceptor {
         String mustRole = authCheck.mustRole();
         RequestAttributes requestAttributes = RequestContextHolder.currentRequestAttributes();
         HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
-        // 获取当前登录用户
+        // 获取当前登录用户（未登录时抛出 NOT_LOGIN_ERROR）
         LoginUserVO loginUser = userService.getLoginUserVO(request);
         UserRoleEnum mustRoleEnum = UserRoleEnum.getEnumByValue(mustRole);
-        // 不需要权限，直接放行
+        // 不需要特定权限，登录即可放行（mustRole 为空字符串时）
         if (mustRoleEnum == null) {
             return joinPoint.proceed();
         }
-        // 必须有这个权限才能通过
+        // 角色校验：admin 豁免 + vip 为 user 超集 + 其余精确匹配
         UserRoleEnum userRoleEnum = UserRoleEnum.getEnumByValue(loginUser.getUserRole());
-        if (userRoleEnum == null) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
-        }
-        // 要求必须有管理员权限，但当前用户没有
-        if (UserRoleEnum.ADMIN.equals(mustRoleEnum) && !UserRoleEnum.ADMIN.equals(userRoleEnum)) {
+        if (!UserRoleEnum.satisfies(userRoleEnum, mustRoleEnum)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
         // 通过权限校验，放行

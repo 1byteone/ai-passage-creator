@@ -31,6 +31,8 @@ public class SkillExecution {
     private final Gson gson = new Gson();
 
     private SkillContext.RuntimeContext context;
+    /** PENDING / RUNNING / SUCCESS / FAILED */
+    @Getter
     private volatile String status = "PENDING";
     private SkillExecutionPo persistedExecution;
 
@@ -101,6 +103,8 @@ public class SkillExecution {
             po.setPhase(definition.getPhases().get(definition.getPhases().size() - 1).getName());
             po.setOutputData(gson.toJson(resultData));
             po.setDurationMs((int) (System.currentTimeMillis() - context.getStartTime()));
+            po.setTokenUsage(context.getTokenUsage());
+            po.setModelUsed(context.getModelUsedSummary());
             mapper.update(po);
 
             streamHandler.accept(SkillEventFactory.complete(
@@ -113,6 +117,9 @@ public class SkillExecution {
             po.setStatus("FAILED");
             po.setErrorMessage(errorMessage);
             po.setDurationMs((int) (System.currentTimeMillis() - context.getStartTime()));
+            // 失败前已完成的阶段同样消耗了 Token，需一并记录用于成本核算
+            po.setTokenUsage(context.getTokenUsage());
+            po.setModelUsed(context.getModelUsedSummary());
             mapper.update(po);
 
             streamHandler.accept(SkillEventFactory.error(

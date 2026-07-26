@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -13,6 +14,7 @@ import reactor.core.publisher.Flux;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -81,22 +83,32 @@ public class SkillNodeAction implements NodeAction {
         String prompt = templateEngine.render(phase.getPromptFile(), inputs);
         log.debug("Prompt 渲染完成: phase={}, promptLength={}", phase.getName(), prompt.length());
 
-        // 记录到 AgentLog
-        String modelName = phase.getModel() != null ? phase.getModel() : "default";
+        // 记录到 AgentLog（modelName 取实际生效的模型，而非阶段声明值）
+        String modelName = modelRouter.resolveModelName(
+                phase.getModel(),
+                state.value("skillDefaultModel").map(Object::toString).orElse(null));
         ctx.getSharedData().put("prompt_" + phase.getName(), prompt);
         ctx.getSharedData().put("model_" + phase.getName(), modelName);
+        ctx.recordModelUsed(modelName);
 
-        // 调用 LLM
+        // 调用 LLM，并采集本阶段 Token 消耗
         String output;
+        int phaseTokens;
         long startTime = System.currentTimeMillis();
         if (phase.isStreaming()) {
-            output = callStreaming(model, prompt, ctx, executionId, skillName);
+            StreamResult streamResult = callStreaming(model, prompt, ctx, executionId, skillName);
+            output = streamResult.text();
+            phaseTokens = streamResult.totalTokens();
         } else {
-            output = callNonStreaming(model, prompt);
+            ChatResponse response = model.call(new Prompt(new UserMessage(prompt)));
+            output = response.getResult().getOutput().getText();
+            phaseTokens = extractTotalTokens(response);
         }
         long duration = System.currentTimeMillis() - startTime;
-        log.info("LLM 调用完成: phase={}, duration={}ms, outputLength={}",
-                phase.getName(), duration, output.length());
+        ctx.addTokenUsage(phaseTokens);
+        ctx.getSharedData().put("tokens_" + phase.getName(), phaseTokens);
+        log.info("LLM 调用完成: phase={}, model={}, duration={}ms, outputLength={}, tokens={}",
+                phase.getName(), modelName, duration, output.length(), phaseTokens);
 
         // 解析输出
         Object parsed = parserRegistry.parse(phase.getOutputParser(), output, phase);
@@ -112,19 +124,25 @@ public class SkillNodeAction implements NodeAction {
         return result;
     }
 
-    private String callNonStreaming(ChatModel model, String prompt) {
-        ChatResponse response = model.call(new Prompt(new UserMessage(prompt)));
-        return response.getResult().getOutput().getText();
+    /** 流式调用结果：拼接后的文本 + 本次请求的 Token 总量 */
+    private record StreamResult(String text, int totalTokens) {
     }
 
-    private String callStreaming(ChatModel model, String prompt, SkillContext.RuntimeContext ctx,
-                                 String executionId, String skillName) {
+    private StreamResult callStreaming(ChatModel model, String prompt, SkillContext.RuntimeContext ctx,
+                                       String executionId, String skillName) {
         StringBuilder sb = new StringBuilder();
         Flux<ChatResponse> flux = model.stream(new Prompt(new UserMessage(prompt)));
         AtomicReference<Throwable> error = new AtomicReference<>();
+        // 流式响应中多数分片的 usage 为空，仅末尾分片携带整次请求的总量，
+        // 因此取最大值而非逐片累加，避免重复计数或取到 0
+        AtomicInteger maxTotalTokens = new AtomicInteger(0);
 
         flux.doOnNext(response -> {
-                    String chunk = response.getResult().getOutput().getText();
+                    int tokens = extractTotalTokens(response);
+                    if (tokens > maxTotalTokens.get()) {
+                        maxTotalTokens.set(tokens);
+                    }
+                    String chunk = extractChunkText(response);
                     if (chunk != null) {
                         sb.append(chunk);
                         ctx.getStreamHandler().accept(SkillEventFactory.progress(
@@ -140,7 +158,36 @@ public class SkillNodeAction implements NodeAction {
         if (error.get() != null) {
             throw new RuntimeException("流式 LLM 调用失败", error.get());
         }
-        return sb.toString();
+        return new StreamResult(sb.toString(), maxTotalTokens.get());
+    }
+
+    /**
+     * 从 ChatResponse 中提取本次请求的 Token 总量
+     * <p>
+     * 各层级均可能为 null（尤其流式分片），全部做空值保护，取不到时返回 0。
+     */
+    private int extractTotalTokens(ChatResponse response) {
+        if (response == null || response.getMetadata() == null) {
+            return 0;
+        }
+        Usage usage = response.getMetadata().getUsage();
+        if (usage == null || usage.getTotalTokens() == null) {
+            return 0;
+        }
+        return usage.getTotalTokens();
+    }
+
+    /**
+     * 安全提取流式分片文本
+     * <p>
+     * 携带 usage 的末尾分片通常没有 choices，getResult() 会返回 null。
+     */
+    private String extractChunkText(ChatResponse response) {
+        if (response == null || response.getResult() == null
+                || response.getResult().getOutput() == null) {
+            return null;
+        }
+        return response.getResult().getOutput().getText();
     }
 
     Map<String, Object> resolveInputs(OverAllState state) {
