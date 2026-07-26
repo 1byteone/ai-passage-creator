@@ -32,7 +32,7 @@ AI 驱动的内容创作平台（灵犀写作），基于 Spring Boot 3 + Spring
 ```
 ai-passage-creator/
 ├── pom.xml
-├── sql/                          # 数据库初始化脚本（8个）
+├── sql/                          # 数据库初始化脚本（10个）
 │   ├── init.sql                  # 基础库+user表
 │   ├── core.sql                  # article表
 │   ├── add_phase_fields.sql      # 阶段字段
@@ -40,6 +40,8 @@ ai-passage-creator/
 │   ├── add_quota_field.sql       # 配额字段
 │   ├── add_vip_payment.sql       # VIP支付
 │   ├── create_table_agent_log.sql# Agent日志
+│   ├── alter_agent_log_table.sql # Agent日志扩展(model_used/token_usage)
+│   ├── create_skill_execution_table.sql # Skill执行记录
 │   └── update_article_table.sql  # 表修复
 ├── docs/                         # 项目复盘文档（8个）
 │   ├── 01-多智能体编排与系统设计-项目复盘.md
@@ -166,8 +168,34 @@ ai-passage-creator/
     │   ├── StatisticsService.java
     │   ├── SvgDiagramService.java          # SVG生成
     │   └── UserService.java
+    ├── skill/                              # Skill 引擎（配置驱动的通用 LLM 工作流）
+    │   ├── SkillController.java            # Skill API
+    │   ├── SkillRegistry.java              # skill.yaml 扫描注册 + StateGraph 构建
+    │   ├── SkillDefinition.java            # Skill 定义模型
+    │   ├── PhaseDefinition.java            # 阶段定义
+    │   ├── VariableDef.java                # 变量定义（含 uiType 供前端渲染）
+    │   ├── SkillExecution.java             # 单次执行 POJO
+    │   ├── SkillExecutionService.java      # @Async 调度 + 失败退配额
+    │   ├── SkillExecutionChain.java        # 执行链
+    │   ├── SkillNodeAction.java            # 通用 StateGraph 节点
+    │   ├── SkillContext.java               # 运行时上下文（跨线程共享）
+    │   ├── SkillSseEmitterManager.java     # SSE 管理（带事件缓冲重放）
+    │   ├── SkillEventFactory.java          # 统一 JSON 事件构造
+    │   ├── ModelRouter.java                # 模型路由 + 降级
+    │   ├── ModelRouterConfig.java
+    │   ├── PromptTemplateEngine.java       # Prompt 模板渲染
+    │   ├── OutputParserRegistry.java       # 输出解析策略注册表
+    │   ├── SkillOutputParser.java
+    │   ├── config/AgnesModelConfig.java
+    │   └── parsers/                        # json / markdown / topic-options
     └── utils/
         └── GsonUtils.java                  # Gson工具
+
+src/main/resources/skills/                  # Skill 声明（新增能力无需写 Java）
+├── topic-gen/{skill.yaml, prompts/}
+├── proofreading/{skill.yaml, prompts/}
+├── article-to-x/{skill.yaml, prompts/}
+└── research/{skill.yaml, prompts/}         # multiRound，暂未公开
 ```
 
 ---
@@ -195,11 +223,12 @@ ai-passage-creator/
 | Stripe | 支付 | `stripe.api-key` / `webhook-secret` (测试模式) |
 | Mermaid | 流程图 | `mermaid.cli-command: mmdc` |
 
-### 数据库表（4张）
+### 数据库表（5张）
 - **user**: Snowflake ID, userAccount, userPassword (MD5+salt), userRole (user/vip/admin), quota, vipTime
 - **article**: taskId (UUID), userId, topic, userDescription, style, enabledImageMethods(JSON), titleOptions(JSON), outline(JSON), content, fullContent, images(JSON), status, phase, errorMessage
 - **payment_record**: stripeSessionId, amount(USD), currency, status (PENDING/SUCCEEDED/FAILED/REFUNDED), productType (VIP_PERMANENT)
 - **agent_log**: taskId, agentName, durationMs, status (SUCCESS/FAILED/RUNNING), prompt, inputData(JSON), outputData(JSON)
+- **skill_execution**: skillExecutionId, skillName, userId, status, phase, inputData(JSON), outputData(JSON), tokenUsage, modelUsed, durationMs, errorMessage
 
 ---
 
@@ -495,6 +524,70 @@ CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 | `/webhook/stripe` | POST | Stripe Webhook 回调 |
 | `/statistics/overview` | GET | 系统统计概览 (Admin) |
 | `/health/` | GET | 健康检查 |
+| `/skill/list` | GET | 列出公开 Skill |
+| `/skill/{name}/definition` | GET | 获取 Skill 定义（含 `variables[*].uiType` 供前端渲染动态表单） |
+| `/skill/{name}/execute` | POST | 执行 Skill（扣 1 配额，admin/VIP 豁免） |
+| `/skill/{executionId}/progress` | GET (SSE) | Skill 执行进度推送 |
+| `/skill/{executionId}/result` | GET | 获取执行结果（从 DB 查询） |
+| `/skill/{executionId}/confirm` | POST | 多轮交互确认（**当前为桩实现**） |
+| `/skill/executions` | POST | 分页查询执行历史（非 Admin 仅见本人） |
+
+> **SSE 端点的状态码语义**：`GlobalExceptionHandler` 对携带
+> `Accept: text/event-stream` 的请求返回**真实 HTTP 状态码**（401/403/404 等），
+> 普通 REST 请求仍维持 `HTTP 200 + body 内业务错误码`的既有契约。
+> 原因：SSE 若返回 200 但 Content-Type 不匹配，浏览器 EventSource 会无限重连。
+
+---
+
+## Skill 引擎 (skill/ 包)
+
+配置驱动的通用 LLM 工作流引擎，与文章写作链路并行的第二条主线。
+Skill 以 `src/main/resources/skills/{name}/` 下的 `skill.yaml` + `prompts/*.md` 声明，
+无需写 Java 代码即可新增能力。
+
+### 已注册 Skill
+
+| Skill | 阶段数 | multiRound | 是否公开 |
+|---|---|---|---|
+| `topic-gen` | 1 | false | ✅ |
+| `proofreading` | 3 | false | ✅ |
+| `article-to-x` | 1 | false | ✅ |
+| `research` | 2 | **true** | ❌ 仅内部（未加入 `PUBLIC_SKILLS`） |
+
+公开范围由 `SkillController.PUBLIC_SKILLS` 白名单控制。
+
+### 核心组件
+
+| 组件 | 职责 |
+|---|---|
+| `SkillRegistry` | 启动时扫描并注册 skill.yaml，构建 StateGraph |
+| `SkillDefinition` / `PhaseDefinition` / `VariableDef` | YAML 映射的定义模型 |
+| `SkillNodeAction` | 通用 StateGraph 节点：渲染 Prompt → 调 LLM → 解析输出 → 采集用量 |
+| `SkillExecution` | 单次执行的 POJO，负责状态流转与持久化 |
+| `SkillExecutionService` | `@Async("skillExecutor")` 异步调度 + 失败退配额 |
+| `SkillSseEmitterManager` | SSE 连接管理，**带事件缓冲重放**（解决订阅竞态） |
+| `SkillEventFactory` | 统一构造 JSON 格式 SSE 事件 |
+| `SkillContext` | `ConcurrentHashMap` 运行时上下文（替代 ThreadLocal，支持跨线程） |
+| `ModelRouter` | 模型路由（agnes / dashscope）+ 降级 |
+| `OutputParserRegistry` | 输出解析策略（json / markdown / topic-options） |
+
+### SSE 事件类型（全部为 JSON）
+
+`skill.started` / `skill.phase_started` / `skill.progress` /
+`skill.phase_complete` / `skill.complete` / `skill.error`
+
+> 与文章链路的 `SseMessageTypeEnum`（纯文本前缀格式）**不同**，Skill 侧统一 JSON。
+
+### 配额与计费
+
+- 每次执行扣 **1** 配额，admin/VIP 豁免（复用 `QuotaService` 的 SQL CAS）
+- **派发失败**与**运行时失败**均通过 `QuotaService.refundQuota()` 退还
+- `skill_execution.token_usage` / `model_used` 记录真实用量与生效模型
+- 流式响应仅末尾分片携带整次用量，故取 **max 而非累加**
+
+### 线程池
+
+`skillExecutor`：core 5 / max 15 / queue 200 / `CallerRunsPolicy`，与文章写作线程池隔离。
 
 ---
 

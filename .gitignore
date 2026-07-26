@@ -42,3 +42,9 @@ frontend/.env.*.local
 .env
 .env.*
 !.env.example
+
+### Dev server logs ###
+*.log
+.backend-dev*.log
+.frontend-dev*.log
+.redis-*.log
