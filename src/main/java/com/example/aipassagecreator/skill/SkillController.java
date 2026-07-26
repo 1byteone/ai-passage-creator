@@ -10,6 +10,7 @@ import com.example.aipassagecreator.model.dto.skill.SkillExecuteRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillExecuteResponse;
 import com.example.aipassagecreator.model.dto.skill.SkillExecutionQueryRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillResultResponse;
+import com.example.aipassagecreator.enums.SkillExecutionStatusEnum;
 import com.example.aipassagecreator.enums.UserRoleEnum;
 import com.example.aipassagecreator.model.po.SkillExecutionPo;
 import com.example.aipassagecreator.model.po.User;
@@ -38,7 +39,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SkillController {
 
-    private static final List<String> PUBLIC_SKILLS = List.of("topic-gen", "proofreading", "article-to-x");
+    private static final List<String> PUBLIC_SKILLS =
+            List.of("topic-gen", "proofreading", "article-to-x", "research");
+
+    private static final String ACTION_APPROVE = "approve";
+    private static final String ACTION_MODIFY = "modify";
 
     private final SkillRegistry skillRegistry;
     private final SkillSseEmitterManager sseEmitterManager;
@@ -46,6 +51,7 @@ public class SkillController {
     private final SkillExecutionService skillExecutionService;
     private final SkillExecutionMapper skillExecutionMapper;
     private final QuotaService quotaService;
+    private final SkillExecutionRegistry executionRegistry;
 
     /**
      * 执行 Skill
@@ -81,6 +87,10 @@ public class SkillController {
         try {
             execution = skillRegistry.createExecution(skillName, inputs);
             execution.prepare(loginUser.getId());
+            // 含确认阶段的 Skill 需登记实例，confirm 时才能取回并从检查点续跑
+            if (skillRegistry.hasConfirmationPhase(skillName)) {
+                executionRegistry.register(execution, loginUser.getId());
+            }
             // 异步执行（通过 SkillExecutionService 确保 @Async 生效）
             skillExecutionService.executeAsync(execution, loginUser.getId());
         } catch (Exception e) {
@@ -122,25 +132,76 @@ public class SkillController {
 
     /**
      * 多轮交互确认
+     * <p>
+     * 仅在执行暂停于 AWAITING_CONFIRMATION 时可调用。
+     * 支持 approve（直接续跑）与 modify（写入修改后再续跑）；
+     * retry 需回退节点重跑，本轮暂不支持。
      */
     @PostMapping("/{executionId}/confirm")
     public BaseResponse<?> confirm(
             @PathVariable String executionId,
             @RequestBody SkillConfirmRequest request,
             HttpServletRequest servletRequest) {
-        LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
-        if (loginUser == null) {
-            return ResultUtils.error(ErrorCode.NOT_LOGIN_ERROR);
-        }
+        User loginUser = userService.getLoginUser(servletRequest);
+
         // 验证执行记录属于当前用户
         SkillExecutionPo po = skillExecutionMapper.selectOneByQuery(
-                com.mybatisflex.core.query.QueryWrapper.create()
-                        .eq("skill_execution_id", executionId));
+                QueryWrapper.create().eq("skill_execution_id", executionId));
         if (po == null || !po.getUserId().equals(loginUser.getId())) {
             return ResultUtils.error(ErrorCode.NO_AUTH_ERROR, "无权操作此执行记录");
         }
-        log.info("Skill 确认: executionId={}, phase={}, action={}", executionId, request.getPhase(), request.getAction());
-        return ResultUtils.success("确认已接收");
+        if (!SkillExecutionStatusEnum.AWAITING_CONFIRMATION.getValue().equals(po.getStatus())) {
+            return ResultUtils.error(ErrorCode.OPERATION_ERROR,
+                    "当前状态不允许确认: " + po.getStatus());
+        }
+
+        String action = request == null || request.getAction() == null
+                ? ACTION_APPROVE
+                : request.getAction().trim().toLowerCase();
+        if (!ACTION_APPROVE.equals(action) && !ACTION_MODIFY.equals(action)) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR,
+                    "暂不支持的确认动作: " + action + "，当前支持 approve / modify");
+        }
+
+        // 检查点存于进程内，应用重启后执行实例会丢失
+        SkillExecution execution = executionRegistry.get(executionId);
+        if (execution == null) {
+            return ResultUtils.error(ErrorCode.OPERATION_ERROR, "执行已过期，请重新发起");
+        }
+
+        Map<String, Object> modifiedData = null;
+        if (ACTION_MODIFY.equals(action)) {
+            modifiedData = parseModifiedData(request.getModifiedData());
+            if (modifiedData == null || modifiedData.isEmpty()) {
+                return ResultUtils.error(ErrorCode.PARAMS_ERROR, "modify 动作需提供 modifiedData");
+            }
+        }
+
+        log.info("Skill 确认: executionId={}, phase={}, action={}", executionId, po.getPhase(), action);
+        skillExecutionService.resumeAsync(execution, loginUser.getId(), modifiedData);
+
+        return ResultUtils.success(Map.of(
+                "skillExecutionId", executionId,
+                "action", action,
+                "status", SkillExecutionStatusEnum.RUNNING.getValue()));
+    }
+
+    /**
+     * 解析 modify 动作携带的修改数据（JSON 对象字符串）
+     *
+     * @return 解析失败返回 null
+     */
+    private Map<String, Object> parseModifiedData(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return GsonUtils.fromJson(raw, new TypeToken<Map<String, Object>>() {
+            });
+        } catch (Exception e) {
+            log.warn("modifiedData 解析失败: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**

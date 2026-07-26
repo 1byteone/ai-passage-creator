@@ -22,8 +22,15 @@ public class PhaseDefinition {
     private String outputKey;
     /** 变量映射 */
     private List<VariableRef> variables;
-    /** 是否需要用户确认 */
+    /**
+     * 是否需要用户确认
+     * <p>
+     * 为 true 时，该阶段执行 <b>之前</b> 会暂停（interruptBefore），
+     * 让用户先审阅上一阶段产出，确认后才继续。
+     */
     private boolean requireConfirmation;
+    /** 阶段序号（从 1 开始，由 SkillRegistry 注册时回填，供前端定位进度） */
+    private Integer phaseIndex;
 
     @Data
     public static class VariableRef {

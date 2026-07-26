@@ -174,8 +174,10 @@ ai-passage-creator/
     │   ├── SkillDefinition.java            # Skill 定义模型
     │   ├── PhaseDefinition.java            # 阶段定义
     │   ├── VariableDef.java                # 变量定义（含 uiType 供前端渲染）
-    │   ├── SkillExecution.java             # 单次执行 POJO
+    │   ├── SkillExecution.java             # 单次执行 POJO（含暂停/续跑）
     │   ├── SkillExecutionService.java      # @Async 调度 + 失败退配额
+    │   ├── SkillExecutionRegistry.java     # 存活执行注册表（多轮确认用）
+    │   ├── SkillConfirmationReaper.java    # 超时未确认收割器
     │   ├── SkillExecutionChain.java        # 执行链
     │   ├── SkillNodeAction.java            # 通用 StateGraph 节点
     │   ├── SkillContext.java               # 运行时上下文（跨线程共享）
@@ -195,7 +197,7 @@ src/main/resources/skills/                  # Skill 声明（新增能力无需�
 ├── topic-gen/{skill.yaml, prompts/}
 ├── proofreading/{skill.yaml, prompts/}
 ├── article-to-x/{skill.yaml, prompts/}
-└── research/{skill.yaml, prompts/}         # multiRound，暂未公开
+└── research/{skill.yaml, prompts/}         # multiRound + 多轮确认
 ```
 
 ---
@@ -529,7 +531,7 @@ CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 | `/skill/{name}/execute` | POST | 执行 Skill（扣 1 配额，admin/VIP 豁免） |
 | `/skill/{executionId}/progress` | GET (SSE) | Skill 执行进度推送 |
 | `/skill/{executionId}/result` | GET | 获取执行结果（从 DB 查询） |
-| `/skill/{executionId}/confirm` | POST | 多轮交互确认（**当前为桩实现**） |
+| `/skill/{executionId}/confirm` | POST | 多轮交互确认（`approve` / `modify`；`retry` 暂不支持） |
 | `/skill/executions` | POST | 分页查询执行历史（非 Admin 仅见本人） |
 
 > **SSE 端点的状态码语义**：`GlobalExceptionHandler` 对携带
@@ -552,7 +554,7 @@ Skill 以 `src/main/resources/skills/{name}/` 下的 `skill.yaml` + `prompts/*.m
 | `topic-gen` | 1 | false | ✅ |
 | `proofreading` | 3 | false | ✅ |
 | `article-to-x` | 1 | false | ✅ |
-| `research` | 2 | **true** | ❌ 仅内部（未加入 `PUBLIC_SKILLS`） |
+| `research` | 2 | **true** | ✅ 唯一使用多轮确认的 Skill |
 
 公开范围由 `SkillController.PUBLIC_SKILLS` 白名单控制。
 
@@ -563,8 +565,10 @@ Skill 以 `src/main/resources/skills/{name}/` 下的 `skill.yaml` + `prompts/*.m
 | `SkillRegistry` | 启动时扫描并注册 skill.yaml，构建 StateGraph |
 | `SkillDefinition` / `PhaseDefinition` / `VariableDef` | YAML 映射的定义模型 |
 | `SkillNodeAction` | 通用 StateGraph 节点：渲染 Prompt → 调 LLM → 解析输出 → 采集用量 |
-| `SkillExecution` | 单次执行的 POJO，负责状态流转与持久化 |
-| `SkillExecutionService` | `@Async("skillExecutor")` 异步调度 + 失败退配额 |
+| `SkillExecution` | 单次执行的 POJO，负责状态流转、持久化、暂停与续跑 |
+| `SkillExecutionService` | `@Async("skillExecutor")` 异步调度/续跑 + 失败退配额 |
+| `SkillExecutionRegistry` | 存活执行实例注册表，供 confirm 取回并从检查点续跑 |
+| `SkillConfirmationReaper` | `@Scheduled` 收割超时未确认的执行并退还配额 |
 | `SkillSseEmitterManager` | SSE 连接管理，**带事件缓冲重放**（解决订阅竞态） |
 | `SkillEventFactory` | 统一构造 JSON 格式 SSE 事件 |
 | `SkillContext` | `ConcurrentHashMap` 运行时上下文（替代 ThreadLocal，支持跨线程） |
@@ -574,9 +578,37 @@ Skill 以 `src/main/resources/skills/{name}/` 下的 `skill.yaml` + `prompts/*.m
 ### SSE 事件类型（全部为 JSON）
 
 `skill.started` / `skill.phase_started` / `skill.progress` /
-`skill.phase_complete` / `skill.complete` / `skill.error`
+`skill.phase_complete` / `skill.awaiting_confirmation` / `skill.complete` / `skill.error`
 
 > 与文章链路的 `SseMessageTypeEnum`（纯文本前缀格式）**不同**，Skill 侧统一 JSON。
+
+### 多轮确认（Human-in-the-Loop）
+
+阶段声明 `requireConfirmation: true` 表示**该阶段执行之前**暂停，
+让用户先审阅上一阶段产出 —— 对应 StateGraph 的 `interruptBefore`。
+
+```
+execute()  → 跑到确认节点前停下 → status=AWAITING_CONFIRMATION
+           → SSE: skill.awaiting_confirmation（含 pendingOutput）
+           → 方法返回，线程立即释放（不阻塞等待）
+confirm()  → approve: 直接续跑
+           → modify:  updateState 写入修改后再续跑
+           → resumeAsync() → 跑至 END → status=SUCCESS
+超时未确认  → SkillConfirmationReaper 置 FAILED 并退还配额
+```
+
+**关键实现约束（已由 `GraphInterruptMechanismTest` 锁定）：**
+
+| 事项 | 说明 |
+|---|---|
+| 续跑必须用 `graph.getState(config).config()` | 该 config 携带 `checkPointId`。**直接传原 config 不会报错，但会从 START 重跑已完成阶段**，白烧 token 且永远推进不了 |
+| `updateState` 第三参传 `null` | interruptBefore 模式的约定；返回的 config 可直接用于续跑 |
+| 暂停时不可关闭 SSE | 前端需保持连接以接收续跑后的事件，仅终态才 `complete()` |
+| 暂停时不可清理 `SkillContext` | 续跑依赖其中的累计用量与阶段产出 |
+| 检查点为 `MemorySaver`（进程内） | 应用重启后待确认执行无法续跑，`confirm` 返回「执行已过期，请重新发起」 |
+
+无确认阶段的 Skill 走原编译路径（`compile()` 无参），不引入检查点开销 —— 现有 3 个
+Skill 行为不受影响，由 `SkillConfirmationTest` 回归保证。
 
 ### 配额与计费
 

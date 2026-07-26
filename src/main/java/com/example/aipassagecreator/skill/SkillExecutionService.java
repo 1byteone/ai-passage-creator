@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.skill;
 
+import com.example.aipassagecreator.enums.SkillExecutionStatusEnum;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.service.QuotaService;
 import com.example.aipassagecreator.service.UserService;
@@ -7,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 /**
  * Skill 异步执行服务
@@ -17,25 +20,52 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SkillExecutionService {
 
-    private static final String STATUS_FAILED = "FAILED";
-
     private final SkillSseEmitterManager sseEmitterManager;
+    private final SkillExecutionRegistry executionRegistry;
     private final QuotaService quotaService;
     private final UserService userService;
 
     @Async("skillExecutor")
     public void executeAsync(SkillExecution execution, Long userId) {
+        execution.execute(
+                event -> sseEmitterManager.publish(execution.getExecutionId(), event),
+                userId
+        );
+        settle(execution, userId);
+    }
+
+    /**
+     * 用户确认后续跑
+     *
+     * @param modifiedData modify 动作携带的修改数据，approve 时为 null
+     */
+    @Async("skillExecutor")
+    public void resumeAsync(SkillExecution execution, Long userId, Map<String, Object> modifiedData) {
+        execution.resume(
+                modifiedData,
+                event -> sseEmitterManager.publish(execution.getExecutionId(), event)
+        );
+        settle(execution, userId);
+    }
+
+    /**
+     * 一次执行片段结束后的收尾
+     * <p>
+     * 暂停等待确认时 <b>不能</b> 关闭 SSE —— 前端需保持连接以接收续跑后的事件。
+     * 仅终态才关闭连接并从注册表移除。
+     */
+    private void settle(SkillExecution execution, Long userId) {
+        if (execution.isAwaitingConfirmation()) {
+            log.info("Skill 等待用户确认，保持 SSE 连接: executionId={}", execution.getExecutionId());
+            return;
+        }
         try {
-            execution.execute(
-                    event -> sseEmitterManager.publish(execution.getExecutionId(), event),
-                    userId
-            );
             // 执行失败用户未获得任何产出，退还配额
-            // execute() 内部已捕获全部异常且不外抛，故此处以最终状态判定
-            if (STATUS_FAILED.equals(execution.getStatus())) {
+            if (SkillExecutionStatusEnum.FAILED.getValue().equals(execution.getStatus())) {
                 refundQuietly(userId, execution.getExecutionId());
             }
         } finally {
+            executionRegistry.remove(execution.getExecutionId());
             sseEmitterManager.complete(execution.getExecutionId());
         }
     }
@@ -43,7 +73,7 @@ public class SkillExecutionService {
     /**
      * 退还配额，失败不影响 SSE 收尾
      */
-    private void refundQuietly(Long userId, String executionId) {
+    void refundQuietly(Long userId, String executionId) {
         try {
             User user = userService.getById(userId);
             if (user == null) {

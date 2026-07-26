@@ -39,6 +39,27 @@ public final class SkillEventFactory {
         return GsonUtils.toJson(payload);
     }
 
+    /**
+     * 执行已暂停，等待用户确认
+     *
+     * @param phase          即将执行、需要确认的阶段
+     * @param pendingOutput  待用户审阅的上一阶段产出
+     */
+    public static String awaitingConfirmation(String executionId, String skillName, String phase,
+                                              int phaseIndex, int totalPhases, Object pendingOutput) {
+        Map<String, Object> payload = base("skill.awaiting_confirmation", executionId, skillName);
+        payload.put("status", "AWAITING_CONFIRMATION");
+        payload.put("phase", phase);
+        payload.put("phaseIndex", phaseIndex);
+        payload.put("totalPhases", totalPhases);
+        // 前端据此渲染确认面板；approve 直接续跑，modify 可回传修改后的数据
+        payload.put("supportedActions", java.util.List.of("approve", "modify"));
+        if (pendingOutput != null) {
+            payload.put("pendingOutput", pendingOutput);
+        }
+        return GsonUtils.toJson(payload);
+    }
+
     public static String error(String executionId, String skillName, String phase, String errorMessage) {
         Map<String, Object> payload = base("skill.error", executionId, skillName);
         payload.put("status", "FAILED");

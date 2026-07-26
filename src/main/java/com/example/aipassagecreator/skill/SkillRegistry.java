@@ -1,9 +1,12 @@
 package com.example.aipassagecreator.skill;
 
+import com.alibaba.cloud.ai.graph.CompileConfig;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.KeyStrategy;
 import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
 import com.alibaba.cloud.ai.graph.StateGraph;
+import com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.example.aipassagecreator.mapper.SkillExecutionMapper;
@@ -121,12 +124,20 @@ public class SkillRegistry {
             phaseOutputKeyMap.put(phase.getName(), phase.getOutputKey());
         }
 
+        // 收集需要用户确认的节点：在这些节点执行「之前」中断
+        List<String> confirmationNodes = new ArrayList<>();
+
         try {
             // 添加节点
             String previousNode = START;
             for (int i = 0; i < def.getPhases().size(); i++) {
                 PhaseDefinition phase = def.getPhases().get(i);
                 String nodeName = phase.getName();
+                // 回填阶段序号，供前端定位进度
+                phase.setPhaseIndex(i + 1);
+                if (phase.isRequireConfirmation()) {
+                    confirmationNodes.add(nodeName);
+                }
                 SkillNodeAction action = new SkillNodeAction(
                         phase,
                         i + 1,
@@ -142,10 +153,29 @@ public class SkillRegistry {
             }
             graph.addEdge(previousNode, END);
 
-            return graph.compile();
+            // 无确认节点的 Skill 保持原有编译路径，不引入检查点开销
+            if (confirmationNodes.isEmpty()) {
+                return graph.compile();
+            }
+
+            // 含确认节点：启用中断 + 检查点，使执行可在中断处暂停并稍后续跑
+            log.info("Skill {} 启用多轮确认, 中断节点: {}", def.getName(), confirmationNodes);
+            CompileConfig compileConfig = CompileConfig.builder()
+                    .saverConfig(SaverConfig.builder().register(new MemorySaver()).build())
+                    .interruptsBefore(confirmationNodes)
+                    .build();
+            return graph.compile(compileConfig);
         } catch (GraphStateException e) {
             throw new RuntimeException("StateGraph 编译失败: " + def.getName(), e);
         }
+    }
+
+    /**
+     * Skill 是否声明了需要用户确认的阶段
+     */
+    public boolean hasConfirmationPhase(String skillName) {
+        SkillDefinition def = getSkill(skillName);
+        return def.getPhases().stream().anyMatch(PhaseDefinition::isRequireConfirmation);
     }
 
     private KeyStrategyFactory createKeyStrategy(SkillDefinition def) {
