@@ -177,6 +177,18 @@ public class SkillController {
             }
         }
 
+        // 原子抢占：在同步路径内就把状态从 AWAITING_CONFIRMATION 翻成 RUNNING。
+        // 若留给异步的 resume() 去翻，SkillConfirmationReaper 的条件更新会在这个窗口内
+        // 照样命中，把用户刚确认的执行判为超时并退款；并发重复 confirm 也靠这一步拦住。
+        SkillExecutionPo claim = new SkillExecutionPo();
+        claim.setStatus(SkillExecutionStatusEnum.RUNNING.getValue());
+        int claimed = skillExecutionMapper.updateByQuery(claim, QueryWrapper.create()
+                .eq("skill_execution_id", executionId)
+                .eq("status", SkillExecutionStatusEnum.AWAITING_CONFIRMATION.getValue()));
+        if (claimed == 0) {
+            return ResultUtils.error(ErrorCode.OPERATION_ERROR, "确认已被处理，或执行已超时取消");
+        }
+
         log.info("Skill 确认: executionId={}, phase={}, action={}", executionId, po.getPhase(), action);
         skillExecutionService.resumeAsync(execution, loginUser.getId(), modifiedData);
 

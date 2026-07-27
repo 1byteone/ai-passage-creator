@@ -165,6 +165,30 @@ class SkillConfirmationTest {
     }
 
     @Test
+    @DisplayName("回归：续跑前上下文缺失时不得改动状态，否则执行会卡在非终态")
+    void resumeKeepsStatusWhenContextMissing() {
+        SkillExecution execution = skillRegistry.createExecution("research", Map.of("topic", "测试"));
+        // 未经 execute()，既无 AWAITING_CONFIRMATION 也无上下文
+        org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalStateException.class,
+                () -> execution.resume(null, event -> {
+                }));
+        // 关键：状态未被污染，仍可被后续流程正常处理
+        assertEquals(SkillExecutionStatusEnum.PENDING.getValue(), execution.getStatus());
+        assertFalse(execution.isTerminal());
+    }
+
+    @Test
+    @DisplayName("回归：暂停时记录待确认阶段名，供超时收割回报准确阶段")
+    void pendingPhaseIsExposedForReaper() {
+        SkillExecution execution = skillRegistry.createExecution("research", Map.of("topic", "测试"));
+        // 尚未暂停时为空；暂停后由 pauseIfAwaitingConfirmation 写入。
+        // SkillConfirmationReaper 依赖此字段而非 getStatus()——
+        // 早期实现误把执行状态当阶段名传给前端。
+        assertNull(execution.getPendingPhase());
+    }
+
+    @Test
     @DisplayName("尚未登记的执行不会被判定为超时")
     void findExpiredIgnoresUnregistered() {
         // 刚登记的执行远未达到 TTL，不应被收割

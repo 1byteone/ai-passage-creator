@@ -47,6 +47,10 @@ public class SkillExecution {
     /** 图执行的线程上下文，threadId 固定为 executionId，续跑时复用 */
     private final RunnableConfig runnableConfig;
 
+    /** 暂停时待用户确认的阶段名，供超时收割等场景回报准确阶段 */
+    @Getter
+    private volatile String pendingPhase;
+
     public SkillExecution(String executionId, SkillDefinition definition,
                           Map<String, Object> inputs, CompiledGraph graph,
                           ModelRouter modelRouter, SkillExecutionMapper mapper) {
@@ -117,16 +121,18 @@ public class SkillExecution {
      *
      * @param modifiedData 用户修改后的数据（modify 动作），为空则表示直接 approve
      */
-    public void resume(Map<String, Object> modifiedData, Consumer<String> streamHandler) {
+    public synchronized void resume(Map<String, Object> modifiedData, Consumer<String> streamHandler) {
         if (!SkillExecutionStatusEnum.AWAITING_CONFIRMATION.getValue().equals(status)) {
             throw new IllegalStateException("当前状态不允许续跑: " + status);
         }
-        this.status = SkillExecutionStatusEnum.RUNNING.getValue();
-        // 上下文在暂停时被保留；若已丢失（如应用重启）则无法续跑
-        this.context = SkillContext.get(executionId);
-        if (context == null) {
+        // 先校验上下文再改状态：若此处失败后已置为 RUNNING，执行会卡在非终态，
+        // 既不会被收割也无法再次确认
+        SkillContext.RuntimeContext resumeContext = SkillContext.get(executionId);
+        if (resumeContext == null) {
             throw new IllegalStateException("执行上下文已丢失，无法续跑: " + executionId);
         }
+        this.context = resumeContext;
+        this.status = SkillExecutionStatusEnum.RUNNING.getValue();
         context.setStreamHandler(streamHandler);
 
         SkillExecutionPo po = persistedExecution;
@@ -184,6 +190,7 @@ public class SkillExecution {
                 : 0;
 
         this.status = SkillExecutionStatusEnum.AWAITING_CONFIRMATION.getValue();
+        this.pendingPhase = next;
         SkillExecutionPo po = persistedExecution;
         po.setStatus(SkillExecutionStatusEnum.AWAITING_CONFIRMATION.getValue());
         po.setPhase(next);

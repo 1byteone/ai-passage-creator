@@ -60,9 +60,10 @@ public class SkillConfirmationReaper {
                 .eq("status", SkillExecutionStatusEnum.AWAITING_CONFIRMATION.getValue()));
 
         if (affected == 0) {
-            // 用户已在收割前完成确认，交由正常流程处理
+            // 用户已在收割前完成确认（confirm 已把状态抢占为 RUNNING），交由正常流程处理。
+            // 此处 **不可** 移出注册表：该执行可能正要续跑，且多确认点的 Skill 还会再次暂停，
+            // 提前移除会让下一次 confirm 误报「执行已过期」。终态清理交给 purgeTerminal。
             log.debug("收割跳过，状态已变更: executionId={}", executionId);
-            executionRegistry.remove(executionId);
             return;
         }
 
@@ -72,9 +73,8 @@ public class SkillConfirmationReaper {
         sseEmitterManager.publish(executionId, SkillEventFactory.error(
                 executionId,
                 item.execution().getDefinition().getName(),
-                item.execution().getDefinition().getPhases().isEmpty()
-                        ? null
-                        : item.execution().getStatus(),
+                // 待确认的阶段名，而非执行状态
+                item.execution().getPendingPhase(),
                 "等待确认超时，已自动取消"));
         sseEmitterManager.complete(executionId);
 
