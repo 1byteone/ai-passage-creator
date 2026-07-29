@@ -41,3 +41,21 @@ export async function getSkillResult(
     ...(options || {}),
   })
 }
+<<<<<<< HEAD
+
+export async function confirmSkill(
+  executionId: string,
+  body: API.SkillConfirmRequest,
+  options?: { [key: string]: unknown },
+) {
+  return request<API.BaseResponseVoid>(`/skill/${executionId}/confirm`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  })
+}
+=======
+>>>>>>> master

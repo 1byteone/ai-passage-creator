@@ -25,7 +25,8 @@ class SkillNodeActionTest {
                 null,
                 null,
                 null,
-                Map.of("content_review", "reviewResult")
+                Map.of("content_review", "reviewResult"),
+                List.of()
         );
         Map<String, Object> reviewResult = Map.of(
                 "overallScore", 88,

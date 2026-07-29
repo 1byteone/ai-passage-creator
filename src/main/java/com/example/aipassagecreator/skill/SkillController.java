@@ -8,12 +8,29 @@ import com.example.aipassagecreator.mapper.SkillExecutionMapper;
 import com.example.aipassagecreator.model.dto.skill.SkillConfirmRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillExecuteRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillExecuteResponse;
+<<<<<<< HEAD
+import com.example.aipassagecreator.model.dto.skill.SkillExecutionQueryRequest;
+import com.example.aipassagecreator.model.dto.skill.SkillResultResponse;
+import com.example.aipassagecreator.enums.SkillExecutionStatusEnum;
+import com.example.aipassagecreator.enums.UserRoleEnum;
+import com.example.aipassagecreator.model.po.SkillExecutionPo;
+import com.example.aipassagecreator.model.po.User;
+import com.example.aipassagecreator.model.vo.LoginUserVO;
+import com.example.aipassagecreator.model.vo.SkillExecutionVO;
+import com.example.aipassagecreator.service.QuotaService;
+import com.example.aipassagecreator.service.UserService;
+import com.example.aipassagecreator.utils.GsonUtils;
+import com.google.gson.reflect.TypeToken;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryWrapper;
+=======
 import com.example.aipassagecreator.model.dto.skill.SkillResultResponse;
 import com.example.aipassagecreator.model.po.SkillExecutionPo;
 import com.example.aipassagecreator.model.vo.LoginUserVO;
 import com.example.aipassagecreator.service.UserService;
 import com.example.aipassagecreator.utils.GsonUtils;
 import com.google.gson.reflect.TypeToken;
+>>>>>>> master
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,13 +48,26 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SkillController {
 
+<<<<<<< HEAD
+    private static final List<String> PUBLIC_SKILLS =
+            List.of("topic-gen", "proofreading", "article-to-x", "research");
+
+    private static final String ACTION_APPROVE = "approve";
+    private static final String ACTION_MODIFY = "modify";
+=======
     private static final List<String> PUBLIC_SKILLS = List.of("topic-gen", "proofreading", "article-to-x");
+>>>>>>> master
 
     private final SkillRegistry skillRegistry;
     private final SkillSseEmitterManager sseEmitterManager;
     private final UserService userService;
     private final SkillExecutionService skillExecutionService;
     private final SkillExecutionMapper skillExecutionMapper;
+<<<<<<< HEAD
+    private final QuotaService quotaService;
+    private final SkillExecutionRegistry executionRegistry;
+=======
+>>>>>>> master
 
     /**
      * 执行 Skill
@@ -50,6 +80,15 @@ public class SkillController {
 
         SkillDefinition def = getPublicSkill(skillName);
 
+<<<<<<< HEAD
+        // 权限校验：检查用户角色（未登录时 getLoginUser 抛出 NOT_LOGIN_ERROR）
+        User loginUser = userService.getLoginUser(servletRequest);
+        List<String> requiredRoles = def.getRequiredRoles();
+        if (requiredRoles != null && !requiredRoles.isEmpty()) {
+            // 满足任一所需角色即可（admin 豁免 + vip 为 user 超集，与 AuthInterceptor 同语义）
+            boolean hasRole = requiredRoles.stream()
+                    .anyMatch(role -> UserRoleEnum.satisfies(loginUser.getUserRole(), role));
+=======
         // 权限校验：检查用户角色
         LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
         if (loginUser == null) {
@@ -61,11 +100,37 @@ public class SkillController {
                     .anyMatch(role -> "admin".equals(role) && "admin".equals(loginUser.getUserRole())
                             || "vip".equals(role) && "vip".equals(loginUser.getUserRole())
                             || "user".equals(role));
+>>>>>>> master
             if (!hasRole) {
                 return ResultUtils.error(ErrorCode.NO_AUTH_ERROR, "需要 " + requiredRoles + " 角色才能使用此 Skill");
             }
         }
 
+<<<<<<< HEAD
+        // 配额校验与扣减：每次执行消耗 1 配额，admin/VIP 豁免（与文章生成同规则）
+        quotaService.checkAndConsumeQuota(loginUser, "配额不足，无法执行此 Skill");
+
+        Map<String, Object> inputs = request == null || request.getInputs() == null
+                ? Map.of()
+                : request.getInputs();
+
+        SkillExecution execution;
+        try {
+            execution = skillRegistry.createExecution(skillName, inputs);
+            execution.prepare(loginUser.getId());
+            // 含确认阶段的 Skill 需登记实例，confirm 时才能取回并从检查点续跑
+            if (skillRegistry.hasConfirmationPhase(skillName)) {
+                executionRegistry.register(execution, loginUser.getId());
+            }
+            // 异步执行（通过 SkillExecutionService 确保 @Async 生效）
+            skillExecutionService.executeAsync(execution, loginUser.getId());
+        } catch (Exception e) {
+            // 派发失败说明未真正消耗算力，退还配额避免白扣
+            log.error("Skill 派发失败，退还配额: skillName={}, userId={}", skillName, loginUser.getId(), e);
+            quotaService.refundQuota(loginUser);
+            throw e;
+        }
+=======
         Map<String, Object> inputs = request == null || request.getInputs() == null
                 ? Map.of()
                 : request.getInputs();
@@ -74,6 +139,7 @@ public class SkillController {
 
         // 异步执行（通过 SkillExecutionService 确保 @Async 生效）
         skillExecutionService.executeAsync(execution, loginUser.getId());
+>>>>>>> master
 
         SkillExecuteResponse response = SkillExecuteResponse.builder()
                 .skillExecutionId(execution.getExecutionId())
@@ -107,12 +173,93 @@ public class SkillController {
 
     /**
      * 多轮交互确认
+<<<<<<< HEAD
+     * <p>
+     * 仅在执行暂停于 AWAITING_CONFIRMATION 时可调用。
+     * 支持 approve（直接续跑）与 modify（写入修改后再续跑）；
+     * retry 需回退节点重跑，本轮暂不支持。
+=======
+>>>>>>> master
      */
     @PostMapping("/{executionId}/confirm")
     public BaseResponse<?> confirm(
             @PathVariable String executionId,
             @RequestBody SkillConfirmRequest request,
             HttpServletRequest servletRequest) {
+<<<<<<< HEAD
+        User loginUser = userService.getLoginUser(servletRequest);
+
+        // 验证执行记录属于当前用户
+        SkillExecutionPo po = skillExecutionMapper.selectOneByQuery(
+                QueryWrapper.create().eq("skill_execution_id", executionId));
+        if (po == null || !po.getUserId().equals(loginUser.getId())) {
+            return ResultUtils.error(ErrorCode.NO_AUTH_ERROR, "无权操作此执行记录");
+        }
+        if (!SkillExecutionStatusEnum.AWAITING_CONFIRMATION.getValue().equals(po.getStatus())) {
+            return ResultUtils.error(ErrorCode.OPERATION_ERROR,
+                    "当前状态不允许确认: " + po.getStatus());
+        }
+
+        String action = request == null || request.getAction() == null
+                ? ACTION_APPROVE
+                : request.getAction().trim().toLowerCase();
+        if (!ACTION_APPROVE.equals(action) && !ACTION_MODIFY.equals(action)) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR,
+                    "暂不支持的确认动作: " + action + "，当前支持 approve / modify");
+        }
+
+        // 检查点存于进程内，应用重启后执行实例会丢失
+        SkillExecution execution = executionRegistry.get(executionId);
+        if (execution == null) {
+            return ResultUtils.error(ErrorCode.OPERATION_ERROR, "执行已过期，请重新发起");
+        }
+
+        Map<String, Object> modifiedData = null;
+        if (ACTION_MODIFY.equals(action)) {
+            modifiedData = parseModifiedData(request.getModifiedData());
+            if (modifiedData == null || modifiedData.isEmpty()) {
+                return ResultUtils.error(ErrorCode.PARAMS_ERROR, "modify 动作需提供 modifiedData");
+            }
+        }
+
+        // 原子抢占：在同步路径内就把状态从 AWAITING_CONFIRMATION 翻成 RUNNING。
+        // 若留给异步的 resume() 去翻，SkillConfirmationReaper 的条件更新会在这个窗口内
+        // 照样命中，把用户刚确认的执行判为超时并退款；并发重复 confirm 也靠这一步拦住。
+        SkillExecutionPo claim = new SkillExecutionPo();
+        claim.setStatus(SkillExecutionStatusEnum.RUNNING.getValue());
+        int claimed = skillExecutionMapper.updateByQuery(claim, QueryWrapper.create()
+                .eq("skill_execution_id", executionId)
+                .eq("status", SkillExecutionStatusEnum.AWAITING_CONFIRMATION.getValue()));
+        if (claimed == 0) {
+            return ResultUtils.error(ErrorCode.OPERATION_ERROR, "确认已被处理，或执行已超时取消");
+        }
+
+        log.info("Skill 确认: executionId={}, phase={}, action={}", executionId, po.getPhase(), action);
+        skillExecutionService.resumeAsync(execution, loginUser.getId(), modifiedData);
+
+        return ResultUtils.success(Map.of(
+                "skillExecutionId", executionId,
+                "action", action,
+                "status", SkillExecutionStatusEnum.RUNNING.getValue()));
+    }
+
+    /**
+     * 解析 modify 动作携带的修改数据（JSON 对象字符串）
+     *
+     * @return 解析失败返回 null
+     */
+    private Map<String, Object> parseModifiedData(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return GsonUtils.fromJson(raw, new TypeToken<Map<String, Object>>() {
+            });
+        } catch (Exception e) {
+            log.warn("modifiedData 解析失败: {}", e.getMessage());
+            return null;
+        }
+=======
         LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
         if (loginUser == null) {
             return ResultUtils.error(ErrorCode.NOT_LOGIN_ERROR);
@@ -126,6 +273,7 @@ public class SkillController {
         }
         log.info("Skill 确认: executionId={}, phase={}, action={}", executionId, request.getPhase(), request.getAction());
         return ResultUtils.success("确认已接收");
+>>>>>>> master
     }
 
     /**
@@ -166,6 +314,50 @@ public class SkillController {
     }
 
     /**
+<<<<<<< HEAD
+     * 分页查询 Skill 执行历史
+     * <p>
+     * 普通用户仅能查看本人记录，管理员可查看全部。
+     */
+    @PostMapping("/executions")
+    public BaseResponse<Page<SkillExecutionVO>> listExecutions(
+            @RequestBody(required = false) SkillExecutionQueryRequest request,
+            HttpServletRequest servletRequest) {
+        User loginUser = userService.getLoginUser(servletRequest);
+        SkillExecutionQueryRequest query = request == null ? new SkillExecutionQueryRequest() : request;
+
+        QueryWrapper queryWrapper = QueryWrapper.create()
+                .eq("is_delete", 0)
+                .orderBy("create_time", false);
+
+        // 非管理员只能查看自己的执行记录
+        if (!UserRoleEnum.ADMIN.getValue().equals(loginUser.getUserRole())) {
+            queryWrapper.eq("user_id", loginUser.getId());
+        }
+        if (query.getSkillName() != null && !query.getSkillName().isBlank()) {
+            queryWrapper.eq("skill_name", query.getSkillName());
+        }
+        if (query.getStatus() != null && !query.getStatus().isBlank()) {
+            queryWrapper.eq("status", query.getStatus());
+        }
+
+        Page<SkillExecutionPo> poPage = skillExecutionMapper.paginate(
+                new Page<>(query.getCurrent(), query.getPageSize()), queryWrapper);
+
+        Page<SkillExecutionVO> voPage = new Page<>();
+        voPage.setPageNumber(poPage.getPageNumber());
+        voPage.setPageSize(poPage.getPageSize());
+        voPage.setTotalRow(poPage.getTotalRow());
+        voPage.setRecords(poPage.getRecords().stream()
+                .map(SkillExecutionVO::objToVo)
+                .collect(Collectors.toList()));
+
+        return ResultUtils.success(voPage);
+    }
+
+    /**
+=======
+>>>>>>> master
      * 列出所有可用 Skill
      */
     @GetMapping("/list")

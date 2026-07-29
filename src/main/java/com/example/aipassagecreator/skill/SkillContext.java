@@ -34,6 +34,41 @@ public class SkillContext {
         private volatile int currentPhaseIndex;
         private int totalPhases;
         private long startTime;
+<<<<<<< HEAD
+        /** 累计 Token 消耗（各阶段之和） */
+        private final java.util.concurrent.atomic.AtomicInteger totalTokenUsage =
+                new java.util.concurrent.atomic.AtomicInteger(0);
+        /** 实际使用过的模型名称（去重，保持出现顺序） */
+        private final java.util.Set<String> modelsUsed =
+                java.util.Collections.synchronizedSet(new java.util.LinkedHashSet<>());
+
+        /** 累加某阶段的 Token 消耗 */
+        public void addTokenUsage(int tokens) {
+            if (tokens > 0) {
+                totalTokenUsage.addAndGet(tokens);
+            }
+        }
+
+        /** 记录实际使用的模型 */
+        public void recordModelUsed(String modelName) {
+            if (modelName != null && !modelName.isBlank()) {
+                modelsUsed.add(modelName);
+            }
+        }
+
+        /** 获取累计 Token 消耗 */
+        public int getTokenUsage() {
+            return totalTokenUsage.get();
+        }
+
+        /** 获取使用过的模型，多个以逗号分隔 */
+        public String getModelUsedSummary() {
+            synchronized (modelsUsed) {
+                return modelsUsed.isEmpty() ? null : String.join(",", modelsUsed);
+            }
+        }
+=======
+>>>>>>> master
     }
 
     public static RuntimeContext create(String executionId, SseEmitter emitter) {

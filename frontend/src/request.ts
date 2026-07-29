@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { message } from 'ant-design-vue'
-import { API_BASE_URL } from '@/config/env.example.ts'
+import { API_BASE_URL } from '@/config/env.ts'
 import { REQUEST_TIMEOUT, UNAUTHORIZED_CODE } from '@/constants'
 
 // 创建 Axios 实例
@@ -29,8 +29,10 @@ myAxios.interceptors.response.use(
     // 未登录
     if (data.code === UNAUTHORIZED_CODE) {
       // 不是获取用户信息的请求，并且用户目前不是已经在用户登录页面，则跳转到登录页面
+      // 使用 response.config.url 或可选链保护 responseURL（部分浏览器/axios 版本可能为 undefined）
+      const requestUrl = response.config?.url || response.request?.responseURL || ''
       if (
-        !response.request.responseURL.includes('user/get/login') &&
+        !requestUrl.includes('user/get/login') &&
         !window.location.pathname.includes('/user/login')
       ) {
         message.warning('请先登录')

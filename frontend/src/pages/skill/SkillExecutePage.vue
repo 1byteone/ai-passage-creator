@@ -1,8 +1,8 @@
 <template>
-  <main class="skill-execute-page">
+  <section class="skill-execute-page" aria-label="AI 技能执行工作台">
     <div class="execute-shell">
       <button class="back-link" type="button" @click="router.push('/skill')">
-        <ArrowLeftOutlined />
+        <ArrowLeftOutlined aria-hidden="true" />
         返回技能中心
       </button>
       <SkillExecuteSurface
@@ -13,7 +13,7 @@
         @execution-change="syncExecutionId"
       />
     </div>
-  </main>
+  </section>
 </template>
 
 <script setup lang="ts">

@@ -1,5 +1,5 @@
 <template>
-  <a-layout-footer class="footer">
+  <footer class="footer">
     <div class="footer-content">
       <p class="copyright">
         <a
@@ -12,7 +12,7 @@
         </a>
       </p>
     </div>
-  </a-layout-footer>
+  </footer>
 </template>
 
 <script setup lang="ts">

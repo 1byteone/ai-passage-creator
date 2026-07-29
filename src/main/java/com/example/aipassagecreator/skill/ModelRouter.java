@@ -38,6 +38,30 @@ public class ModelRouter {
     }
 
     /**
+<<<<<<< HEAD
+     * 解析出实际生效的模型名称（与 {@link #resolve} 的取值逻辑保持一致）
+     * <p>
+     * 用于日志与用量统计记录真实使用的模型，而非阶段声明值。
+     *
+     * @param phaseModel   阶段指定的模型（可空）
+     * @param skillDefault skill 默认模型（可空）
+     * @return 生效的模型名称
+     */
+    public String resolveModelName(String phaseModel, String skillDefault) {
+        String modelName = phaseModel != null ? phaseModel : skillDefault;
+        if (modelName == null) {
+            modelName = config.getDefaultModel();
+        }
+        // 未知模型会在 resolve() 中回落到默认模型，此处保持一致
+        return switch (modelName) {
+            case "agnes", "dashscope" -> modelName;
+            default -> config.getDefaultModel();
+        };
+    }
+
+    /**
+=======
+>>>>>>> master
      * 带降级策略的模型解析：主模型不可用则降级
      */
     public ChatModel resolveWithFallback(String phaseModel, String skillDefault) {

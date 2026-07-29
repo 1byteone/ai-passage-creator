@@ -1,0 +1,12 @@
+# 本地开发专用配置。只有显式启用 local Profile 时才会生效。
+app:
+  test-vip-account:
+    enabled: ${TEST_VIP_ACCOUNT_ENABLED:true}
+    account: ${TEST_VIP_ACCOUNT:vip_test}
+    password: ${TEST_VIP_PASSWORD:VipTest@2026}
+    display-name: ${TEST_VIP_DISPLAY_NAME:VIP 测试账号}
+  test-admin-account:
+    enabled: ${TEST_ADMIN_ACCOUNT_ENABLED:true}
+    account: ${TEST_ADMIN_ACCOUNT:admin_test}
+    password: ${TEST_ADMIN_PASSWORD:AdminTest@2026}
+    display-name: ${TEST_ADMIN_DISPLAY_NAME:管理员测试账号}

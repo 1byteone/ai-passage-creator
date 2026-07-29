@@ -1,14 +1,20 @@
 package com.example.aipassagecreator.skill;
 
+import com.alibaba.cloud.ai.graph.CompileConfig;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.KeyStrategy;
 import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
 import com.alibaba.cloud.ai.graph.StateGraph;
+import com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.example.aipassagecreator.mapper.SkillExecutionMapper;
+import com.example.aipassagecreator.skill.tool.WebSearchTool;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.Resource;
@@ -39,18 +45,21 @@ public class SkillRegistry {
     private final ModelRouter modelRouter;
     private final OutputParserRegistry parserRegistry;
     private final SkillExecutionMapper skillExecutionMapper;
+    private final WebSearchTool webSearchTool;
     private SkillExecutionService skillExecutionService;
 
     public SkillRegistry(ResourceLoader resourceLoader,
                          PromptTemplateEngine templateEngine,
                          ModelRouter modelRouter,
                          OutputParserRegistry parserRegistry,
-                         SkillExecutionMapper skillExecutionMapper) {
+                         SkillExecutionMapper skillExecutionMapper,
+                         WebSearchTool webSearchTool) {
         this.resourceLoader = resourceLoader;
         this.templateEngine = templateEngine;
         this.modelRouter = modelRouter;
         this.parserRegistry = parserRegistry;
         this.skillExecutionMapper = skillExecutionMapper;
+        this.webSearchTool = webSearchTool;
     }
 
     @Autowired
@@ -121,12 +130,22 @@ public class SkillRegistry {
             phaseOutputKeyMap.put(phase.getName(), phase.getOutputKey());
         }
 
+        // 收集需要用户确认的节点：在这些节点执行「之前」中断
+        List<String> confirmationNodes = new ArrayList<>();
+
         try {
             // 添加节点
             String previousNode = START;
             for (int i = 0; i < def.getPhases().size(); i++) {
                 PhaseDefinition phase = def.getPhases().get(i);
                 String nodeName = phase.getName();
+                // 回填阶段序号，供前端定位进度
+                phase.setPhaseIndex(i + 1);
+                if (phase.isRequireConfirmation()) {
+                    confirmationNodes.add(nodeName);
+                }
+                // 解析该阶段需要的工具
+                List<ToolCallback> phaseTools = resolveTools(phase.getTools());
                 SkillNodeAction action = new SkillNodeAction(
                         phase,
                         i + 1,
@@ -134,7 +153,8 @@ public class SkillRegistry {
                         templateEngine,
                         modelRouter,
                         parserRegistry,
-                        phaseOutputKeyMap
+                        phaseOutputKeyMap,
+                        phaseTools
                 );
                 graph.addNode(nodeName, node_async(action));
                 graph.addEdge(previousNode, nodeName);
@@ -142,10 +162,53 @@ public class SkillRegistry {
             }
             graph.addEdge(previousNode, END);
 
-            return graph.compile();
+            // 无确认节点的 Skill 保持原有编译路径，不引入检查点开销
+            if (confirmationNodes.isEmpty()) {
+                return graph.compile();
+            }
+
+            // 含确认节点：启用中断 + 检查点，使执行可在中断处暂停并稍后续跑
+            log.info("Skill {} 启用多轮确认, 中断节点: {}", def.getName(), confirmationNodes);
+            CompileConfig compileConfig = CompileConfig.builder()
+                    .saverConfig(SaverConfig.builder().register(new MemorySaver()).build())
+                    .interruptsBefore(confirmationNodes)
+                    .build();
+            return graph.compile(compileConfig);
         } catch (GraphStateException e) {
             throw new RuntimeException("StateGraph 编译失败: " + def.getName(), e);
         }
+    }
+
+    /**
+     * Skill 是否声明了需要用户确认的阶段
+     */
+    public boolean hasConfirmationPhase(String skillName) {
+        SkillDefinition def = getSkill(skillName);
+        return def.getPhases().stream().anyMatch(PhaseDefinition::isRequireConfirmation);
+    }
+
+    /**
+     * 解析阶段声明中需要的工具列表
+     * <p>
+     * 当前支持：webSearch → WebSearchTool
+     */
+    private List<ToolCallback> resolveTools(List<String> toolNames) {
+        if (toolNames == null || toolNames.isEmpty()) {
+            return List.of();
+        }
+        List<ToolCallback> callbacks = new ArrayList<>();
+        for (String toolName : toolNames) {
+            switch (toolName) {
+                case "webSearch" -> callbacks.add(
+                        FunctionToolCallback.builder("webSearch", webSearchTool::webSearch)
+                                .description("执行网络搜索，返回结构化搜索结果（标题、链接、摘要）")
+                                .inputType(WebSearchTool.WebSearchRequest.class)
+                                .build()
+                );
+                default -> log.warn("未知工具: {}", toolName);
+            }
+        }
+        return callbacks;
     }
 
     private KeyStrategyFactory createKeyStrategy(SkillDefinition def) {

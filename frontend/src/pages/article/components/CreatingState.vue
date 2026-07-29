@@ -53,6 +53,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Progress as AProgress } from 'ant-design-vue'
 import { BulbOutlined, PictureOutlined } from '@ant-design/icons-vue'
 import { markdownToHtml } from '@/utils/markdown'
 

@@ -43,7 +43,7 @@ export interface SkillSSEConnection {
 export const connectSSE = (taskId: string, options: SSEOptions): EventSource => {
   const { onMessage, onError, onComplete } = options
 
-  const eventSource = new EventSource(`/api/article/progress/${taskId}`)
+  const eventSource = new EventSource(`/api/article/progress/${taskId}`, { withCredentials: true })
 
   eventSource.onmessage = (event) => {
     try {
@@ -100,7 +100,7 @@ export const connectSkillSSE = (
 
   const connect = () => {
     if (closed) return
-    source = new EventSource(`/api/skill/${encodeURIComponent(executionId)}/progress`)
+    source = new EventSource(`/api/skill/${encodeURIComponent(executionId)}/progress`, { withCredentials: true })
 
     source.onmessage = (event) => {
       try {

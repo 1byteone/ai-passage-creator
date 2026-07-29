@@ -1,9 +1,6 @@
 /**
- * CSS 变量定义 - 清新绿色配色方案
+ * Design tokens - precision green system
  */
-
-/* 引入 Google Fonts - Geometric Modern */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Work+Sans:wght@300;400;500;600;700&display=swap');
 
 :root {
   /* 品牌色 - 绿色系 */
@@ -31,6 +28,38 @@
   --color-border: #E2E8F0;
   --color-border-light: #F1F5F9;
 
+  /* 语义化表面层 */
+  --surface-canvas: #FFFFFF;
+  --surface-page: #F8FAFC;
+  --surface-panel: #FFFFFF;
+  --surface-muted: #F1F5F9;
+  --surface-elevated: #FFFFFF;
+  --surface-brand-soft: #F0FDF4;
+
+  /* 语义化文本层 */
+  --text-strong: #0F172A;
+  --text-body: #1E293B;
+  --text-subtle: #475569;
+  --text-muted: #64748B;
+  --text-disabled: #94A3B8;
+  --text-inverse: #FFFFFF;
+
+  /* 语义化边界层 */
+  --border-subtle: #F1F5F9;
+  --border-default: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --border-focus: #16A34A;
+
+  /* 语义化状态层 */
+  --state-success-bg: #F0FDF4;
+  --state-success-text: #15803D;
+  --state-warning-bg: #FEFCE8;
+  --state-warning-text: #A16207;
+  --state-error-bg: #FEF2F2;
+  --state-error-text: #B91C1C;
+  --state-info-bg: #EFF6FF;
+  --state-info-text: #1D4ED8;
+
   /* 渐变 */
   --gradient-primary: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
   --gradient-hero: linear-gradient(180deg, #DCFCE7 0%, #FFFFFF 100%);
@@ -51,6 +80,9 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-card-hover: 0 8px 24px rgba(34, 197, 94, 0.15);
   --shadow-green: 0 4px 14px rgba(34, 197, 94, 0.25);
+  --shadow-subtle: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-raised: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(34, 197, 94, 0.18);
 
   /* 圆角 */
   --radius-sm: 6px;
@@ -64,6 +96,28 @@
   --transition-fast: 150ms ease-out;
   --transition-normal: 200ms ease-out;
   --transition-slow: 300ms ease-out;
+
+  /* 间距 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* 字体角色 */
+  --font-heading: 'Segoe UI Variable Display', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+
+  /* 稳定尺寸 */
+  --control-height-sm: 32px;
+  --control-height-md: 40px;
+  --control-height-lg: 48px;
+  --touch-target-min: 44px;
 
   /* 毛玻璃 */
   --glass-bg: rgba(255, 255, 255, 0.9);

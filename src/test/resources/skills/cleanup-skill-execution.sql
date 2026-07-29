@@ -1,0 +1,1 @@
+DELETE FROM skill_execution;

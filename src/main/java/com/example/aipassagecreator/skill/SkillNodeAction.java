@@ -2,17 +2,37 @@ package com.example.aipassagecreator.skill;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+<<<<<<< HEAD
+import com.example.aipassagecreator.skill.tool.WebSearchTool;
+=======
+>>>>>>> master
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+<<<<<<< HEAD
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+=======
+import org.springframework.ai.chat.prompt.Prompt;
+>>>>>>> master
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
+<<<<<<< HEAD
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+=======
 import java.util.HashMap;
 import java.util.Map;
+>>>>>>> master
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -32,6 +52,11 @@ public class SkillNodeAction implements NodeAction {
     private final OutputParserRegistry parserRegistry;
     /** phase name → outputKey 映射，用于变量引用解析 */
     private final Map<String, String> phaseOutputKeyMap;
+<<<<<<< HEAD
+    /** 该阶段可用的工具（LLM 工具调用） */
+    private final List<ToolCallback> toolCallbacks;
+=======
+>>>>>>> master
 
     public SkillNodeAction(PhaseDefinition phase,
                            int phaseIndex,
@@ -39,7 +64,12 @@ public class SkillNodeAction implements NodeAction {
                            PromptTemplateEngine templateEngine,
                            ModelRouter modelRouter,
                            OutputParserRegistry parserRegistry,
+<<<<<<< HEAD
+                           Map<String, String> phaseOutputKeyMap,
+                           List<ToolCallback> toolCallbacks) {
+=======
                            Map<String, String> phaseOutputKeyMap) {
+>>>>>>> master
         this.phase = phase;
         this.phaseIndex = phaseIndex;
         this.totalPhases = totalPhases;
@@ -47,6 +77,10 @@ public class SkillNodeAction implements NodeAction {
         this.modelRouter = modelRouter;
         this.parserRegistry = parserRegistry;
         this.phaseOutputKeyMap = phaseOutputKeyMap;
+<<<<<<< HEAD
+        this.toolCallbacks = toolCallbacks == null ? List.of() : toolCallbacks;
+=======
+>>>>>>> master
     }
 
     @Override
@@ -81,6 +115,44 @@ public class SkillNodeAction implements NodeAction {
         String prompt = templateEngine.render(phase.getPromptFile(), inputs);
         log.debug("Prompt 渲染完成: phase={}, promptLength={}", phase.getName(), prompt.length());
 
+<<<<<<< HEAD
+        // 记录到 AgentLog（modelName 取实际生效的模型，而非阶段声明值）
+        String modelName = modelRouter.resolveModelName(
+                phase.getModel(),
+                state.value("skillDefaultModel").map(Object::toString).orElse(null));
+        ctx.getSharedData().put("prompt_" + phase.getName(), prompt);
+        ctx.getSharedData().put("model_" + phase.getName(), modelName);
+        ctx.recordModelUsed(modelName);
+
+        // 调用 LLM，并采集本阶段 Token 消耗
+        String output;
+        int phaseTokens;
+        long startTime = System.currentTimeMillis();
+        if (phase.isStreaming()) {
+            StreamResult streamResult = callStreaming(model, prompt, ctx, executionId, skillName);
+            output = streamResult.text();
+            phaseTokens = streamResult.totalTokens();
+        } else {
+            ChatResponse response;
+            if (!toolCallbacks.isEmpty()) {
+                // 注入工具：LLM 可自主决定调用搜索工具获取真实数据
+                ToolCallingChatOptions toolOptions = ToolCallingChatOptions.builder()
+                        .toolCallbacks(toolCallbacks)
+                        .internalToolExecutionEnabled(true)
+                        .build();
+                response = model.call(new Prompt(List.of(new UserMessage(prompt)), toolOptions));
+            } else {
+                response = model.call(new Prompt(new UserMessage(prompt)));
+            }
+            output = response.getResult().getOutput().getText();
+            phaseTokens = extractTotalTokens(response);
+        }
+        long duration = System.currentTimeMillis() - startTime;
+        ctx.addTokenUsage(phaseTokens);
+        ctx.getSharedData().put("tokens_" + phase.getName(), phaseTokens);
+        log.info("LLM 调用完成: phase={}, model={}, duration={}ms, outputLength={}, tokens={}",
+                phase.getName(), modelName, duration, output.length(), phaseTokens);
+=======
         // 记录到 AgentLog
         String modelName = phase.getModel() != null ? phase.getModel() : "default";
         ctx.getSharedData().put("prompt_" + phase.getName(), prompt);
@@ -97,6 +169,7 @@ public class SkillNodeAction implements NodeAction {
         long duration = System.currentTimeMillis() - startTime;
         log.info("LLM 调用完成: phase={}, duration={}ms, outputLength={}",
                 phase.getName(), duration, output.length());
+>>>>>>> master
 
         // 解析输出
         Object parsed = parserRegistry.parse(phase.getOutputParser(), output, phase);
@@ -112,6 +185,27 @@ public class SkillNodeAction implements NodeAction {
         return result;
     }
 
+<<<<<<< HEAD
+    /** 流式调用结果：拼接后的文本 + 本次请求的 Token 总量 */
+    private record StreamResult(String text, int totalTokens) {
+    }
+
+    private StreamResult callStreaming(ChatModel model, String prompt, SkillContext.RuntimeContext ctx,
+                                       String executionId, String skillName) {
+        StringBuilder sb = new StringBuilder();
+        Flux<ChatResponse> flux = model.stream(new Prompt(new UserMessage(prompt)));
+        AtomicReference<Throwable> error = new AtomicReference<>();
+        // 流式响应中多数分片的 usage 为空，仅末尾分片携带整次请求的总量，
+        // 因此取最大值而非逐片累加，避免重复计数或取到 0
+        AtomicInteger maxTotalTokens = new AtomicInteger(0);
+
+        flux.doOnNext(response -> {
+                    int tokens = extractTotalTokens(response);
+                    if (tokens > maxTotalTokens.get()) {
+                        maxTotalTokens.set(tokens);
+                    }
+                    String chunk = extractChunkText(response);
+=======
     private String callNonStreaming(ChatModel model, String prompt) {
         ChatResponse response = model.call(new Prompt(new UserMessage(prompt)));
         return response.getResult().getOutput().getText();
@@ -125,6 +219,7 @@ public class SkillNodeAction implements NodeAction {
 
         flux.doOnNext(response -> {
                     String chunk = response.getResult().getOutput().getText();
+>>>>>>> master
                     if (chunk != null) {
                         sb.append(chunk);
                         ctx.getStreamHandler().accept(SkillEventFactory.progress(
@@ -140,7 +235,40 @@ public class SkillNodeAction implements NodeAction {
         if (error.get() != null) {
             throw new RuntimeException("流式 LLM 调用失败", error.get());
         }
+<<<<<<< HEAD
+        return new StreamResult(sb.toString(), maxTotalTokens.get());
+    }
+
+    /**
+     * 从 ChatResponse 中提取本次请求的 Token 总量
+     * <p>
+     * 各层级均可能为 null（尤其流式分片），全部做空值保护，取不到时返回 0。
+     */
+    private int extractTotalTokens(ChatResponse response) {
+        if (response == null || response.getMetadata() == null) {
+            return 0;
+        }
+        Usage usage = response.getMetadata().getUsage();
+        if (usage == null || usage.getTotalTokens() == null) {
+            return 0;
+        }
+        return usage.getTotalTokens();
+    }
+
+    /**
+     * 安全提取流式分片文本
+     * <p>
+     * 携带 usage 的末尾分片通常没有 choices，getResult() 会返回 null。
+     */
+    private String extractChunkText(ChatResponse response) {
+        if (response == null || response.getResult() == null
+                || response.getResult().getOutput() == null) {
+            return null;
+        }
+        return response.getResult().getOutput().getText();
+=======
         return sb.toString();
+>>>>>>> master
     }
 
     Map<String, Object> resolveInputs(OverAllState state) {

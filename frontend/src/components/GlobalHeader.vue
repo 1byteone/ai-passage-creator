@@ -1,11 +1,18 @@
 <template>
-  <a-layout-header class="header">
+  <header class="header">
     <div class="header-container">
       <div class="header-left">
         <RouterLink to="/" class="logo-link">
           <div class="logo-wrapper">
-            <img src="@/assets/logo.png" alt="Logo" class="logo-img" />
-            <h1 class="site-title">AI文章创作器</h1>
+            <img
+              src="@/assets/logo.webp"
+              alt=""
+              width="36"
+              height="36"
+              decoding="async"
+              class="logo-img"
+            />
+            <span class="site-title">AI文章创作器</span>
           </div>
         </RouterLink>
       </div>
@@ -24,19 +31,17 @@
           <component :is="item.icon" class="nav-icon" />
           <span>{{ item.label }}</span>
         </RouterLink>
-        <a-dropdown v-if="overflowItems.length" class="mobile-more" trigger="click">
-          <button class="more-button" type="button" aria-label="更多导航">
+        <details v-if="overflowItems.length" class="mobile-more">
+          <summary class="more-button" aria-label="更多导航">
             <MoreOutlined />
-          </button>
-          <template #overlay>
-            <a-menu @click="handleOverflowClick">
-              <a-menu-item v-for="item in overflowItems" :key="item.key">
+          </summary>
+          <div class="mobile-more-menu">
+            <RouterLink v-for="item in overflowItems" :key="item.key" :to="item.key">
                 <component :is="item.icon" />
                 <span>{{ item.label }}</span>
-              </a-menu-item>
-            </a-menu>
-          </template>
-        </a-dropdown>
+            </RouterLink>
+          </div>
+        </details>
       </nav>
 
       <!-- 右侧：用户操作区域 -->
@@ -79,15 +84,13 @@
         </div>
       </div>
     </div>
-  </a-layout-header>
+  </header>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
-import { userLogout } from '@/api/userController.ts'
 import {
   LogoutOutlined,
   HomeOutlined,
@@ -167,17 +170,16 @@ const isActive = (path: string) => {
   return route.path === path || route.path.startsWith(`${path}/`)
 }
 
-const handleOverflowClick = ({ key }: { key: string | number }) => {
-  router.push(String(key))
-}
-
 // 退出登录
 const doLogout = async () => {
+  const [{ default: message }, { userLogout }] = await Promise.all([
+    import('ant-design-vue/es/message'),
+    import('@/api/userController.ts'),
+  ])
   const res = await userLogout()
   if (res.data.code === 0) {
-    loginUserStore.setLoginUser({
-      userName: '未登录',
-    })
+    // 完全重置用户状态，清除所有字段（id、userRole、quota 等），避免旧数据残留
+    loginUserStore.resetLoginUser()
     message.success('退出登录成功')
     await router.push('/user/login')
   } else {
@@ -256,6 +258,7 @@ const doLogout = async () => {
 
 .mobile-more {
   display: none;
+  position: relative;
 }
 
 .more-button {
@@ -270,6 +273,43 @@ const doLogout = async () => {
   background: transparent;
   color: var(--color-text-secondary);
   font-size: 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.more-button::-webkit-details-marker {
+  display: none;
+}
+
+.mobile-more-menu {
+  position: fixed;
+  top: 58px;
+  right: 12px;
+  z-index: 120;
+  display: grid;
+  min-width: 136px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-lg);
+}
+
+.mobile-more-menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.mobile-more-menu a:hover,
+.mobile-more-menu a:focus-visible {
+  background: var(--color-background-secondary);
+  color: var(--color-text);
 }
 
 .nav-item {

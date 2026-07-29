@@ -16,4 +16,14 @@ public interface UserMapper extends BaseMapper<User> {
      */
     @Update("UPDATE user SET quota = quota - 1 WHERE id = #{userId} AND quota > 0")
     int decrementQuota(@Param("userId") Long userId);
+
+    /**
+     * 原子退还用户配额
+     * 用于任务派发失败等未真正消耗算力的场景，避免用户配额白扣
+     *
+     * @param userId 用户ID
+     * @return 影响行数，1表示成功
+     */
+    @Update("UPDATE user SET quota = quota + 1 WHERE id = #{userId}")
+    int incrementQuota(@Param("userId") Long userId);
 }

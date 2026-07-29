@@ -24,7 +24,7 @@
         v-else-if="fieldDefinition(fieldName, rawDefinition).uiType === 'select'"
         :id="fieldName"
         :ref="(element: unknown) => setFieldRef(fieldName, element)"
-        :value="modelValue[fieldName]"
+        :value="selectValue(fieldName)"
         :options="fieldDefinition(fieldName, rawDefinition).options"
         :placeholder="fieldDefinition(fieldName, rawDefinition).placeholder"
         :status="errors[fieldName] ? 'error' : undefined"
@@ -88,7 +88,7 @@
       class="execute-button"
     >
       <template #icon>
-        <PlayCircleOutlined />
+        <PlayCircleOutlined aria-hidden="true" />
       </template>
       {{ actionLabel }}
     </a-button>
@@ -97,6 +97,7 @@
 
 <script setup lang="ts">
 import { computed, reactive } from 'vue'
+import { Radio as ARadio, RadioGroup as ARadioGroup, Select as ASelect } from 'ant-design-vue'
 import { PlayCircleOutlined } from '@ant-design/icons-vue'
 import { getFieldDefinition } from '@/config/skill'
 
@@ -122,6 +123,10 @@ const fieldDefinition = (fieldName: string, raw?: API.SkillVariableDef) =>
   getFieldDefinition(props.skillName, fieldName, raw)
 
 const stringValue = (fieldName: string) => String(props.modelValue[fieldName] ?? '')
+const selectValue = (fieldName: string) => {
+  const value = props.modelValue[fieldName]
+  return typeof value === 'string' || typeof value === 'number' ? value : undefined
+}
 
 const setFieldRef = (fieldName: string, element: unknown) => {
   if (element && typeof element === 'object') {

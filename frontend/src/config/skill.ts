@@ -5,13 +5,22 @@ export interface SkillUiConfig {
   title: string
   shortTitle: string
   description: string
+<<<<<<< HEAD
+  inputLabel: string
+  outputLabel: string
+=======
+>>>>>>> master
   actionLabel: string
   icon: SkillIconName
   categoryLabel: string
   accent: 'blue' | 'green' | 'amber'
 }
 
+<<<<<<< HEAD
+export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x', 'research'] as const
+=======
 export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x'] as const
+>>>>>>> master
 
 export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
   'topic-gen': {
@@ -19,6 +28,11 @@ export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
     title: '选题生成',
     shortTitle: '找选题',
     description: '从一个方向拆出可比较的标题、文章结构与投入评估。',
+<<<<<<< HEAD
+    inputLabel: '一个内容方向或目标受众',
+    outputLabel: '多组选题、标题和建议大纲',
+=======
+>>>>>>> master
     actionLabel: '生成选题',
     icon: 'ideas',
     categoryLabel: '写作',
@@ -29,6 +43,11 @@ export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
     title: '文章审校',
     shortTitle: '审校文章',
     description: '检查内容与逻辑，降低生硬的 AI 表达，并输出可直接使用的终稿。',
+<<<<<<< HEAD
+    inputLabel: '一篇需要检查的文章',
+    outputLabel: '问题清单、修改对比和终稿',
+=======
+>>>>>>> master
     actionLabel: '开始审校',
     icon: 'proofreading',
     categoryLabel: '写作',
@@ -39,11 +58,31 @@ export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
     title: '社交转写',
     shortTitle: '转社交文案',
     description: '把长文浓缩为适合微博、小红书或 X 的短内容。',
+<<<<<<< HEAD
+    inputLabel: '一篇需要浓缩的长文',
+    outputLabel: '适配目标平台的短文案',
+=======
+>>>>>>> master
     actionLabel: '转为社交文案',
     icon: 'social',
     categoryLabel: '写作',
     accent: 'amber',
   },
+<<<<<<< HEAD
+  research: {
+    name: 'research',
+    title: '结构化调研',
+    shortTitle: '调研',
+    description: '围绕主题进行多轮搜索，整理关键发现与结构化简报。',
+    inputLabel: '调研主题与关键问题',
+    outputLabel: '调研发现与写作建议',
+    actionLabel: '开始调研',
+    icon: 'ideas',
+    categoryLabel: '写作',
+    accent: 'blue',
+  },
+=======
+>>>>>>> master
 }
 
 export const PHASE_LABELS: Record<string, string> = {
@@ -52,6 +91,11 @@ export const PHASE_LABELS: Record<string, string> = {
   ai_tone_fix: '调整表达语气',
   rhythm_polish: '润色节奏与终稿',
   condense: '提炼社交文案',
+<<<<<<< HEAD
+  search: '资料检索',
+  summary: '生成调研简报',
+=======
+>>>>>>> master
 }
 
 const FALLBACK_FIELDS: Record<string, Record<string, API.SkillVariableDef>> = {
@@ -135,6 +179,11 @@ export const getSkillUiConfig = (skillName: string): SkillUiConfig => {
       title: skillName,
       shortTitle: skillName,
       description: '通用 AI 技能',
+<<<<<<< HEAD
+      inputLabel: '任务所需素材',
+      outputLabel: '结构化处理结果',
+=======
+>>>>>>> master
       actionLabel: '开始执行',
       icon: 'ideas',
       categoryLabel: '其他',
