@@ -290,6 +290,17 @@ public class SkillExecution {
         return SkillExecutionStatusEnum.AWAITING_CONFIRMATION.getValue().equals(status);
     }
 
+    /**
+     * 测试/诊断用：暴露当前运行时共享数据快照。
+     * 终态清理后 context 为空，返回不可变空 Map。
+     */
+    public Map<String, Object> getContextSharedData() {
+        if (context == null) {
+            return Map.of();
+        }
+        return Map.copyOf(context.getSharedData());
+    }
+
     private PhaseDefinition findPhase(String phaseName) {
         return definition.getPhases().stream()
                 .filter(p -> p.getName().equals(phaseName))

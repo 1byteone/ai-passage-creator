@@ -39,7 +39,6 @@ public final class SkillEventFactory {
         return GsonUtils.toJson(payload);
     }
 
-<<<<<<< HEAD
     /**
      * 执行已暂停，等待用户确认
      *
@@ -61,8 +60,6 @@ public final class SkillEventFactory {
         return GsonUtils.toJson(payload);
     }
 
-=======
->>>>>>> master
     public static String error(String executionId, String skillName, String phase, String errorMessage) {
         Map<String, Object> payload = base("skill.error", executionId, skillName);
         payload.put("status", "FAILED");

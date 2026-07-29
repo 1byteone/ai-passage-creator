@@ -2,37 +2,25 @@ package com.example.aipassagecreator.skill;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
-<<<<<<< HEAD
 import com.example.aipassagecreator.skill.tool.WebSearchTool;
-=======
->>>>>>> master
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
-<<<<<<< HEAD
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
-=======
-import org.springframework.ai.chat.prompt.Prompt;
->>>>>>> master
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
-<<<<<<< HEAD
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-=======
-import java.util.HashMap;
-import java.util.Map;
->>>>>>> master
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -52,11 +40,8 @@ public class SkillNodeAction implements NodeAction {
     private final OutputParserRegistry parserRegistry;
     /** phase name → outputKey 映射，用于变量引用解析 */
     private final Map<String, String> phaseOutputKeyMap;
-<<<<<<< HEAD
     /** 该阶段可用的工具（LLM 工具调用） */
     private final List<ToolCallback> toolCallbacks;
-=======
->>>>>>> master
 
     public SkillNodeAction(PhaseDefinition phase,
                            int phaseIndex,
@@ -64,12 +49,8 @@ public class SkillNodeAction implements NodeAction {
                            PromptTemplateEngine templateEngine,
                            ModelRouter modelRouter,
                            OutputParserRegistry parserRegistry,
-<<<<<<< HEAD
                            Map<String, String> phaseOutputKeyMap,
                            List<ToolCallback> toolCallbacks) {
-=======
-                           Map<String, String> phaseOutputKeyMap) {
->>>>>>> master
         this.phase = phase;
         this.phaseIndex = phaseIndex;
         this.totalPhases = totalPhases;
@@ -77,10 +58,7 @@ public class SkillNodeAction implements NodeAction {
         this.modelRouter = modelRouter;
         this.parserRegistry = parserRegistry;
         this.phaseOutputKeyMap = phaseOutputKeyMap;
-<<<<<<< HEAD
         this.toolCallbacks = toolCallbacks == null ? List.of() : toolCallbacks;
-=======
->>>>>>> master
     }
 
     @Override
@@ -115,7 +93,6 @@ public class SkillNodeAction implements NodeAction {
         String prompt = templateEngine.render(phase.getPromptFile(), inputs);
         log.debug("Prompt 渲染完成: phase={}, promptLength={}", phase.getName(), prompt.length());
 
-<<<<<<< HEAD
         // 记录到 AgentLog（modelName 取实际生效的模型，而非阶段声明值）
         String modelName = modelRouter.resolveModelName(
                 phase.getModel(),
@@ -152,24 +129,6 @@ public class SkillNodeAction implements NodeAction {
         ctx.getSharedData().put("tokens_" + phase.getName(), phaseTokens);
         log.info("LLM 调用完成: phase={}, model={}, duration={}ms, outputLength={}, tokens={}",
                 phase.getName(), modelName, duration, output.length(), phaseTokens);
-=======
-        // 记录到 AgentLog
-        String modelName = phase.getModel() != null ? phase.getModel() : "default";
-        ctx.getSharedData().put("prompt_" + phase.getName(), prompt);
-        ctx.getSharedData().put("model_" + phase.getName(), modelName);
-
-        // 调用 LLM
-        String output;
-        long startTime = System.currentTimeMillis();
-        if (phase.isStreaming()) {
-            output = callStreaming(model, prompt, ctx, executionId, skillName);
-        } else {
-            output = callNonStreaming(model, prompt);
-        }
-        long duration = System.currentTimeMillis() - startTime;
-        log.info("LLM 调用完成: phase={}, duration={}ms, outputLength={}",
-                phase.getName(), duration, output.length());
->>>>>>> master
 
         // 解析输出
         Object parsed = parserRegistry.parse(phase.getOutputParser(), output, phase);
@@ -185,7 +144,6 @@ public class SkillNodeAction implements NodeAction {
         return result;
     }
 
-<<<<<<< HEAD
     /** 流式调用结果：拼接后的文本 + 本次请求的 Token 总量 */
     private record StreamResult(String text, int totalTokens) {
     }
@@ -205,21 +163,6 @@ public class SkillNodeAction implements NodeAction {
                         maxTotalTokens.set(tokens);
                     }
                     String chunk = extractChunkText(response);
-=======
-    private String callNonStreaming(ChatModel model, String prompt) {
-        ChatResponse response = model.call(new Prompt(new UserMessage(prompt)));
-        return response.getResult().getOutput().getText();
-    }
-
-    private String callStreaming(ChatModel model, String prompt, SkillContext.RuntimeContext ctx,
-                                 String executionId, String skillName) {
-        StringBuilder sb = new StringBuilder();
-        Flux<ChatResponse> flux = model.stream(new Prompt(new UserMessage(prompt)));
-        AtomicReference<Throwable> error = new AtomicReference<>();
-
-        flux.doOnNext(response -> {
-                    String chunk = response.getResult().getOutput().getText();
->>>>>>> master
                     if (chunk != null) {
                         sb.append(chunk);
                         ctx.getStreamHandler().accept(SkillEventFactory.progress(
@@ -235,7 +178,6 @@ public class SkillNodeAction implements NodeAction {
         if (error.get() != null) {
             throw new RuntimeException("流式 LLM 调用失败", error.get());
         }
-<<<<<<< HEAD
         return new StreamResult(sb.toString(), maxTotalTokens.get());
     }
 
@@ -266,9 +208,6 @@ public class SkillNodeAction implements NodeAction {
             return null;
         }
         return response.getResult().getOutput().getText();
-=======
-        return sb.toString();
->>>>>>> master
     }
 
     Map<String, Object> resolveInputs(OverAllState state) {

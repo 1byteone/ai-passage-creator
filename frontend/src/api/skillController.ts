@@ -41,7 +41,6 @@ export async function getSkillResult(
     ...(options || {}),
   })
 }
-<<<<<<< HEAD
 
 export async function confirmSkill(
   executionId: string,
@@ -57,5 +56,3 @@ export async function confirmSkill(
     ...(options || {}),
   })
 }
-=======
->>>>>>> master

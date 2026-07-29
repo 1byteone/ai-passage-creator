@@ -1,6 +1,5 @@
 export type SkillTerminalState = 'COMPLETED' | 'FAILED' | null
 
-<<<<<<< HEAD
 export interface AwaitingConfirmation {
   /** 待确认的阶段名 */
   phase: string
@@ -12,8 +11,6 @@ export interface AwaitingConfirmation {
   pendingOutput?: unknown
 }
 
-=======
->>>>>>> master
 export interface SkillRuntimeSnapshot {
   phase: string
   phaseIndex: number
@@ -21,11 +18,8 @@ export interface SkillRuntimeSnapshot {
   outputData: Record<string, unknown>
   errorMessage: string
   terminalState: SkillTerminalState
-<<<<<<< HEAD
   /** 非空时表示执行已暂停，等待用户确认 */
   awaiting: AwaitingConfirmation | null
-=======
->>>>>>> master
 }
 
 export const createSkillRuntimeSnapshot = (): SkillRuntimeSnapshot => ({
@@ -35,10 +29,7 @@ export const createSkillRuntimeSnapshot = (): SkillRuntimeSnapshot => ({
   outputData: {},
   errorMessage: '',
   terminalState: null,
-<<<<<<< HEAD
   awaiting: null,
-=======
->>>>>>> master
 })
 
 export const applySkillProgressEvent = (
@@ -51,11 +42,8 @@ export const applySkillProgressEvent = (
     outputData: { ...snapshot.outputData },
     phase: event.phase || snapshot.phase,
     phaseIndex: event.phaseIndex || snapshot.phaseIndex,
-<<<<<<< HEAD
     // 收到任何后续事件即退出待确认态
     awaiting: null,
-=======
->>>>>>> master
   }
 
   if (event.type === 'skill.phase_started') {
@@ -67,7 +55,6 @@ export const applySkillProgressEvent = (
     if (phase && event.outputData !== undefined) {
       next.outputData[phase.outputKey] = event.outputData
     }
-<<<<<<< HEAD
   } else if (event.type === 'skill.awaiting_confirmation') {
     next.streamedText = ''
     next.awaiting = {
@@ -77,8 +64,6 @@ export const applySkillProgressEvent = (
       pendingOutput: event.pendingOutput,
     }
     next.terminalState = null
-=======
->>>>>>> master
   } else if (event.type === 'skill.complete') {
     if (event.outputData && typeof event.outputData === 'object' && !Array.isArray(event.outputData)) {
       next.outputData = event.outputData as Record<string, unknown>
@@ -88,7 +73,6 @@ export const applySkillProgressEvent = (
   } else if (event.type === 'skill.error') {
     next.errorMessage = event.errorMessage || '执行失败，请调整输入后重试'
     next.terminalState = 'FAILED'
-<<<<<<< HEAD
   } else if (event.type === 'skill.started') {
     // 开始事件，无操作
   } else if (event.type === 'skill.progress') {
@@ -97,9 +81,3 @@ export const applySkillProgressEvent = (
 
   return next
 }
-=======
-  }
-
-  return next
-}
->>>>>>> master

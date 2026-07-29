@@ -38,7 +38,6 @@ public class ModelRouter {
     }
 
     /**
-<<<<<<< HEAD
      * 解析出实际生效的模型名称（与 {@link #resolve} 的取值逻辑保持一致）
      * <p>
      * 用于日志与用量统计记录真实使用的模型，而非阶段声明值。
@@ -60,8 +59,6 @@ public class ModelRouter {
     }
 
     /**
-=======
->>>>>>> master
      * 带降级策略的模型解析：主模型不可用则降级
      */
     public ChatModel resolveWithFallback(String phaseModel, String skillDefault) {

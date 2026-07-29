@@ -331,21 +331,15 @@ declare namespace API {
     requireConfirmation?: boolean
   }
 
-<<<<<<< HEAD
   type SkillConfirmAction = 'approve' | 'modify'
 
-=======
->>>>>>> master
   type SkillProgressEvent = {
     type:
       | 'skill.started'
       | 'skill.phase_started'
       | 'skill.progress'
       | 'skill.phase_complete'
-<<<<<<< HEAD
       | 'skill.awaiting_confirmation'
-=======
->>>>>>> master
       | 'skill.complete'
       | 'skill.error'
     skillExecutionId: string
@@ -358,7 +352,6 @@ declare namespace API {
     data?: string
     outputData?: unknown
     errorMessage?: string
-<<<<<<< HEAD
     /** 仅 skill.awaiting_confirmation：后端支持的确认动作 */
     supportedActions?: SkillConfirmAction[]
     /** 仅 skill.awaiting_confirmation：待用户审阅的上一阶段产出 */
@@ -369,18 +362,12 @@ declare namespace API {
     action: SkillConfirmAction
     /** modify 动作携带的修改数据，JSON 对象字符串 */
     modifiedData?: string
-=======
->>>>>>> master
   }
 
   type SkillResultResponse = {
     skillExecutionId?: string
     skillName?: string
-<<<<<<< HEAD
     status: 'PENDING' | 'RUNNING' | 'AWAITING_CONFIRMATION' | 'SUCCESS' | 'FAILED' | 'NOT_FOUND'
-=======
-    status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'NOT_FOUND'
->>>>>>> master
     phase?: string
     durationMs?: number
     errorMessage?: string

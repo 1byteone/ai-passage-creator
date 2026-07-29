@@ -34,7 +34,6 @@ public class SkillContext {
         private volatile int currentPhaseIndex;
         private int totalPhases;
         private long startTime;
-<<<<<<< HEAD
         /** 累计 Token 消耗（各阶段之和） */
         private final java.util.concurrent.atomic.AtomicInteger totalTokenUsage =
                 new java.util.concurrent.atomic.AtomicInteger(0);
@@ -67,8 +66,6 @@ public class SkillContext {
                 return modelsUsed.isEmpty() ? null : String.join(",", modelsUsed);
             }
         }
-=======
->>>>>>> master
     }
 
     public static RuntimeContext create(String executionId, SseEmitter emitter) {

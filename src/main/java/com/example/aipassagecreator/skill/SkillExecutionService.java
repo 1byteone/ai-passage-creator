@@ -1,22 +1,15 @@
 package com.example.aipassagecreator.skill;
 
-<<<<<<< HEAD
 import com.example.aipassagecreator.enums.SkillExecutionStatusEnum;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.service.QuotaService;
 import com.example.aipassagecreator.service.UserService;
-=======
->>>>>>> master
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
-<<<<<<< HEAD
-=======
-import java.util.function.Consumer;
->>>>>>> master
 
 /**
  * Skill 异步执行服务
@@ -28,7 +21,6 @@ import java.util.function.Consumer;
 public class SkillExecutionService {
 
     private final SkillSseEmitterManager sseEmitterManager;
-<<<<<<< HEAD
     private final SkillExecutionRegistry executionRegistry;
     private final QuotaService quotaService;
     private final UserService userService;
@@ -94,18 +86,4 @@ public class SkillExecutionService {
             log.error("Skill 执行失败退款异常: userId={}, executionId={}", userId, executionId, e);
         }
     }
-=======
-
-    @Async("skillExecutor")
-    public void executeAsync(SkillExecution execution, Long userId) {
-        try {
-            execution.execute(
-                    event -> sseEmitterManager.publish(execution.getExecutionId(), event),
-                    userId
-            );
-        } finally {
-            sseEmitterManager.complete(execution.getExecutionId());
-        }
-    }
->>>>>>> master
 }

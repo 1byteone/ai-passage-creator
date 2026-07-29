@@ -5,7 +5,6 @@
     <a-result
       v-else-if="definitionError"
       status="404"
-<<<<<<< HEAD
       sub-title="技能可能尚未公开，或定义加载失败。"
     >
       <template #title>
@@ -13,18 +12,12 @@
           这个技能暂不可用
         </component>
       </template>
-=======
-      title="这个技能暂不可用"
-      sub-title="技能可能尚未公开，或定义加载失败。"
-    >
->>>>>>> master
       <template #extra>
         <a-button @click="loadDefinition">重新加载</a-button>
       </template>
     </a-result>
 
     <template v-else-if="definition">
-<<<<<<< HEAD
       <header v-if="!embedded && state !== 'INPUT'" class="surface-context">
         <span>{{ uiConfig.categoryLabel }}</span>
         <h1>{{ uiConfig.title }}</h1>
@@ -36,12 +29,6 @@
           <component :is="embedded ? 'h2' : 'h1'" class="surface-title">
             {{ uiConfig.title }}
           </component>
-=======
-      <div v-if="state === 'INPUT'" class="input-layout">
-        <div class="surface-intro">
-          <span>{{ uiConfig.categoryLabel }}</span>
-          <h2>{{ uiConfig.title }}</h2>
->>>>>>> master
           <p>{{ definition.description || uiConfig.description }}</p>
         </div>
         <div class="form-panel">
@@ -64,7 +51,6 @@
         :status-text="executionStatusText"
       />
 
-<<<<<<< HEAD
       <div v-else-if="state === 'AWAITING_CONFIRMATION'" class="awaiting-layout">
         <div class="awaiting-card">
           <div class="awaiting-header">
@@ -109,8 +95,6 @@
         </div>
       </div>
 
-=======
->>>>>>> master
       <a-result
         v-else-if="state === 'FAILED'"
         status="error"
@@ -161,13 +145,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-<<<<<<< HEAD
 import { CheckCircleOutlined, ClockCircleOutlined, EditOutlined } from '@ant-design/icons-vue'
 import { executeSkill, getSkillDefinition, getSkillResult, confirmSkill } from '@/api/skillController'
-=======
-import { CheckCircleOutlined, EditOutlined } from '@ant-design/icons-vue'
-import { executeSkill, getSkillDefinition, getSkillResult } from '@/api/skillController'
->>>>>>> master
 import { getFieldDefinition, getPhaseLabel, getSkillUiConfig } from '@/config/skill'
 import { connectSkillSSE, type SkillSSEConnection } from '@/utils/sse'
 import {
@@ -178,11 +157,7 @@ import SkillInputForm from './SkillInputForm.vue'
 import SkillProgress from './SkillProgress.vue'
 import SkillResultRenderer from './SkillResultRenderer.vue'
 
-<<<<<<< HEAD
 type ExecutionState = 'INPUT' | 'EXECUTING' | 'AWAITING_CONFIRMATION' | 'COMPLETED' | 'FAILED'
-=======
-type ExecutionState = 'INPUT' | 'EXECUTING' | 'COMPLETED' | 'FAILED'
->>>>>>> master
 
 const props = withDefaults(
   defineProps<{
@@ -224,13 +199,10 @@ const streamedText = ref('')
 const outputData = ref<Record<string, unknown>>({})
 const errorMessage = ref('')
 const pollingStartedAt = ref(0)
-<<<<<<< HEAD
 const awaitingPhase = ref('')
 const pendingOutput = ref<unknown>(null)
 const supportedActions = ref<Array<'approve' | 'modify'>>([])
 const confirming = ref(false)
-=======
->>>>>>> master
 
 let sseConnection: SkillSSEConnection | null = null
 let pollTimer: number | null = null
@@ -307,7 +279,6 @@ const loadDefinition = async () => {
   }
 }
 
-<<<<<<< HEAD
 const supportsAction = (action: 'approve' | 'modify'): boolean => {
   return supportedActions.value.includes(action)
 }
@@ -347,8 +318,6 @@ const formatPendingOutput = (data: unknown): string => {
   }
 }
 
-=======
->>>>>>> master
 const startExecution = async () => {
   submitting.value = true
   errorMessage.value = ''
@@ -397,10 +366,7 @@ const handleProgressEvent = (event: API.SkillProgressEvent) => {
       outputData: outputData.value,
       errorMessage: errorMessage.value,
       terminalState: null,
-<<<<<<< HEAD
       awaiting: null,
-=======
->>>>>>> master
     } satisfies SkillRuntimeSnapshot,
     event,
     definition.value?.phases || [],
@@ -412,16 +378,12 @@ const handleProgressEvent = (event: API.SkillProgressEvent) => {
   outputData.value = snapshot.outputData
   errorMessage.value = snapshot.errorMessage
 
-<<<<<<< HEAD
   if (snapshot.awaiting) {
     awaitingPhase.value = snapshot.awaiting.phase
     pendingOutput.value = snapshot.awaiting.pendingOutput ?? null
     supportedActions.value = snapshot.awaiting.supportedActions
     setState('AWAITING_CONFIRMATION')
   } else if (snapshot.terminalState === 'COMPLETED') {
-=======
-  if (snapshot.terminalState === 'COMPLETED') {
->>>>>>> master
     completeExecution(snapshot.outputData)
   } else if (snapshot.terminalState === 'FAILED') {
     setState('FAILED')
@@ -464,7 +426,6 @@ const refreshResult = async (): Promise<boolean> => {
       setState('FAILED')
       return true
     }
-<<<<<<< HEAD
     if (result.status === 'AWAITING_CONFIRMATION') {
       // 轮询恢复时发现执行处于等待确认态
       awaitingPhase.value = result.phase || ''
@@ -473,8 +434,6 @@ const refreshResult = async (): Promise<boolean> => {
       setState('AWAITING_CONFIRMATION')
       return true
     }
-=======
->>>>>>> master
     if (result.phase) {
       currentPhase.value = result.phase
       const index = definition.value?.phases?.findIndex((phase) => phase.name === result.phase) ?? -1
@@ -521,13 +480,10 @@ const completeExecution = (result: Record<string, unknown>) => {
 const returnToInput = () => {
   stopConnections()
   errorMessage.value = ''
-<<<<<<< HEAD
   awaitingPhase.value = ''
   pendingOutput.value = null
   supportedActions.value = []
   confirming.value = false
-=======
->>>>>>> master
   sessionStorage.setItem(draftKey.value, JSON.stringify(inputs.value))
   sessionStorage.removeItem(executionKey.value)
   executionId.value = ''
@@ -605,12 +561,8 @@ defineExpose({
 }
 
 .input-layout,
-<<<<<<< HEAD
 .completed-layout,
 .awaiting-layout {
-=======
-.completed-layout {
->>>>>>> master
   display: grid;
   gap: 24px;
 }
@@ -621,17 +573,12 @@ defineExpose({
   font-weight: 600;
 }
 
-<<<<<<< HEAD
 .surface-title {
-=======
-.surface-intro h2 {
->>>>>>> master
   margin: 6px 0 8px;
   color: var(--color-text);
   font-size: 24px;
 }
 
-<<<<<<< HEAD
 .result-title {
   margin: 0;
   color: inherit;
@@ -655,8 +602,6 @@ defineExpose({
   font-size: 24px;
 }
 
-=======
->>>>>>> master
 .surface-intro p {
   max-width: 680px;
   margin: 0;
@@ -672,7 +617,6 @@ defineExpose({
   background: white;
 }
 
-<<<<<<< HEAD
 .awaiting-card {
   padding: 32px 24px 24px;
   border: 1px solid var(--color-border);
@@ -739,8 +683,6 @@ defineExpose({
   flex-wrap: wrap;
 }
 
-=======
->>>>>>> master
 .completion-bar {
   display: flex;
   align-items: center;
@@ -777,11 +719,7 @@ defineExpose({
   cursor: pointer;
 }
 
-<<<<<<< HEAD
 .embedded .surface-title {
-=======
-.embedded .surface-intro h2 {
->>>>>>> master
   font-size: 20px;
 }
 
