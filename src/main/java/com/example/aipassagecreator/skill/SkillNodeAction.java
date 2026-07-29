@@ -2,17 +2,23 @@ package com.example.aipassagecreator.skill;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import com.example.aipassagecreator.skill.tool.WebSearchTool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -34,6 +40,8 @@ public class SkillNodeAction implements NodeAction {
     private final OutputParserRegistry parserRegistry;
     /** phase name → outputKey 映射，用于变量引用解析 */
     private final Map<String, String> phaseOutputKeyMap;
+    /** 该阶段可用的工具（LLM 工具调用） */
+    private final List<ToolCallback> toolCallbacks;
 
     public SkillNodeAction(PhaseDefinition phase,
                            int phaseIndex,
@@ -41,7 +49,8 @@ public class SkillNodeAction implements NodeAction {
                            PromptTemplateEngine templateEngine,
                            ModelRouter modelRouter,
                            OutputParserRegistry parserRegistry,
-                           Map<String, String> phaseOutputKeyMap) {
+                           Map<String, String> phaseOutputKeyMap,
+                           List<ToolCallback> toolCallbacks) {
         this.phase = phase;
         this.phaseIndex = phaseIndex;
         this.totalPhases = totalPhases;
@@ -49,6 +58,7 @@ public class SkillNodeAction implements NodeAction {
         this.modelRouter = modelRouter;
         this.parserRegistry = parserRegistry;
         this.phaseOutputKeyMap = phaseOutputKeyMap;
+        this.toolCallbacks = toolCallbacks == null ? List.of() : toolCallbacks;
     }
 
     @Override
@@ -100,7 +110,17 @@ public class SkillNodeAction implements NodeAction {
             output = streamResult.text();
             phaseTokens = streamResult.totalTokens();
         } else {
-            ChatResponse response = model.call(new Prompt(new UserMessage(prompt)));
+            ChatResponse response;
+            if (!toolCallbacks.isEmpty()) {
+                // 注入工具：LLM 可自主决定调用搜索工具获取真实数据
+                ToolCallingChatOptions toolOptions = ToolCallingChatOptions.builder()
+                        .toolCallbacks(toolCallbacks)
+                        .internalToolExecutionEnabled(true)
+                        .build();
+                response = model.call(new Prompt(List.of(new UserMessage(prompt)), toolOptions));
+            } else {
+                response = model.call(new Prompt(new UserMessage(prompt)));
+            }
             output = response.getResult().getOutput().getText();
             phaseTokens = extractTotalTokens(response);
         }

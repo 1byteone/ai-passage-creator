@@ -16,6 +16,13 @@ public class PhaseDefinition {
     private String model;
     /** 是否流式输出 */
     private boolean streaming;
+    /**
+     * 注入的工具名称列表（对应 Spring Bean 名称）
+     * <p>
+     * 例如：["webSearch"] 表示该阶段 LLM 调用时可使用 WebSearchTool。
+     * 工具通过 @Tool 注解声明，运行时由 LLM 自主决定何时调用。
+     */
+    private List<String> tools;
     /** 输出解析器：json / markdown / raw / pptx */
     private String outputParser = "json";
     /** 输出在 OverAllState 中的键名 */

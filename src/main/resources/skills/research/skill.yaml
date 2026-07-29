@@ -21,6 +21,7 @@ phases:
     streaming: false
     outputParser: json
     outputKey: searchResults
+    tools: [webSearch]
     variables:
       - name: topic
       - name: questions
