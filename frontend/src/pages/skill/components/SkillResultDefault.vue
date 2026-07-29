@@ -5,10 +5,12 @@
         <p>执行完成</p>
         <h2>结构化结果</h2>
       </div>
-      <a-button @click="copyResult">
-        <template #icon><CopyOutlined /></template>
-        复制
-      </a-button>
+      <div class="result-actions">
+        <a-button @click="copyResult"><template #icon><CopyOutlined /></template>复制</a-button>
+        <a-button type="primary" @click="downloadResult">
+          <template #icon><DownloadOutlined /></template>下载 Markdown
+        </a-button>
+      </div>
     </header>
     <pre>{{ formattedResult }}</pre>
   </section>
@@ -16,8 +18,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { message } from 'ant-design-vue'
-import { CopyOutlined } from '@ant-design/icons-vue'
+import { CopyOutlined, DownloadOutlined } from '@ant-design/icons-vue'
+import { copyResultText, downloadResultText } from '@/utils/resultActions'
 
 const props = defineProps<{
   outputData: Record<string, unknown>
@@ -31,14 +33,8 @@ const formattedResult = computed(() => {
   return JSON.stringify(props.outputData, null, 2)
 })
 
-const copyResult = async () => {
-  try {
-    await navigator.clipboard.writeText(formattedResult.value)
-    message.success('结果已复制')
-  } catch {
-    message.error('复制失败，请手动选择文本')
-  }
-}
+const copyResult = () => copyResultText(formattedResult.value)
+const downloadResult = () => downloadResultText(formattedResult.value, 'skill-result.md')
 </script>
 
 <style scoped>
@@ -64,6 +60,12 @@ header h2 {
   margin: 0;
   color: var(--color-text);
   font-size: 22px;
+}
+
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 pre {

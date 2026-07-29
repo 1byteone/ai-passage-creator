@@ -74,9 +74,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { message } from 'ant-design-vue'
 import { CopyOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import { diffText } from '@/utils/textDiff'
+import { copyResultText, downloadResultText } from '@/utils/resultActions'
 
 const props = defineProps<{
   inputs: Record<string, unknown>
@@ -113,24 +113,8 @@ const issueGroups = computed(() => [
   { title: '修改建议', items: arrayValue('suggestions') },
 ])
 
-const copyFinal = async () => {
-  try {
-    await navigator.clipboard.writeText(finalContent.value)
-    message.success('终稿已复制')
-  } catch {
-    message.error('复制失败，请手动选择文本')
-  }
-}
-
-const downloadFinal = () => {
-  const blob = new Blob([finalContent.value], { type: 'text/markdown;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = 'proofread-article.md'
-  anchor.click()
-  URL.revokeObjectURL(url)
-}
+const copyFinal = () => copyResultText(finalContent.value, '终稿已复制')
+const downloadFinal = () => downloadResultText(finalContent.value, 'proofread-article.md')
 </script>
 
 <style scoped>

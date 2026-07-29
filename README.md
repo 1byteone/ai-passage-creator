@@ -167,6 +167,23 @@ docker-compose up -d
 # API 文档: http://localhost:8123/api/doc.html
 ```
 
+### 本地特权测试账号
+
+本地联调需要验证 VIP 和管理端功能时，使用 `local` Profile 启动后端：
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+应用会幂等创建或刷新以下测试账号：
+
+| 用途 | 账号 | 密码 | 角色 |
+|------|------|------|------|
+| VIP 功能 | `vip_test` | `VipTest@2026` | `vip` |
+| 管理端功能 | `admin_test` | `AdminTest@2026` | `admin` |
+
+两个初始化器只允许在 `local` 或 `test` Profile 中运行，默认及生产环境不会创建账号。可分别通过 `TEST_VIP_ACCOUNT_ENABLED=false` 和 `TEST_ADMIN_ACCOUNT_ENABLED=false` 关闭；账号、密码和显示名称也可使用对应的 `TEST_VIP_*`、`TEST_ADMIN_*` 环境变量覆盖。
+
 ---
 
 ## 📂 项目结构

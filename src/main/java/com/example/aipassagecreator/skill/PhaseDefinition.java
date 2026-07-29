@@ -16,6 +16,7 @@ public class PhaseDefinition {
     private String model;
     /** 是否流式输出 */
     private boolean streaming;
+<<<<<<< HEAD
     /**
      * 注入的工具名称列表（对应 Spring Bean 名称）
      * <p>
@@ -23,12 +24,15 @@ public class PhaseDefinition {
      * 工具通过 @Tool 注解声明，运行时由 LLM 自主决定何时调用。
      */
     private List<String> tools;
+=======
+>>>>>>> master
     /** 输出解析器：json / markdown / raw / pptx */
     private String outputParser = "json";
     /** 输出在 OverAllState 中的键名 */
     private String outputKey;
     /** 变量映射 */
     private List<VariableRef> variables;
+<<<<<<< HEAD
     /**
      * 是否需要用户确认
      * <p>
@@ -38,6 +42,10 @@ public class PhaseDefinition {
     private boolean requireConfirmation;
     /** 阶段序号（从 1 开始，由 SkillRegistry 注册时回填，供前端定位进度） */
     private Integer phaseIndex;
+=======
+    /** 是否需要用户确认 */
+    private boolean requireConfirmation;
+>>>>>>> master
 
     @Data
     public static class VariableRef {

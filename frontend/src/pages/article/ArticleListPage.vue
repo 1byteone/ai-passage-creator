@@ -1,211 +1,195 @@
 <template>
-  <div class="article-list-page">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-container">
-        <div class="header-content">
-          <h1 class="page-title">历史记录</h1>
-          <p class="page-subtitle">管理您创作的所有文章</p>
-        </div>
-        <a-button type="primary" size="large" @click="goToCreate" class="create-btn">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          创作新文章
-        </a-button>
+  <section class="history-page" aria-labelledby="history-title">
+    <header class="page-heading">
+      <div>
+        <p>内容资产</p>
+        <h1 id="history-title">历史文章</h1>
+        <span>查找、继续阅读或导出过去的创作成果。</span>
       </div>
-    </div>
+      <a-button type="primary" size="large" @click="goToCreate">
+        <template #icon><PlusOutlined /></template>
+        创作新文章
+      </a-button>
+    </header>
 
-    <div class="container">
-      <!-- 搜索筛选栏 -->
-      <div class="filter-bar">
-        <div class="filter-left">
-          <a-input-search
-            v-model:value="searchKeyword"
-            placeholder="搜索文章标题..."
-            style="width: 280px"
-            @search="handleSearch"
-            @change="handleSearchChange"
-            allow-clear
-            class="search-input"
+    <div class="history-shell">
+      <section class="filter-section" aria-labelledby="filter-title">
+        <div class="filter-heading">
+          <div>
+            <h2 id="filter-title">筛选文章</h2>
+            <p>{{ resultCountLabel }}</p>
+          </div>
+          <button
+            class="filter-toggle"
+            type="button"
+            :aria-expanded="filtersExpanded"
+            aria-controls="history-filters"
+            @click="filtersExpanded = !filtersExpanded"
           >
-            <template #prefix>
-              <SearchOutlined class="search-icon" />
-            </template>
-          </a-input-search>
-
-          <a-range-picker
-            v-model:value="dateRange"
-            :placeholder="['开始日期', '结束日期']"
-            @change="handleDateChange"
-            class="date-picker"
-          />
-
-          <a-select
-            v-model:value="statusFilter"
-            placeholder="全部状态"
-            style="width: 120px"
-            allow-clear
-            @change="handleStatusChange"
-            class="status-select"
-          >
-            <a-select-option value="">全部状态</a-select-option>
-            <a-select-option value="COMPLETED">已完成</a-select-option>
-            <a-select-option value="PROCESSING">生成中</a-select-option>
-            <a-select-option value="PENDING">等待中</a-select-option>
-            <a-select-option value="FAILED">失败</a-select-option>
-          </a-select>
+            <FilterOutlined />
+            {{ filtersExpanded ? '收起筛选' : '展开筛选' }}
+          </button>
         </div>
 
-        <div class="filter-right">
-          <span class="total-count">共 {{ pagination.total }} 篇文章</span>
+        <div id="history-filters" class="filter-controls" :class="{ expanded: filtersExpanded }">
+          <label class="filter-field search-field">
+            <span>标题或选题</span>
+            <a-input-search
+              v-model:value="searchKeyword"
+              placeholder="搜索当前页文章"
+              allow-clear
+              @search="applyLocalFilters"
+              @change="handleSearchChange"
+            >
+              <template #prefix><SearchOutlined /></template>
+            </a-input-search>
+          </label>
+
+          <label class="filter-field">
+            <span>创建日期</span>
+            <a-range-picker
+              v-model:value="dateRange"
+              :placeholder="['开始日期', '结束日期']"
+              @change="applyLocalFilters"
+            />
+          </label>
+
+          <label class="filter-field status-field">
+            <span>任务状态</span>
+            <a-select v-model:value="statusFilter" @change="handleStatusChange">
+              <a-select-option value="">全部状态</a-select-option>
+              <a-select-option value="COMPLETED">已完成</a-select-option>
+              <a-select-option value="PROCESSING">生成中</a-select-option>
+              <a-select-option value="PENDING">等待中</a-select-option>
+              <a-select-option value="FAILED">失败</a-select-option>
+            </a-select>
+          </label>
+
+          <a-button v-if="hasFilters" class="clear-filter" @click="clearFilters">清除筛选</a-button>
         </div>
+      </section>
+
+      <div v-if="errorMessage && !records.length" class="page-state" role="alert">
+        <a-result status="warning" title="历史文章暂时无法加载" :sub-title="errorMessage">
+          <template #extra><a-button type="primary" @click="loadData">重新加载</a-button></template>
+        </a-result>
       </div>
 
-      <!-- 表格卡片 -->
-      <a-card :bordered="false" class="table-card">
-        <a-table
-          :columns="columns"
-          :data-source="dataSource"
-          :loading="loading"
-          :pagination="pagination"
-          @change="handleTableChange"
-          row-key="id"
-          class="article-table"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'title'">
-              <div class="title-cell" @click="viewArticle(record)">
-                <div class="main-title">{{ record.mainTitle || record.topic || '-' }}</div>
-                <div class="sub-title">{{ record.subTitle || '-' }}</div>
+      <template v-else>
+        <div v-if="errorMessage" class="stale-notice" role="status">
+          <span>刷新失败，当前仍显示上一次加载的文章。</span>
+          <a-button size="small" @click="loadData">重试</a-button>
+        </div>
+
+        <div v-if="loading && !records.length" class="loading-list" aria-label="文章加载中">
+          <a-skeleton v-for="index in 4" :key="index" active :paragraph="{ rows: 2 }" />
+        </div>
+
+        <div v-else-if="!visibleRecords.length" class="page-state">
+          <a-empty :description="emptyDescription">
+            <a-button v-if="hasFilters" @click="clearFilters">清除筛选</a-button>
+            <a-button v-else type="primary" @click="goToCreate">创作第一篇文章</a-button>
+          </a-empty>
+        </div>
+
+        <template v-else>
+          <div class="desktop-table">
+            <a-table
+              :columns="columns"
+              :data-source="visibleRecords"
+              :loading="loading"
+              :pagination="pagination"
+              row-key="id"
+              @change="handleTableChange"
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'title'">
+                  <button class="title-cell" type="button" @click="viewArticle(record)">
+                    <strong>{{ record.mainTitle || record.topic || '未命名文章' }}</strong>
+                    <span>{{ record.subTitle || record.topic || '暂无副标题' }}</span>
+                  </button>
+                </template>
+                <template v-else-if="column.key === 'status'">
+                  <StatusBadge :status="record.status || 'PENDING'" />
+                </template>
+                <template v-else-if="column.key === 'createTime'">
+                  <time :datetime="record.createTime">{{ formatDate(record.createTime) }}</time>
+                </template>
+                <template v-else-if="column.key === 'action'">
+                  <ArticleActions :record="record" />
+                </template>
+              </template>
+            </a-table>
+          </div>
+
+          <div class="mobile-list">
+            <article v-for="record in visibleRecords" :key="record.id || record.taskId">
+              <div class="article-heading">
+                <StatusBadge :status="record.status || 'PENDING'" />
+                <time :datetime="record.createTime">{{ formatDate(record.createTime) }}</time>
               </div>
-            </template>
+              <button class="mobile-title" type="button" @click="viewArticle(record)">
+                <strong>{{ record.mainTitle || record.topic || '未命名文章' }}</strong>
+                <span>{{ record.subTitle || record.topic || '暂无副标题' }}</span>
+              </button>
+              <ArticleActions :record="record" />
+            </article>
 
-            <template v-else-if="column.key === 'status'">
-              <span :class="['status-badge', `status-${record.status?.toLowerCase()}`]">
-                <span class="status-dot"></span>
-                {{ getStatusText(record.status) }}
-              </span>
-            </template>
-
-            <template v-else-if="column.key === 'createTime'">
-              <span class="time-text">{{ formatDate(record.createTime) }}</span>
-            </template>
-
-            <template v-else-if="column.key === 'action'">
-              <div class="action-group">
-                <a-button type="link" size="small" @click="viewArticle(record)" class="action-btn view-btn">
-                  <EyeOutlined />
-                  查看
-                </a-button>
-                <a-button
-                  v-if="record.status === 'FAILED'"
-                  type="link"
-                  size="small"
-                  @click="retryArticle(record)"
-                  class="action-btn retry-btn"
-                >
-                  <RedoOutlined />
-                  重试
-                </a-button>
-                <a-button
-                  v-else
-                  type="link"
-                  size="small"
-                  @click="exportArticle(record)"
-                  class="action-btn export-btn"
-                >
-                  <DownloadOutlined />
-                  导出
-                </a-button>
-                <a-popconfirm
-                  title="确定要删除这篇文章吗?"
-                  ok-text="确定"
-                  cancel-text="取消"
-                  @confirm="deleteArticle(record)"
-                >
-                  <a-button type="link" size="small" danger class="action-btn delete-btn">
-                    <DeleteOutlined />
-                    删除
-                  </a-button>
-                </a-popconfirm>
-              </div>
-            </template>
-          </template>
-
-          <!-- 空状态 -->
-          <template #emptyText>
-            <div class="empty-state">
-              <FileTextOutlined class="empty-icon" />
-              <p class="empty-title">暂无文章</p>
-              <p class="empty-desc">开始创作您的第一篇文章吧</p>
-              <a-button type="primary" @click="goToCreate">
-                <PlusOutlined />
-                创作新文章
-              </a-button>
-            </div>
-          </template>
-        </a-table>
-      </a-card>
+            <a-pagination
+              v-model:current="pagination.current"
+              :page-size="pagination.pageSize"
+              :total="pagination.total"
+              :show-size-changer="false"
+              simple
+              @change="handleMobilePageChange"
+            />
+          </div>
+        </template>
+      </template>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, defineComponent, h, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { message, Modal } from 'ant-design-vue'
 import {
-  PlusOutlined,
-  SearchOutlined,
-  EyeOutlined,
-  DownloadOutlined,
+  Button,
+  Modal,
+  Pagination as APagination,
+  Popconfirm,
+  RangePicker as ARangePicker,
+  Select as ASelect,
+  SelectOption as ASelectOption,
+  Table as ATable,
+  message,
+} from 'ant-design-vue'
+import {
   DeleteOutlined,
-  FileTextOutlined,
-  RedoOutlined
+  DownloadOutlined,
+  EyeOutlined,
+  FilterOutlined,
+  PlusOutlined,
+  RedoOutlined,
+  SearchOutlined,
 } from '@ant-design/icons-vue'
-import { listArticle, deleteArticle as deleteArticleApi, getArticle } from '@/api/articleController'
 import dayjs, { type Dayjs } from 'dayjs'
+import 'dayjs/locale/zh-cn'
+import StatusBadge from '@/components/StatusBadge.vue'
+import { deleteArticle as deleteArticleApi, getArticle, listArticle } from '@/api/articleController'
+import { exportAsMarkdown } from '@/utils/article'
+
+dayjs.locale('zh-cn')
 
 const router = useRouter()
-
-// 搜索筛选
 const searchKeyword = ref('')
-const dateRange = ref<[Dayjs, Dayjs] | null>(null)
-const statusFilter = ref<string>('')
-
-const columns = [
-  {
-    title: '选题',
-    dataIndex: 'topic',
-    key: 'topic',
-    width: 180,
-    ellipsis: true,
-  },
-  {
-    title: '标题',
-    key: 'title',
-    width: 280,
-  },
-  {
-    title: '状态',
-    key: 'status',
-    width: 110,
-  },
-  {
-    title: '创建时间',
-    key: 'createTime',
-    width: 160,
-  },
-  {
-    title: '操作',
-    key: 'action',
-    width: 200,
-  },
-]
-
+const dateRange = ref<[Dayjs, Dayjs]>()
+const statusFilter = ref('')
+const filtersExpanded = ref(false)
 const loading = ref(false)
-const dataSource = ref<API.ArticleVO[]>([])
+const records = ref<API.ArticleVO[]>([])
+const visibleRecords = ref<API.ArticleVO[]>([])
+const errorMessage = ref('')
 const pagination = ref({
   current: 1,
   pageSize: 10,
@@ -213,550 +197,494 @@ const pagination = ref({
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: (total: number) => `共 ${total} 条`,
-  pageSizeOptions: ['10', '20', '50', '100']
+  pageSizeOptions: ['10', '20', '50', '100'],
 })
 
-// 加载数据
+const columns = [
+  { title: '文章', key: 'title' },
+  { title: '状态', key: 'status', width: 112 },
+  { title: '创建时间', key: 'createTime', width: 168 },
+  { title: '操作', key: 'action', width: 250 },
+]
+
+const hasLocalFilters = computed(() => Boolean(searchKeyword.value || dateRange.value))
+const hasFilters = computed(() => Boolean(hasLocalFilters.value || statusFilter.value))
+const resultCountLabel = computed(() =>
+  hasLocalFilters.value
+    ? `本页匹配 ${visibleRecords.value.length} 篇，全部记录 ${pagination.value.total} 篇`
+    : `共 ${pagination.value.total} 篇文章`,
+)
+const emptyDescription = computed(() =>
+  hasFilters.value ? '当前筛选条件下没有匹配文章' : '还没有历史文章',
+)
+
+const applyLocalFilters = () => {
+  let result = [...records.value]
+  const keyword = searchKeyword.value.trim().toLowerCase()
+  if (keyword) {
+    result = result.filter(
+      (item) =>
+        item.mainTitle?.toLowerCase().includes(keyword) ||
+        item.subTitle?.toLowerCase().includes(keyword) ||
+        item.topic?.toLowerCase().includes(keyword),
+    )
+  }
+  if (dateRange.value) {
+    const [start, end] = dateRange.value
+    result = result.filter((item) => {
+      const createdAt = dayjs(item.createTime)
+      return !createdAt.isBefore(start.startOf('day')) && !createdAt.isAfter(end.endOf('day'))
+    })
+  }
+  visibleRecords.value = result
+}
+
 const loadData = async () => {
   loading.value = true
+  errorMessage.value = ''
   try {
-    const res = await listArticle({
+    const response = await listArticle({
       pageNum: pagination.value.current,
       pageSize: pagination.value.pageSize,
-      // 如果后端支持，可以传递搜索参数
-      // keyword: searchKeyword.value,
-      // status: statusFilter.value,
+      status: statusFilter.value || undefined,
     })
-    const pageData = res.data.data
-    let records = pageData?.records || []
-
-    // 前端过滤（如果后端不支持）
-    if (searchKeyword.value) {
-      const keyword = searchKeyword.value.toLowerCase()
-      records = records.filter((item: API.ArticleVO) =>
-        item.mainTitle?.toLowerCase().includes(keyword) ||
-        item.topic?.toLowerCase().includes(keyword)
-      )
+    if (response.data.code !== 0 || !response.data.data) {
+      throw new Error(response.data.message || '服务未返回文章列表')
     }
-
-    if (statusFilter.value) {
-      records = records.filter((item: API.ArticleVO) => item.status === statusFilter.value)
-    }
-
-    if (dateRange.value) {
-      const [start, end] = dateRange.value
-      records = records.filter((item: API.ArticleVO) => {
-        const createTime = dayjs(item.createTime)
-        return createTime.isAfter(start.startOf('day')) && createTime.isBefore(end.endOf('day'))
-      })
-    }
-
-    dataSource.value = records
-    pagination.value.total = pageData?.totalRow || 0
+    records.value = response.data.data.records || []
+    pagination.value.total = response.data.data.totalRow || 0
+    applyLocalFilters()
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '加载失败')
+    errorMessage.value = error instanceof Error ? error.message : '请稍后重试'
   } finally {
     loading.value = false
   }
 }
 
-// 搜索处理
-const handleSearch = () => {
-  pagination.value.current = 1
-  loadData()
-}
-
 const handleSearchChange = () => {
-  // 如果搜索框清空，也触发搜索
-  if (!searchKeyword.value) {
-    handleSearch()
-  }
+  if (!searchKeyword.value) applyLocalFilters()
 }
-
-const handleDateChange = () => {
-  pagination.value.current = 1
-  loadData()
-}
-
 const handleStatusChange = () => {
   pagination.value.current = 1
   loadData()
 }
-
-// 表格变化
-const handleTableChange = (pag: { current?: number; pageSize?: number }) => {
-  pagination.value.current = pag.current || 1
-  pagination.value.pageSize = pag.pageSize || pagination.value.pageSize
+const handleTableChange = (page: { current?: number; pageSize?: number }) => {
+  pagination.value.current = page.current || 1
+  pagination.value.pageSize = page.pageSize || pagination.value.pageSize
   loadData()
 }
+const handleMobilePageChange = (page: number) => {
+  pagination.value.current = page
+  loadData()
+}
+const clearFilters = () => {
+  searchKeyword.value = ''
+  dateRange.value = undefined
+  const requiresReload = Boolean(statusFilter.value)
+  statusFilter.value = ''
+  pagination.value.current = 1
+  if (requiresReload) loadData()
+  else applyLocalFilters()
+}
 
-// 查看文章
 const viewArticle = (record: API.ArticleVO) => {
-  router.push(`/article/${record.taskId}`)
+  if (record.taskId) router.push(`/article/${record.taskId}`)
 }
+const goToCreate = () => router.push('/create')
+const formatDate = (date?: string) => (date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '时间未知')
 
-// 导出文章
 const exportArticle = async (record: API.ArticleVO) => {
+  if (!record.taskId) return
   try {
-    const res = await getArticle({ taskId: record.taskId || '' })
-    const article = res.data.data
-    if (!article) {
-      message.error('文章数据不存在')
-      return
+    const response = await getArticle({ taskId: record.taskId })
+    if (response.data.code !== 0 || !response.data.data) {
+      throw new Error(response.data.message || '文章数据不存在')
     }
-
-    let markdown = `# ${article.mainTitle}\n\n`
-    markdown += `> ${article.subTitle}\n\n`
-
-    if (article.fullContent) {
-      markdown += article.fullContent
-    } else {
-      markdown += article.content || ''
-    }
-
-    const blob = new Blob([markdown], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${article.mainTitle || '文章'}.md`
-    a.click()
-    URL.revokeObjectURL(url)
-
-    message.success('导出成功')
+    const article = response.data.data
+    exportAsMarkdown({
+      title: article.mainTitle || article.topic || '文章',
+      subTitle: article.subTitle,
+      content: article.content,
+      fullContent: article.fullContent,
+    })
+    message.success('文章已导出')
   } catch (error) {
-    message.error((error as Error).message || '导出失败')
+    message.error(error instanceof Error ? error.message : '导出失败，请稍后重试')
   }
 }
 
-// 删除文章
 const deleteArticle = async (record: API.ArticleVO) => {
+  if (!record.id) return
   try {
-    await deleteArticleApi({ id: record.id })
-    message.success('删除成功')
-    loadData()
+    const response = await deleteArticleApi({ id: record.id })
+    if (response.data.code !== 0 || !response.data.data) {
+      throw new Error(response.data.message || '删除失败')
+    }
+    message.success('文章已删除')
+    if (records.value.length === 1 && pagination.value.current > 1) pagination.value.current -= 1
+    await loadData()
   } catch (error) {
-    message.error((error as Error).message || '删除失败')
+    message.error(error instanceof Error ? error.message : '删除失败，请稍后重试')
   }
 }
 
-// 重试文章（重新创建）
 const retryArticle = (record: API.ArticleVO) => {
   Modal.confirm({
-    title: '确认重试',
-    content: `将使用相同的选题"${record.topic}"重新创建文章，是否继续？`,
-    okText: '确认',
+    title: '重新创建这篇文章？',
+    content: `将保留选题“${record.topic || '未命名选题'}”并返回创作页，你可以先调整设置再提交。`,
+    okText: '返回创作页',
     cancelText: '取消',
-    onOk: () => {
+    onOk: () =>
       router.push({
         path: '/create',
-        query: {
-          topic: record.topic || '',
-          style: record.userDescription || ''
-        }
-      })
-    }
+        query: { topic: record.topic || '', style: record.userDescription || '' },
+      }),
   })
 }
 
-// 跳转创作页面
-const goToCreate = () => {
-  router.push('/create')
-}
-
-// 格式化日期
-const formatDate = (date: string) => {
-  return dayjs(date).format('YYYY-MM-DD HH:mm')
-}
-
-// 获取状态文本
-const getStatusText = (status: string) => {
-  const textMap: Record<string, string> = {
-    PENDING: '等待中',
-    PROCESSING: '生成中',
-    COMPLETED: '已完成',
-    FAILED: '失败',
-  }
-  return textMap[status] || status
-}
-
-onMounted(() => {
-  loadData()
+const ArticleActions = defineComponent({
+  props: { record: { type: Object as () => API.ArticleVO, required: true } },
+  setup(props) {
+    return () =>
+      h('div', { class: 'article-actions' }, [
+        h(
+          Button,
+          { type: 'link', size: 'small', onClick: () => viewArticle(props.record) },
+          { icon: () => h(EyeOutlined), default: () => '查看' },
+        ),
+        props.record.status === 'FAILED'
+          ? h(
+              Button,
+              { type: 'link', size: 'small', onClick: () => retryArticle(props.record) },
+              { icon: () => h(RedoOutlined), default: () => '重试' },
+            )
+          : h(
+              Button,
+              {
+                type: 'link',
+                size: 'small',
+                disabled: props.record.status !== 'COMPLETED',
+                onClick: () => exportArticle(props.record),
+              },
+              { icon: () => h(DownloadOutlined), default: () => '导出' },
+            ),
+        h(
+          Popconfirm,
+          {
+            title: '确定删除这篇文章？',
+            description: '删除后无法恢复。',
+            okText: '删除',
+            cancelText: '取消',
+            onConfirm: () => deleteArticle(props.record),
+          },
+          {
+            default: () =>
+              h(
+                Button,
+                { type: 'link', size: 'small', danger: true },
+                { icon: () => h(DeleteOutlined), default: () => '删除' },
+              ),
+          },
+        ),
+      ])
+  },
 })
+
+onMounted(loadData)
 </script>
 
-<style scoped lang="scss">
-.article-list-page {
-  background: var(--color-background-secondary);
-  min-height: 100vh;
-  padding-bottom: 60px;
+<style scoped>
+.history-page {
+  min-height: calc(100dvh - 64px);
+  padding: 42px 20px 72px;
+  background: var(--surface-page);
+}
 
-  .page-header {
-    background: var(--gradient-hero);
-    padding: 32px 20px;
-    margin-bottom: 24px;
+.page-heading,
+.history-shell {
+  width: min(1160px, 100%);
+  margin-inline: auto;
+}
+
+.page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.page-heading p {
+  margin: 0 0 5px;
+  color: var(--color-primary-dark);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.page-heading h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+}
+
+.page-heading span {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.filter-section {
+  margin-bottom: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+}
+
+.filter-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.filter-heading h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.filter-heading p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.filter-toggle {
+  display: none;
+  min-height: var(--touch-target-min);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
+.filter-controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.3fr) minmax(280px, 1fr) 150px auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.filter-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filter-field > span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.status-field :deep(.ant-select) {
+  width: 100%;
+}
+
+.clear-filter {
+  align-self: end;
+}
+
+.desktop-table {
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+}
+
+.desktop-table :deep(.ant-table-thead th) {
+  background: var(--surface-muted);
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+.title-cell,
+.mobile-title {
+  display: grid;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.title-cell strong,
+.mobile-title strong {
+  color: var(--text-strong);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.title-cell span,
+.mobile-title span {
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title-cell:hover strong,
+.mobile-title:hover strong {
+  color: var(--color-primary-dark);
+}
+
+time {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+:deep(.article-actions) {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.mobile-list {
+  display: none;
+}
+
+.page-state,
+.loading-list {
+  min-height: 420px;
+  padding: 32px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+}
+
+.page-state {
+  display: grid;
+  place-items: center;
+}
+
+.loading-list {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+}
+
+.stale-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-md);
+  background: var(--state-warning-bg);
+  color: var(--state-warning-text);
+  font-size: 13px;
+}
+
+@media (max-width: 820px) {
+  .filter-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .history-page {
+    padding: 28px 16px 56px;
   }
 
-  .header-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
+  .page-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .page-heading h1 {
+    font-size: 26px;
+  }
+
+  .page-heading .ant-btn {
+    width: 100%;
+  }
+
+  .filter-heading {
+    margin-bottom: 0;
+  }
+
+  .filter-toggle {
+    display: inline-flex;
     align-items: center;
+    gap: 8px;
   }
 
-  .header-content {
-    color: var(--color-text);
+  .filter-controls {
+    display: none;
+    grid-template-columns: 1fr;
+    margin-top: 16px;
   }
 
-  .page-title {
-    font-size: 28px;
-    font-weight: 700;
-    margin: 0 0 6px;
-    letter-spacing: -0.5px;
-    color: var(--color-text);
+  .filter-controls.expanded {
+    display: grid;
   }
 
-  .page-subtitle {
-    font-size: 14px;
-    color: var(--color-text-secondary);
-    margin: 0;
+  .desktop-table {
+    display: none;
   }
 
-  .create-btn {
-    height: 44px;
-    padding: 0 24px;
-    font-size: 15px;
-    font-weight: 600;
-    border-radius: var(--radius-lg);
-    background: var(--gradient-primary) !important;
-    border: none !important;
-    color: white !important;
-    box-shadow: var(--shadow-green) !important;
-    transition: opacity var(--transition-normal) !important;
-
-    &:hover,
-    &:focus,
-    &:active {
-      background: var(--gradient-primary) !important;
-      border: none !important;
-      color: white !important;
-      box-shadow: var(--shadow-green) !important;
-      opacity: 0.92;
-    }
-
-    :deep(.ant-wave) {
-      display: none;
-    }
-  }
-
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-  }
-
-  // 筛选栏
-  .filter-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding: 16px 20px;
-    background: white;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--color-border);
-  }
-
-  .filter-left {
-    display: flex;
-    align-items: center;
+  .mobile-list {
+    display: grid;
     gap: 12px;
   }
 
-  .search-input {
-    :deep(.ant-input-affix-wrapper) {
-      border-top-left-radius: var(--radius-md);
-      border-bottom-left-radius: var(--radius-md);
-      border-top-right-radius: 0;
-      border-bottom-right-radius: 0;
-      border-color: var(--color-border);
-
-      &:hover, &:focus {
-        border-color: var(--color-primary);
-      }
-    }
-
-    .search-icon {
-      color: var(--color-text-muted);
-    }
+  .mobile-list article {
+    padding: 18px 16px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface-panel);
   }
 
-  .date-picker {
-    :deep(.ant-picker) {
-      border-radius: var(--radius-md);
-    }
-  }
-
-  .status-select {
-    :deep(.ant-select-selector) {
-      border-radius: var(--radius-md) !important;
-    }
-  }
-
-  .filter-right {
-    .total-count {
-      font-size: 14px;
-      color: var(--color-text-secondary);
-    }
-  }
-
-  .table-card {
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--color-border);
-    box-shadow: none;
-    overflow: hidden;
-
-    :deep(.ant-card-body) {
-      padding: 0;
-    }
-  }
-
-  .article-table {
-    :deep(.ant-table-thead > tr > th) {
-      background: var(--color-background-secondary);
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--color-text-secondary);
-      border-bottom: 1px solid var(--color-border);
-      padding: 14px 16px;
-    }
-
-    :deep(.ant-table-tbody > tr > td) {
-      padding: 16px;
-      border-bottom: 1px solid var(--color-border-light);
-    }
-
-    :deep(.ant-table-tbody > tr:hover > td) {
-      background: rgba(34, 197, 94, 0.02);
-    }
-
-    :deep(.ant-table-pagination) {
-      margin: 16px;
-    }
-  }
-
-  .title-cell {
-    cursor: pointer;
-    transition: all var(--transition-fast);
-
-    &:hover {
-      .main-title {
-        color: var(--color-primary);
-      }
-    }
-
-    .main-title {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 4px;
-      color: var(--color-text);
-      transition: color var(--transition-fast);
-      line-height: 1.4;
-    }
-
-    .sub-title {
-      font-size: 13px;
-      color: var(--color-text-muted);
-      display: -webkit-box;
-      -webkit-line-clamp: 1;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-  }
-
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: var(--radius-full);
-    font-size: 12px;
-    font-weight: 500;
-
-    .status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-    }
-
-    &.status-completed {
-      background: rgba(34, 197, 94, 0.1);
-      color: var(--color-primary-dark);
-
-      .status-dot {
-        background: var(--color-primary);
-      }
-    }
-
-    &.status-processing {
-      background: rgba(59, 130, 246, 0.1);
-      color: #2563EB;
-
-      .status-dot {
-        background: #3B82F6;
-        animation: pulse 1.5s infinite;
-      }
-    }
-
-    &.status-pending {
-      background: var(--color-background-tertiary);
-      color: var(--color-text-secondary);
-
-      .status-dot {
-        background: var(--color-text-muted);
-      }
-    }
-
-    &.status-failed {
-      background: rgba(239, 68, 68, 0.1);
-      color: #DC2626;
-
-      .status-dot {
-        background: #EF4444;
-      }
-    }
-  }
-
-  .time-text {
-    color: var(--color-text-secondary);
-    font-size: 13px;
-  }
-
-  .action-group {
+  .article-heading {
     display: flex;
     align-items: center;
-    gap: 4px;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
   }
 
-  .action-btn {
-    font-size: 13px;
-    padding: 4px 8px;
-    height: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    transition: all var(--transition-fast);
-
-    &.view-btn {
-      color: var(--color-primary);
-
-      &:hover {
-        color: var(--color-primary-dark);
-      }
-    }
-
-    &.retry-btn {
-      color: #ff4d4f;
-
-      &:hover {
-        color: #DC2626;
-      }
-    }
-
-    &.export-btn {
-      color: var(--color-text-secondary);
-
-      &:hover {
-        color: var(--color-text);
-      }
-    }
-
-    &.delete-btn {
-      &:hover {
-        color: #DC2626;
-      }
-    }
+  .mobile-title strong {
+    font-size: 16px;
   }
 
-  // 空状态
-  .empty-state {
-    padding: 60px 20px;
-    text-align: center;
-
-    .empty-icon {
-      font-size: 48px;
-      color: var(--color-text-muted);
-      margin-bottom: 16px;
-    }
-
-    .empty-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--color-text);
-      margin: 0 0 8px;
-    }
-
-    .empty-desc {
-      font-size: 14px;
-      color: var(--color-text-muted);
-      margin: 0 0 20px;
-    }
+  .mobile-title span {
+    white-space: normal;
   }
-}
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-@media (max-width: 992px) {
-  .article-list-page {
-    .filter-bar {
-      flex-direction: column;
-      gap: 16px;
-      align-items: stretch;
-    }
-
-    .filter-left {
-      flex-wrap: wrap;
-    }
-
-    .filter-right {
-      text-align: right;
-    }
+  .mobile-list :deep(.article-actions) {
+    justify-content: space-between;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-subtle);
   }
-}
 
-@media (max-width: 768px) {
-  .article-list-page {
-    .page-header {
-      padding: 24px 20px;
-    }
+  .mobile-list > :deep(.ant-pagination) {
+    justify-self: center;
+    margin-top: 12px;
+  }
 
-    .header-container {
-      flex-direction: column;
-      gap: 16px;
-      text-align: center;
-    }
+  .page-state,
+  .loading-list {
+    min-height: 320px;
+    padding: 24px 16px;
+  }
 
-    .page-title {
-      font-size: 22px;
-    }
-
-    .create-btn {
-      width: 100%;
-    }
-
-    .filter-left {
-      flex-direction: column;
-      width: 100%;
-
-      .search-input,
-      .date-picker,
-      .status-select {
-        width: 100% !important;
-      }
-    }
+  .stale-notice {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

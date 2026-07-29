@@ -1,8 +1,20 @@
 <template>
   <section class="topic-result">
-    <header>
-      <p>生成完成</p>
-      <h2>{{ options.length }} 个可执行的选题方向</h2>
+    <header class="result-heading">
+      <div>
+        <p>生成完成</p>
+        <h2>{{ options.length }} 个可执行的选题方向</h2>
+      </div>
+      <div v-if="options.length" class="result-actions">
+        <a-button @click="copyOptions">
+          <template #icon><CopyOutlined /></template>
+          复制全部
+        </a-button>
+        <a-button type="primary" @click="downloadOptions">
+          <template #icon><DownloadOutlined /></template>
+          下载 Markdown
+        </a-button>
+      </div>
     </header>
 
     <div v-if="options.length" class="topic-list">
@@ -51,7 +63,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowRightOutlined } from '@ant-design/icons-vue'
+import { ArrowRightOutlined, CopyOutlined, DownloadOutlined } from '@ant-design/icons-vue'
+import { copyResultText, downloadResultText } from '@/utils/resultActions'
 
 const props = defineProps<{
   outputData: Record<string, unknown>
@@ -67,6 +80,29 @@ const options = computed<API.TopicOption[]>(() => {
   const value = props.outputData.topicOptions
   return Array.isArray(value) ? (value as API.TopicOption[]) : []
 })
+
+const formattedOptions = computed(() =>
+  options.value
+    .map((option, index) => {
+      const outline = (option.outline || []).map((item) => `- ${item}`).join('\n')
+      const pros = (option.pros || []).map((item) => `- ${item}`).join('\n')
+      const cons = (option.cons || []).map((item) => `- ${item}`).join('\n')
+      return [
+        `## ${index + 1}. ${option.title}`,
+        option.type ? `类型：${option.type}` : '',
+        option.workload ? `投入：${option.workload}` : '',
+        outline ? `### 建议大纲\n${outline}` : '',
+        pros ? `### 优势\n${pros}` : '',
+        cons ? `### 注意点\n${cons}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+    })
+    .join('\n\n---\n\n'),
+)
+
+const copyOptions = () => copyResultText(formattedOptions.value, '全部选题已复制')
+const downloadOptions = () => downloadResultText(formattedOptions.value, 'topic-options.md')
 
 const useTopic = (option: API.TopicOption) => {
   emit('select', option)
@@ -87,16 +123,29 @@ const useTopic = (option: API.TopicOption) => {
   gap: 20px;
 }
 
-header p {
+.result-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.result-heading p {
   margin: 0 0 4px;
   color: var(--color-text-muted);
   font-size: 12px;
 }
 
-header h2 {
+.result-heading h2 {
   margin: 0;
   color: var(--color-text);
   font-size: 22px;
+}
+
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .topic-list {
@@ -169,6 +218,10 @@ header h2 {
 }
 
 @media (max-width: 760px) {
+  .result-heading {
+    flex-direction: column;
+  }
+
   .topic-main {
     grid-template-columns: 32px minmax(0, 1fr);
   }

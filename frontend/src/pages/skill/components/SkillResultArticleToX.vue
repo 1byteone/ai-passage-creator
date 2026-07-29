@@ -5,10 +5,12 @@
         <p>转写完成</p>
         <h2>{{ platformLabel(inputs.platform) }} 文案</h2>
       </div>
-      <a-button type="primary" @click="copyResult">
-        <template #icon><CopyOutlined /></template>
-        复制文案
-      </a-button>
+      <div class="result-actions">
+        <a-button @click="copyResult"><template #icon><CopyOutlined /></template>复制文案</a-button>
+        <a-button type="primary" @click="downloadResult">
+          <template #icon><DownloadOutlined /></template>下载 Markdown
+        </a-button>
+      </div>
     </header>
 
     <div class="comparison-layout">
@@ -33,9 +35,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { message } from 'ant-design-vue'
-import { CopyOutlined } from '@ant-design/icons-vue'
+import { CopyOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import { platformLabel } from '@/config/skill'
+import { copyResultText, downloadResultText } from '@/utils/resultActions'
 
 const props = defineProps<{
   inputs: Record<string, unknown>
@@ -45,14 +47,8 @@ const props = defineProps<{
 const result = computed(() => String(props.outputData.condensedContent || ''))
 const original = computed(() => String(props.inputs.articleContent || ''))
 
-const copyResult = async () => {
-  try {
-    await navigator.clipboard.writeText(result.value)
-    message.success('社交文案已复制')
-  } catch {
-    message.error('复制失败，请手动选择文本')
-  }
-}
+const copyResult = () => copyResultText(result.value, '社交文案已复制')
+const downloadResult = () => downloadResultText(result.value, 'social-copy.md')
 </script>
 
 <style scoped>
@@ -78,6 +74,12 @@ const copyResult = async () => {
   margin: 0;
   color: var(--color-text);
   font-size: 22px;
+}
+
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .comparison-layout {

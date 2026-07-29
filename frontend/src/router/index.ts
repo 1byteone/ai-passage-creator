@@ -1,8 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomePage from '@/pages/HomePage.vue'
-import UserLoginPage from '@/pages/user/UserLoginPage.vue'
-import UserRegisterPage from '@/pages/user/UserRegisterPage.vue'
-import UserManagePage from '@/pages/admin/UserManagePage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -10,22 +6,31 @@ const router = createRouter({
     {
       path: '/',
       name: '主页',
-      component: HomePage,
+      component: () => import('@/pages/HomePage.vue'),
     },
     {
       path: '/create',
       name: '创作文章',
       component: () => import('@/pages/article/ArticleCreatePage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
     },
     {
       path: '/article/list',
       name: '文章列表',
       component: () => import('@/pages/article/ArticleListPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
     },
     {
       path: '/article/:taskId',
       name: '文章详情',
       component: () => import('@/pages/article/ArticleDetailPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
     },
     {
       path: '/skill',
@@ -43,17 +48,17 @@ const router = createRouter({
     {
       path: '/user/login',
       name: '用户登录',
-      component: UserLoginPage,
+      component: () => import('@/pages/user/UserLoginPage.vue'),
     },
     {
       path: '/user/register',
       name: '用户注册',
-      component: UserRegisterPage,
+      component: () => import('@/pages/user/UserRegisterPage.vue'),
     },
     {
       path: '/admin/userManage',
       name: '用户管理',
-      component: UserManagePage,
+      component: () => import('@/pages/admin/UserManagePage.vue'),
     },
     {
       path: '/admin/statistics',
@@ -64,6 +69,9 @@ const router = createRouter({
       path: '/vip',
       name: '会员购买',
       component: () => import('@/pages/VipPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
     },
   ],
 })

@@ -37,93 +37,166 @@
 
       </aside>
 
+      <section class="mobile-support-panels" aria-label="创作辅助信息" aria-live="polite">
+        <div class="mobile-progress-card">
+          <div class="mobile-progress-header">
+            <div>
+              <span class="mobile-kicker">当前流程</span>
+              <strong>{{ mobilePhaseText }}</strong>
+            </div>
+            <span class="mobile-step-count">{{ mobileStepPosition }}/{{ agentSteps.length }}</span>
+          </div>
+          <a-progress
+            :percent="mobileProgressPercent"
+            :show-info="false"
+            size="small"
+            class="mobile-progress"
+          />
+          <p>{{ currentAgentStep.description }}</p>
+        </div>
+
+        <div class="mobile-context-grid">
+          <div class="mobile-context-item">
+            <span>配额</span>
+            <strong v-if="isAdmin">无限次</strong>
+            <strong v-else-if="isVip">VIP 无限次</strong>
+            <strong v-else>{{ quota }} 次</strong>
+          </div>
+          <div v-if="topic" class="mobile-context-item topic">
+            <span>当前选题</span>
+            <strong>{{ topic }}</strong>
+          </div>
+        </div>
+
+        <div v-if="mobileLatestLogs.length" class="mobile-log-card">
+          <div class="mobile-log-title">最近进度</div>
+          <div
+            v-for="log in mobileLatestLogs"
+            :key="`${log.timestamp}-${log.message}`"
+            :class="['mobile-log-entry', log.level]"
+          >
+            <span>{{ formatLogTime(log.timestamp) }}</span>
+            <p>{{ log.message }}</p>
+          </div>
+        </div>
+      </section>
+
       <!-- 中间：主内容区 -->
-      <main ref="mainContentRef" class="main-content">
+      <section ref="mainContentRef" class="main-content">
         <!-- 阶段切换（带过渡动画） -->
         <Transition name="fade-slide" mode="out-in">
           <!-- 输入状态 -->
           <div v-if="currentPhase === 'INPUT'" key="input" class="input-state">
-          <div class="input-card">
-            <div class="input-header">
-              <h1 class="input-title">创作新文章</h1>
-              <p class="input-subtitle">输入选题，AI 帮你生成爆款文章</p>
+            <div class="input-card">
+              <div class="input-header">
+                <div class="input-kicker">文章生成工作台</div>
+                <h1 class="input-title">创作新文章</h1>
+                <p class="input-subtitle">先确认选题，再选择风格与配图方式，一屏完成创作配置。</p>
+              </div>
+
+              <div class="input-area">
+                <section class="topic-section" aria-labelledby="topic-field-title">
+                  <div class="field-header">
+                    <div>
+                      <h2 id="topic-field-title" class="field-title">选题内容</h2>
+                      <p id="topic-field-description" class="field-description">写清楚主题、人群或角度，生成结果会更稳定。</p>
+                    </div>
+                    <span class="field-badge">必填</span>
+                  </div>
+                  <a-textarea
+                    id="article-topic-input"
+                    v-model:value="topic"
+                    placeholder="请输入您想创作的文章选题，例如：2026年AI如何改变职场"
+                    aria-labelledby="topic-field-title"
+                    aria-describedby="topic-field-description"
+                    :rows="6"
+                    :maxlength="500"
+                    show-count
+                    class="topic-textarea"
+                  />
+                </section>
+
+                <div class="settings-grid" aria-label="创作设置">
+                  <!-- 文章风格选择 -->
+                  <section class="style-section setting-panel">
+                    <div class="section-header">
+                      <div>
+                        <span class="section-title">文章风格</span>
+                        <span class="section-tip">不选择则使用默认风格</span>
+                      </div>
+                    </div>
+                    <a-radio-group v-model:value="selectedStyle" class="style-group">
+                      <a-radio value="">默认</a-radio>
+                      <a-radio value="tech">科技风格</a-radio>
+                      <a-radio value="emotional">情感风格</a-radio>
+                      <a-radio value="educational">教育风格</a-radio>
+                      <a-radio value="humorous">轻松幽默</a-radio>
+                    </a-radio-group>
+                  </section>
+
+                  <!-- 配图方式选择 -->
+                  <section class="image-methods-section setting-panel">
+                    <div class="section-header">
+                      <div>
+                        <span class="section-title">配图方式</span>
+                        <span class="section-tip">不选择则支持所有方式</span>
+                      </div>
+                    </div>
+                    <a-checkbox-group v-model:value="selectedImageMethods" class="methods-group">
+                      <a-checkbox value="PEXELS">Pexels</a-checkbox>
+                      <a-tooltip :title="isVip ? '' : '仅限 VIP 会员'">
+                        <a-checkbox value="NANO_BANANA" :disabled="!isVip">
+                          Nano Banana
+                          <CrownOutlined v-if="!isVip" class="vip-icon" />
+                        </a-checkbox>
+                      </a-tooltip>
+                      <a-checkbox value="MERMAID">Mermaid</a-checkbox>
+                      <a-checkbox value="ICONIFY">Iconify</a-checkbox>
+                      <a-checkbox value="EMOJI_PACK">表情包</a-checkbox>
+                      <a-tooltip :title="isVip ? '' : '仅限 VIP 会员'">
+                        <a-checkbox value="SVG_DIAGRAM" :disabled="!isVip">
+                          SVG
+                          <CrownOutlined v-if="!isVip" class="vip-icon" />
+                        </a-checkbox>
+                      </a-tooltip>
+                    </a-checkbox-group>
+                    <div v-if="!isVip" class="vip-notice">
+                      <CrownOutlined />
+                      <span>AI 生图和 SVG 图表为 VIP 专属功能，</span>
+                      <RouterLink to="/vip" class="upgrade-link">立即升级</RouterLink>
+                    </div>
+                  </section>
+                </div>
+
+                <div class="create-actions">
+                  <div class="create-action-copy">
+                    <span class="action-label">准备开始</span>
+                    <strong v-if="isAdmin">管理员无限创作</strong>
+                    <strong v-else-if="isVip">VIP 无限创作</strong>
+                    <strong v-else>剩余 {{ quota }} 次创作配额</strong>
+                  </div>
+
+                  <a-button
+                    type="primary"
+                    size="large"
+                    :loading="isCreating"
+                    :disabled="!topic.trim() || !hasQuota"
+                    @click="startCreate"
+                    class="create-btn"
+                  >
+                    <template #icon>
+                      <RocketOutlined />
+                    </template>
+                    开始创作
+                  </a-button>
+                </div>
+
+                <div v-if="!hasQuota" class="quota-warning">
+                  <WarningOutlined />
+                  <span>配额已用完，无法创建文章</span>
+                </div>
+              </div>
             </div>
-
-            <div class="input-area">
-              <a-textarea
-                v-model:value="topic"
-                placeholder="请输入您想创作的文章选题，例如：2026年AI如何改变职场"
-                :rows="6"
-                :maxlength="500"
-                show-count
-                class="topic-textarea"
-              />
-
-              <!-- 文章风格选择 -->
-              <div class="style-section">
-                <div class="section-header">
-                  <span class="section-title">文章风格</span>
-                  <span class="section-tip">（不选择使用默认风格）</span>
-                </div>
-                <a-radio-group v-model:value="selectedStyle" class="style-group">
-                  <a-radio value="">默认</a-radio>
-                  <a-radio value="tech">科技风格</a-radio>
-                  <a-radio value="emotional">情感风格</a-radio>
-                  <a-radio value="educational">教育风格</a-radio>
-                  <a-radio value="humorous">轻松幽默</a-radio>
-                </a-radio-group>
-              </div>
-
-              <!-- 配图方式选择 -->
-              <div class="image-methods-section">
-                <div class="section-header">
-                  <span class="section-title">配图方式</span>
-                  <span class="section-tip">（不选择表示支持所有方式）</span>
-                </div>
-                <a-checkbox-group v-model:value="selectedImageMethods" class="methods-group">
-                  <a-checkbox value="PEXELS">Pexels</a-checkbox>
-                  <a-tooltip :title="isVip ? '' : '仅限 VIP 会员'">
-                    <a-checkbox value="NANO_BANANA" :disabled="!isVip">
-                      Nano Banana
-                      <CrownOutlined v-if="!isVip" class="vip-icon" />
-                    </a-checkbox>
-                  </a-tooltip>
-                  <a-checkbox value="MERMAID">Mermaid</a-checkbox>
-                  <a-checkbox value="ICONIFY">Iconify</a-checkbox>
-                  <a-checkbox value="EMOJI_PACK">表情包</a-checkbox>
-                  <a-tooltip :title="isVip ? '' : '仅限 VIP 会员'">
-                    <a-checkbox value="SVG_DIAGRAM" :disabled="!isVip">
-                      SVG
-                      <CrownOutlined v-if="!isVip" class="vip-icon" />
-                    </a-checkbox>
-                  </a-tooltip>
-                </a-checkbox-group>
-                <div v-if="!isVip" class="vip-notice">
-                  <CrownOutlined />
-                  <span>AI 生图和 SVG 图表为 VIP 专属功能，</span>
-                  <RouterLink to="/vip" class="upgrade-link">立即升级</RouterLink>
-                </div>
-              </div>
-
-              <a-button
-                type="primary"
-                size="large"
-                :loading="isCreating"
-                :disabled="!topic.trim() || !hasQuota"
-                @click="startCreate"
-                class="create-btn"
-              >
-                <template #icon>
-                  <RocketOutlined />
-                </template>
-                开始创作
-              </a-button>
-              <div v-if="!hasQuota" class="quota-warning">
-                <WarningOutlined />
-                <span>配额已用完，无法创建文章</span>
-              </div>
-            </div>
-          </div>
           </div>
 
           <!-- 标题生成中 -->
@@ -245,7 +318,7 @@
             :article="article"
           />
         </Transition>
-      </main>
+      </section>
 
       <!-- 右侧：辅助面板 -->
       <aside class="sidebar-right">
@@ -391,7 +464,7 @@
           </h4>
           <div class="tips-list">
             <div class="tip-item">
-              <div class="tip-icon">💡</div>
+              <div class="tip-icon">1</div>
               <div class="tip-content">
                 <div class="tip-desc">AI 正在分析您的选题，生成多个吸引眼球的标题方案</div>
               </div>
@@ -406,7 +479,7 @@
           </h4>
           <div class="tips-list">
             <div class="tip-item">
-              <div class="tip-icon">✅</div>
+              <div class="tip-icon">2</div>
               <div class="tip-content">
                 <div class="tip-desc">选择最符合您期望的标题，或添加补充描述让 AI 更好地理解您的需求</div>
               </div>
@@ -421,7 +494,7 @@
           </h4>
           <div class="tips-list">
             <div class="tip-item">
-              <div class="tip-icon">📝</div>
+              <div class="tip-icon">3</div>
               <div class="tip-content">
                 <div class="tip-desc">AI 正在为您规划文章结构，构建清晰的章节脉络</div>
               </div>
@@ -527,7 +600,16 @@
 <script setup lang="ts">
 import { ref, onBeforeUnmount, onMounted, nextTick, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { message } from 'ant-design-vue'
+import {
+  Checkbox as ACheckbox,
+  CheckboxGroup as ACheckboxGroup,
+  Modal as AModal,
+  Progress as AProgress,
+  Radio as ARadio,
+  RadioGroup as ARadioGroup,
+  Tooltip as ATooltip,
+  message,
+} from 'ant-design-vue'
 import { useLoginUserStore } from '@/stores/loginUser'
 import {
   RocketOutlined,
@@ -611,6 +693,35 @@ interface RealtimeLog {
   message: string
 }
 const realtimeLogs = ref<RealtimeLog[]>([])
+
+const currentAgentStep = computed(() => {
+  const index = Math.min(Math.max(currentStep.value, 0), agentSteps.length - 1)
+  return agentSteps[index]
+})
+
+const mobileStepPosition = computed(() => {
+  if (currentPhase.value === 'COMPLETED') return agentSteps.length
+  return Math.min(Math.max(currentStep.value + 1, 1), agentSteps.length)
+})
+
+const mobileProgressPercent = computed(() =>
+  Math.round((mobileStepPosition.value / agentSteps.length) * 100),
+)
+
+const mobileLatestLogs = computed(() => realtimeLogs.value.slice(-3).reverse())
+
+const mobilePhaseText = computed(() => {
+  const phaseLabels: Record<string, string> = {
+    INPUT: '准备创作',
+    TITLE_GENERATING: '生成标题',
+    TITLE_SELECTING: '选择标题',
+    OUTLINE_GENERATING: '规划大纲',
+    OUTLINE_EDITING: '编辑大纲',
+    CONTENT_GENERATING: '生成正文',
+    COMPLETED: '创作完成',
+  }
+  return phaseLabels[currentPhase.value] || currentAgentStep.value.title
+})
 
 // 标题方案
 const titleOptions = ref<Array<{mainTitle: string, subTitle: string}>>([])
@@ -863,7 +974,7 @@ const handleSSEMessage = (msg: SSEMessage) => {
       currentStep.value = 6
       isCompleted.value = true
       message.success('文章创作完成!')
-      addLog('✨ 文章创作完成！', 'success')
+      addLog('文章创作完成', 'success')
       break
 
     case 'ERROR':
@@ -997,6 +1108,10 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: 320px 1fr 300px;
   height: 100%;
+}
+
+.mobile-support-panels {
+  display: none;
 }
 
 /* 左侧边栏 */
@@ -1148,26 +1263,35 @@ onBeforeUnmount(() => {
 
 /* 输入状态 */
 .input-state {
-  max-width: 700px;
+  width: min(100%, 860px);
   margin: 0 auto;
-  padding-top: 60px;
+  padding-top: 44px;
 }
 
 .input-card {
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-xl);
-  padding: 40px;
+  background: var(--surface-panel, #fff);
+  border: 1px solid var(--border-subtle, var(--color-border-light));
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-md);
 }
 
 .input-header {
-  text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
+}
+
+.input-kicker {
+  margin-bottom: 8px;
+  color: var(--color-primary-dark);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .input-title {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 700;
-  margin: 0 0 8px;
+  line-height: 1.2;
+  margin: 0 0 10px;
   color: var(--color-text);
 }
 
@@ -1175,12 +1299,56 @@ onBeforeUnmount(() => {
   font-size: 15px;
   color: var(--color-text-secondary);
   margin: 0;
+  line-height: 1.7;
 }
 
 .input-area {
   display: flex;
   flex-direction: column;
+  gap: 18px;
+}
+
+.topic-section {
+  padding: 18px;
+  background: var(--surface-muted, var(--color-background-secondary));
+  border: 1px solid var(--border-subtle, var(--color-border-light));
+  border-radius: var(--radius-lg);
+}
+
+.field-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 16px;
+  margin-bottom: 14px;
+}
+
+.field-title {
+  margin: 0 0 4px;
+  color: var(--text-strong, var(--color-text));
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.field-description {
+  margin: 0;
+  color: var(--text-muted, var(--color-text-secondary));
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.field-badge {
+  flex: none;
+  min-height: 24px;
+  padding: 3px 9px;
+  color: var(--color-primary-dark);
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
 }
 
 .topic-textarea {
@@ -1193,6 +1361,53 @@ onBeforeUnmount(() => {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
   }
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.setting-panel {
+  min-width: 0;
+  min-height: 100%;
+  padding: 16px;
+  background: var(--surface-canvas, #fff);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle, var(--color-border-light));
+}
+
+.create-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  gap: 16px;
+  align-items: center;
+  padding: 16px;
+  background: var(--surface-muted, var(--color-background-secondary));
+  border: 1px solid var(--border-subtle, var(--color-border-light));
+  border-radius: var(--radius-lg);
+}
+
+.create-action-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.action-label {
+  color: var(--text-muted, var(--color-text-muted));
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.create-action-copy strong {
+  color: var(--text-strong, var(--color-text));
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
 .create-btn.ant-btn {
@@ -1227,9 +1442,8 @@ onBeforeUnmount(() => {
 .quota-warning {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
-  margin-top: 12px;
   padding: 10px 16px;
   background: rgba(255, 77, 79, 0.08);
   border: 1px solid rgba(255, 77, 79, 0.2);
@@ -1240,10 +1454,6 @@ onBeforeUnmount(() => {
 
 /* 文章风格选择 */
 .style-section {
-  padding: 16px;
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-light);
 }
 
 .style-group {
@@ -1273,26 +1483,26 @@ onBeforeUnmount(() => {
 
 /* 配图方式选择 */
 .image-methods-section {
-  padding: 16px;
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-light);
 }
 
 .section-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .section-title {
+  display: block;
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text);
 }
 
 .section-tip {
+  display: block;
+  margin-top: 3px;
   font-size: 12px;
   color: var(--color-text-muted);
 }
@@ -2076,8 +2286,190 @@ onBeforeUnmount(() => {
     display: none;
   }
 
+  .mobile-support-panels {
+    display: grid;
+    gap: 12px;
+    padding: 16px 20px 0;
+    background: var(--color-background-secondary);
+  }
+
+  .mobile-progress-card,
+  .mobile-log-card,
+  .mobile-context-item {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: white;
+  }
+
+  .mobile-progress-card {
+    padding: 16px;
+  }
+
+  .mobile-progress-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .mobile-kicker,
+  .mobile-context-item span,
+  .mobile-log-title {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .mobile-progress-header strong,
+  .mobile-context-item strong {
+    display: block;
+    margin-top: 2px;
+    color: var(--color-text);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .mobile-step-count {
+    color: var(--color-primary-dark);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .mobile-progress {
+    margin-bottom: 8px;
+  }
+
+  .mobile-progress-card p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .mobile-context-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 12px;
+  }
+
+  .mobile-context-item {
+    min-width: 0;
+    padding: 13px 14px;
+  }
+
+  .mobile-context-item.topic strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-log-card {
+    padding: 14px;
+  }
+
+  .mobile-log-title {
+    margin-bottom: 8px;
+  }
+
+  .mobile-log-entry {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 8px;
+    padding: 7px 0;
+    border-top: 1px solid var(--color-border-light);
+  }
+
+  .mobile-log-entry span {
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mobile-log-entry p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .mobile-log-entry.success p {
+    color: var(--state-success-text);
+  }
+
+  .mobile-log-entry.error p {
+    color: var(--state-error-text);
+  }
+
   .main-content {
     padding: 20px;
+  }
+
+  .input-state {
+    width: 100%;
+    padding-top: 12px;
+  }
+
+  .input-card {
+    padding: 24px;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .create-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .create-btn.ant-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .mobile-support-panels {
+    padding: 14px 14px 0;
+  }
+
+  .mobile-context-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .main-content {
+    padding: 14px;
+  }
+
+  .input-card {
+    padding: 18px;
+  }
+
+  .input-title {
+    font-size: 24px;
+  }
+
+  .field-header,
+  .section-header {
+    gap: 8px;
+  }
+
+  .topic-section,
+  .setting-panel,
+  .create-actions {
+    padding: 14px;
+  }
+
+  .style-group,
+  .methods-group {
+    gap: 8px;
+  }
+
+  .style-group :deep(.ant-radio-wrapper),
+  .methods-group :deep(.ant-checkbox-wrapper) {
+    min-height: 36px;
+    padding: 6px 10px;
   }
 }
 </style>

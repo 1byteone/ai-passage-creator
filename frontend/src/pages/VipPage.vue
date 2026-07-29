@@ -1,241 +1,360 @@
 <template>
   <div class="vip-page">
     <div class="vip-container">
-      <!-- 页面头部 -->
-      <div class="page-header">
-        <div class="header-badge">
-          <CrownOutlined />
-          <span>会员专属</span>
+      <header class="page-heading">
+        <div class="page-kicker">
+          <CrownOutlined aria-hidden="true" />
+          <span>会员与权限</span>
         </div>
-        <h1 class="page-title">升级永久会员</h1>
-        <p class="page-subtitle">解锁全部高级功能，无限创作配额，终身有效</p>
+        <h1>{{ pageTitle }}</h1>
+        <p>{{ pageDescription }}</p>
+      </header>
+
+      <div v-if="paymentNotice" class="payment-feedback" aria-live="polite">
+        <a-alert
+          :type="paymentNotice.type"
+          :message="paymentNotice.message"
+          :description="paymentNotice.description"
+          show-icon
+          closable
+          @close="paymentNotice = null"
+        />
+        <a-button
+          v-if="paymentNotice.canRetry"
+          class="refresh-button"
+          type="link"
+          :loading="refreshingMembership"
+          @click="refreshMembershipStatus"
+        >
+          重新检查会员状态
+        </a-button>
       </div>
 
-      <!-- 主内容区：左右布局 -->
-      <div class="main-section">
-        <!-- 左侧：价格卡片 -->
-        <div class="pricing-card">
-          <div class="pricing-badge">限时优惠</div>
-          <div class="pricing-header">
-            <div class="plan-icon">
-              <CrownOutlined />
-            </div>
-            <h2 class="plan-name">永久会员</h2>
-            <div class="price-display">
-              <span class="currency">$</span>
-              <span class="price">199</span>
-              <span class="period">/永久</span>
-            </div>
-            <div class="original-price">
-              <span class="original-label">原价</span>
-              <span class="original-value">$299</span>
-            </div>
+      <section class="membership-panel" aria-labelledby="membership-status-title">
+        <div
+          class="membership-summary"
+          :class="{ 'membership-summary--active': hasMembershipAccess }"
+        >
+          <div class="status-line">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span>{{ statusLabel }}</span>
           </div>
 
-          <div class="pricing-divider"></div>
+          <h2 id="membership-status-title">{{ membershipHeading }}</h2>
+          <p class="membership-copy">{{ membershipDescription }}</p>
 
-          <div class="pricing-features">
-            <div v-for="(item, index) in pricingFeatures" :key="index" class="pricing-feature">
-              <CheckCircleOutlined class="feature-check" />
-              <span>{{ item }}</span>
+          <dl class="membership-facts">
+            <div v-for="fact in membershipFacts" :key="fact.label">
+              <dt>{{ fact.label }}</dt>
+              <dd>{{ fact.value }}</dd>
             </div>
+          </dl>
+
+          <div v-if="hasMembershipAccess" class="membership-actions">
+            <router-link class="primary-link" to="/create">
+              <EditOutlined aria-hidden="true" />
+              开始创作
+            </router-link>
+            <router-link class="secondary-link" to="/skill">查看 AI 工具</router-link>
           </div>
-
-          <a-button
-            type="primary"
-            size="large"
-            :loading="purchasing"
-            :disabled="isVip"
-            @click="handlePurchase"
-            class="purchase-btn"
-          >
-            <template #icon>
-              <ThunderboltOutlined />
-            </template>
-            {{ isVip ? '您已是永久会员' : '立即升级' }}
-          </a-button>
-
-          <div class="security-notice">
-            <SafetyOutlined />
-            <span>安全支付 · 7天无理由退款</span>
+          <div v-else class="membership-actions membership-actions--purchase">
+            <a-button
+              class="purchase-button"
+              type="primary"
+              size="large"
+              :loading="purchasing"
+              @click="handlePurchase"
+            >
+              <template #icon>
+                <ThunderboltOutlined />
+              </template>
+              升级永久会员 · $199
+            </a-button>
+            <div class="payment-note">
+              <SafetyOutlined aria-hidden="true" />
+              <span>Stripe 托管支付 · 一次购买</span>
+            </div>
           </div>
         </div>
 
-        <!-- 右侧：会员特权 -->
-        <div class="features-section">
-          <h3 class="features-title">
-            <GiftOutlined />
-            会员特权
-          </h3>
-          <div class="features-grid">
-            <div v-for="(feature, index) in features" :key="index" class="feature-card">
-              <div class="feature-icon-wrapper">
-                <component :is="feature.icon" class="feature-icon" />
+        <div class="capability-list">
+          <div class="capability-heading">
+            <div>
+              <span class="section-label">已验证能力</span>
+              <h2>会员能力范围</h2>
+            </div>
+            <span class="capability-count">4 项</span>
+          </div>
+
+          <ul>
+            <li v-for="capability in capabilities" :key="capability.title">
+              <span class="capability-icon" aria-hidden="true">
+                <component :is="capability.icon" />
+              </span>
+              <div class="capability-content">
+                <h3>{{ capability.title }}</h3>
+                <p>{{ capability.description }}</p>
               </div>
-              <div class="feature-content">
-                <h4 class="feature-title">{{ feature.title }}</h4>
-                <p class="feature-desc">{{ feature.desc }}</p>
-              </div>
-            </div>
-          </div>
+              <span
+                class="capability-status"
+                :class="{ 'capability-status--active': hasMembershipAccess }"
+              >
+                {{ hasMembershipAccess ? '已解锁' : '升级后解锁' }}
+              </span>
+            </li>
+          </ul>
         </div>
-      </div>
+      </section>
 
-      <!-- 常见问题 -->
-      <div class="faq-section">
-        <div class="section-header">
-          <QuestionCircleOutlined class="section-icon" />
-          <h2 class="section-title">常见问题</h2>
+      <section class="faq-section" aria-labelledby="faq-title">
+        <div class="section-heading">
+          <span class="section-label">使用说明</span>
+          <h2 id="faq-title">常见问题</h2>
         </div>
-        <div class="faq-grid">
-          <div v-for="(faq, index) in faqs" :key="index" class="faq-card">
-            <h4 class="faq-question">{{ faq.question }}</h4>
-            <p class="faq-answer">{{ faq.answer }}</p>
-          </div>
+        <div class="faq-list">
+          <details v-for="faq in faqs" :key="faq.question">
+            <summary>
+              <span>{{ faq.question }}</span>
+              <PlusOutlined class="faq-toggle" aria-hidden="true" />
+            </summary>
+            <p>{{ faq.answer }}</p>
+          </details>
         </div>
-      </div>
+      </section>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { message, Modal } from 'ant-design-vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Alert as AAlert, message } from 'ant-design-vue'
 import {
-  CheckCircleOutlined,
-  CrownOutlined,
-  SafetyOutlined,
-  ThunderboltOutlined,
-  RocketOutlined,
-  PictureOutlined,
   AppstoreOutlined,
+  CrownOutlined,
   EditOutlined,
-  StarOutlined,
-  GiftOutlined,
-  QuestionCircleOutlined
+  PictureOutlined,
+  PlusOutlined,
+  RocketOutlined,
+  SafetyOutlined,
+  ThunderboltOutlined
 } from '@ant-design/icons-vue'
-import { useLoginUserStore } from '@/stores/loginUser'
 import { createVipPaymentSession } from '@/api/paymentController'
-import { isVip as checkIsVip } from '@/utils/permission'
+import { useLoginUserStore } from '@/stores/loginUser'
+import { isAdmin as checkIsAdmin, isVip as checkIsVip } from '@/utils/permission'
+
+type AlertType = 'success' | 'info' | 'warning' | 'error'
+
+interface PaymentNotice {
+  type: AlertType
+  message: string
+  description: string
+  canRetry?: boolean
+}
 
 const router = useRouter()
 const route = useRoute()
 const loginUserStore = useLoginUserStore()
 const purchasing = ref(false)
+const refreshingMembership = ref(false)
+const paymentNotice = ref<PaymentNotice | null>(null)
 
-// 是否是 VIP（管理员也视为 VIP）
-const isVip = computed(() => checkIsVip(loginUserStore.loginUser))
+const isAdmin = computed(() => checkIsAdmin(loginUserStore.loginUser))
+const isVip = computed(() => loginUserStore.loginUser.userRole === 'vip')
+const hasMembershipAccess = computed(() => checkIsVip(loginUserStore.loginUser))
 
-// 会员特权列表
-const features = [
+const pageTitle = computed(() => {
+  if (isAdmin.value) return '管理员权限'
+  if (isVip.value) return '永久会员权益'
+  return '永久会员'
+})
+
+const pageDescription = computed(() => {
+  if (isAdmin.value) return '当前账号已具备全部会员能力，无需重复购买。'
+  if (isVip.value) return '当前账号已开通永久会员，可以直接使用高级创作能力。'
+  return '一次升级，解锁无限文章创作配额和高级内容能力。'
+})
+
+const statusLabel = computed(() => {
+  if (isAdmin.value) return '管理员权限已生效'
+  if (isVip.value) return '永久会员已生效'
+  return '当前为基础账号'
+})
+
+const membershipHeading = computed(() => {
+  if (isAdmin.value) return '全部高级能力可用'
+  if (isVip.value) return '会员状态正常'
+  return '升级后永久有效'
+})
+
+const membershipDescription = computed(() => {
+  if (isAdmin.value) return '管理员账号继承会员权限，可直接进入创作流程使用全部高级能力。'
+  if (isVip.value) return '您的会员权限已同步到账，无需续费，可随时开始新的创作。'
+  return '永久会员为一次性购买方案，支付完成并确认后自动更新账号权限。'
+})
+
+const formattedVipTime = computed(() => {
+  const vipTime = loginUserStore.loginUser.vipTime
+  if (!vipTime) return '已生效'
+
+  const date = new Date(vipTime)
+  if (Number.isNaN(date.getTime())) return '已生效'
+
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }).format(date)
+})
+
+const membershipFacts = computed(() => {
+  if (isAdmin.value) {
+    return [
+      { label: '账号状态', value: '管理员' },
+      { label: '权限范围', value: '全部可用' },
+      { label: '购买需求', value: '无需购买' }
+    ]
+  }
+
+  if (isVip.value) {
+    return [
+      { label: '会员状态', value: '已开通' },
+      { label: '开通时间', value: formattedVipTime.value },
+      { label: '有效期', value: '永久' }
+    ]
+  }
+
+  return [
+    { label: '会员方案', value: '永久会员' },
+    { label: '方案价格', value: '$199' },
+    { label: '有效期', value: '永久' }
+  ]
+})
+
+const capabilities = [
   {
     icon: RocketOutlined,
-    title: '无限创作配额',
-    desc: '无限次使用文章创作功能，告别配额限制'
+    title: '无限文章创作配额',
+    description: '会员创作文章时不受基础账号配额限制。'
   },
   {
     icon: PictureOutlined,
-    title: 'AI 智能生图',
-    desc: '使用 Nano Banana AI 生成独特配图'
+    title: 'Nano Banana AI 配图',
+    description: '在创作流程中使用 Nano Banana 生成文章配图。'
   },
   {
     icon: AppstoreOutlined,
-    title: 'SVG 图表生成',
-    desc: '自动生成精美的概念示意图和思维导图'
+    title: 'SVG 概念示意图',
+    description: '为文章生成结构清晰、可直接展示的 SVG 图示。'
   },
   {
     icon: EditOutlined,
     title: 'AI 大纲编辑',
-    desc: '使用 AI 助手快速优化文章大纲'
-  },
-  {
-    icon: StarOutlined,
-    title: '优先队列',
-    desc: '享受更快的生成速度和优先服务'
-  },
-  {
-    icon: GiftOutlined,
-    title: '终身有效',
-    desc: '一次购买，永久使用，无需续费'
+    description: '使用 AI 助手调整和优化文章大纲。'
   }
 ]
 
-// 价格卡片特性
-const pricingFeatures = [
-  '无限创作配额',
-  '全部高级配图功能',
-  'AI 大纲智能编辑',
-  '优先生成队列',
-  '终身有效'
-]
-
-// FAQ 列表
 const faqs = [
   {
-    question: '支付后多久生效？',
-    answer: '支付成功后立即生效，您将立即获得永久会员权限，刷新页面即可看到变化。'
-  },
-  {
-    question: '如何申请退款？',
-    answer: '购买后 7 天内，如不满意可申请退款，退款后会员权限将被取消。'
+    question: '支付后什么时候生效？',
+    answer: 'Stripe 确认支付结果后，系统会自动更新账号权限。若返回后仍显示基础账号，可稍后重新检查会员状态。'
   },
   {
     question: '会员是否需要续费？',
-    answer: '不需要。永久会员一次购买，终身有效，无需任何续费。'
+    answer: '不需要。永久会员为一次性购买方案，开通后长期有效。'
   },
   {
-    question: '支付安全吗？',
-    answer: '我们使用 Stripe 国际支付平台，全程加密传输，安全可靠。'
+    question: '会员包含哪些高级配图能力？',
+    answer: '会员额外解锁 Nano Banana AI 配图和 SVG 概念示意图，具体入口位于文章创作流程。'
+  },
+  {
+    question: '如何完成支付？',
+    answer: '点击升级按钮后将前往 Stripe 托管的支付页面，完成或取消支付后会返回当前应用。'
   }
 ]
 
-// 检查支付结果
-onMounted(async () => {
-  const success = route.query.success
-  const cancelled = route.query.cancelled
+const replacePaymentQuery = () => {
+  void router.replace({ path: '/vip' })
+}
 
-  if (success === 'true') {
+const refreshMembershipStatus = async () => {
+  refreshingMembership.value = true
+  try {
     await loginUserStore.fetchLoginUser()
-    Modal.success({
-      title: '支付成功！',
-      content: '恭喜您成为永久会员，已解锁全部高级功能！',
-      okText: '开始创作',
-      onOk: () => {
-        router.push('/create')
+    if (hasMembershipAccess.value) {
+      paymentNotice.value = {
+        type: 'success',
+        message: '会员权限已生效',
+        description: '账号状态已更新，现在可以使用全部会员能力。'
       }
-    })
-    router.replace('/vip')
-  } else if (cancelled === 'true') {
-    message.info('支付已取消')
-    router.replace('/vip')
+    } else {
+      paymentNotice.value = {
+        type: 'warning',
+        message: '支付状态确认中',
+        description: '当前账号尚未更新为会员，请稍后重新检查。',
+        canRetry: true
+      }
+    }
+  } catch (error) {
+    console.error('刷新会员状态失败:', error)
+    paymentNotice.value = {
+      type: 'error',
+      message: '暂时无法检查会员状态',
+      description: '网络或服务暂时不可用，请稍后重试。',
+      canRetry: true
+    }
+  } finally {
+    refreshingMembership.value = false
+  }
+}
+
+onMounted(async () => {
+  if (route.query.success === 'true') {
+    await refreshMembershipStatus()
+    replacePaymentQuery()
+  } else if (route.query.cancelled === 'true') {
+    paymentNotice.value = {
+      type: 'info',
+      message: '支付已取消',
+      description: '本次操作未产生会员状态变更，您可以稍后重新发起支付。'
+    }
+    replacePaymentQuery()
   }
 })
 
-// 购买处理
 const handlePurchase = async () => {
   if (!loginUserStore.loginUser.id) {
     message.warning('请先登录')
-    router.push('/user/login')
+    await router.push('/user/login')
     return
   }
 
-  if (isVip.value) {
-    message.info('您已经是永久会员')
+  if (hasMembershipAccess.value) {
+    message.info('当前账号已具备会员权限')
     return
   }
 
+  paymentNotice.value = null
   purchasing.value = true
   try {
-    const res = await createVipPaymentSession()
-    if (res.data.code === 0 && res.data.data) {
-      window.location.href = res.data.data
-    } else {
-      message.error(res.data.message || '创建支付失败')
+    const response = await createVipPaymentSession()
+    if (response.data.code === 0 && response.data.data) {
+      window.location.assign(response.data.data)
+      return
+    }
+
+    paymentNotice.value = {
+      type: 'error',
+      message: '暂时无法创建支付',
+      description: response.data.message || '请稍后重试，或刷新页面后重新发起支付。'
     }
   } catch (error) {
     console.error('创建支付失败:', error)
-    message.error('创建支付失败，请稀后重试')
+    paymentNotice.value = {
+      type: 'error',
+      message: '暂时无法创建支付',
+      description: '网络或支付服务暂时不可用，请稍后重试。'
+    }
   } finally {
     purchasing.value = false
   }
@@ -243,400 +362,515 @@ const handlePurchase = async () => {
 </script>
 
 <style scoped lang="scss">
+/* Product-state layout: membership status first, capabilities second. */
 .vip-page {
   min-height: calc(100vh - 64px);
-  background: var(--gradient-hero);
-  padding: 48px 24px 80px;
+  padding: 40px 24px 72px;
+  background: var(--surface-page);
+  color: var(--text-body);
 }
 
 .vip-container {
-  max-width: 1200px;
+  width: min(100%, 1120px);
   margin: 0 auto;
 }
 
-/* 页面头部 */
-.page-header {
-  text-align: center;
-  margin-bottom: 48px;
+.page-heading {
+  max-width: 720px;
+  margin-bottom: 28px;
 }
 
-.header-badge {
-  display: inline-flex;
+.page-kicker {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.2);
-  border-radius: var(--radius-full);
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--state-success-text);
   font-size: 13px;
-  font-weight: 600;
-  color: var(--color-primary-dark);
-  margin-bottom: 20px;
-
-  .anticon {
-    font-size: 14px;
-  }
-}
-
-.page-title {
-  font-size: 36px;
   font-weight: 700;
-  margin: 0 0 12px;
-  color: var(--color-text);
-  letter-spacing: -0.5px;
+  letter-spacing: 0.08em;
 }
 
-.page-subtitle {
-  font-size: 16px;
-  color: var(--color-text-secondary);
+.page-heading h1 {
+  margin: 0 0 10px;
+  color: var(--text-strong);
+  font-family: var(--font-heading);
+  font-size: clamp(32px, 4vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.page-heading p {
   margin: 0;
+  color: var(--text-subtle);
+  font-size: 16px;
+  line-height: 1.7;
 }
 
-/* 主内容区 */
-.main-section {
-  display: grid;
-  grid-template-columns: 400px 1fr;
-  gap: 32px;
-  margin-bottom: 56px;
-}
-
-/* 价格卡片 */
-.pricing-card {
-  background: white;
-  border-radius: var(--radius-xl);
-  padding: 36px 32px;
-  box-shadow: var(--shadow-xl);
-  border: 2px solid var(--color-primary);
+.payment-feedback {
   position: relative;
-  height: fit-content;
-  position: sticky;
-  top: 88px;
+  margin-bottom: 20px;
 }
 
-.pricing-badge {
+.refresh-button {
   position: absolute;
-  top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--gradient-primary);
-  color: white;
-  padding: 6px 20px;
-  border-radius: var(--radius-full);
-  font-size: 12px;
+  right: 38px;
+  bottom: 8px;
   font-weight: 600;
-  box-shadow: var(--shadow-green);
 }
 
-.pricing-header {
-  text-align: center;
-  padding-bottom: 20px;
+.membership-panel {
+  display: grid;
+  grid-template-columns: minmax(330px, 0.85fr) minmax(0, 1.35fr);
+  overflow: hidden;
+  margin-bottom: 48px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-subtle);
 }
 
-.plan-icon {
-  width: 52px;
-  height: 52px;
-  margin: 0 auto 14px;
+.membership-summary {
+  display: flex;
+  min-height: 520px;
+  flex-direction: column;
+  padding: 36px;
+  border-right: 1px solid var(--border-default);
+  background: var(--surface-panel);
+}
+
+.membership-summary--active {
+  border-right-color: var(--color-secondary-light);
+  background: var(--color-secondary);
+  color: var(--text-inverse);
+}
+
+.status-line {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: rgba(34, 197, 94, 0.1);
-  border-radius: var(--radius-lg);
-
-  .anticon {
-    font-size: 26px;
-    color: var(--color-primary);
-  }
+  gap: 9px;
+  margin-bottom: 32px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.plan-name {
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0 0 14px;
-  color: var(--color-text);
+.membership-summary--active .status-line {
+  color: #bbf7d0;
 }
 
-.price-display {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  margin-bottom: 6px;
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-disabled);
+  box-shadow: 0 0 0 4px var(--surface-muted);
 }
 
-.currency {
-  font-size: 18px;
-  color: var(--color-text-secondary);
-  margin-right: 2px;
-  font-weight: 500;
+.membership-summary--active .status-dot {
+  background: var(--color-primary-light);
+  box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.16);
 }
 
-.price {
-  font-size: 52px;
-  font-weight: 700;
-  color: var(--color-primary);
-  line-height: 1;
+.membership-summary h2 {
+  margin: 0 0 12px;
+  color: var(--text-strong);
+  font-family: var(--font-heading);
+  font-size: 27px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
 }
 
-.period {
+.membership-summary--active h2 {
+  color: var(--text-inverse);
+}
+
+.membership-copy {
+  min-height: 72px;
+  margin: 0 0 32px;
+  color: var(--text-subtle);
   font-size: 14px;
-  color: var(--color-text-muted);
-  margin-left: 4px;
+  line-height: 1.7;
 }
 
-.original-price {
+.membership-summary--active .membership-copy {
+  color: #cbd5e1;
+}
+
+.membership-facts {
+  margin: 0;
+  border-top: 1px solid var(--border-default);
+}
+
+.membership-summary--active .membership-facts {
+  border-top-color: rgba(226, 232, 240, 0.18);
+}
+
+.membership-facts div {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.membership-summary--active .membership-facts div {
+  border-bottom-color: rgba(226, 232, 240, 0.18);
+}
+
+.membership-facts dt,
+.membership-facts dd {
+  margin: 0;
   font-size: 13px;
 }
 
-.original-label {
-  color: var(--color-text-muted);
+.membership-facts dt {
+  color: var(--text-muted);
 }
 
-.original-value {
-  color: var(--color-text-muted);
-  text-decoration: line-through;
+.membership-facts dd {
+  color: var(--text-strong);
+  font-weight: 650;
+  text-align: right;
 }
 
-.pricing-divider {
-  height: 1px;
-  background: var(--color-border-light);
-  margin: 20px 0;
+.membership-summary--active .membership-facts dt {
+  color: #94a3b8;
 }
 
-.pricing-features {
-  margin-bottom: 24px;
+.membership-summary--active .membership-facts dd {
+  color: var(--text-inverse);
 }
 
-.pricing-feature {
-  display: flex;
-  align-items: center;
+.membership-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 10px;
-  padding: 8px 0;
-  font-size: 14px;
-  color: var(--color-text);
-
-  .feature-check {
-    color: var(--color-primary);
-    font-size: 15px;
-    flex-shrink: 0;
-  }
+  margin-top: auto;
+  padding-top: 32px;
 }
 
-.purchase-btn {
-  width: 100%;
-  height: 48px;
-  font-size: 15px;
-  font-weight: 600;
-  background: var(--gradient-primary) !important;
-  border: none !important;
-  box-shadow: var(--shadow-green) !important;
-  border-radius: var(--radius-md) !important;
-
-  &:hover:not(:disabled) {
-    opacity: 0.9;
-    transform: translateY(-1px);
-  }
-
-  &:disabled {
-    background: var(--color-background-tertiary) !important;
-    color: var(--color-text-secondary) !important;
-    box-shadow: none !important;
-  }
-}
-
-.security-notice {
+.membership-actions--purchase {
   display: flex;
+  flex-direction: column;
+}
+
+.primary-link,
+.secondary-link {
+  display: inline-flex;
+  min-height: var(--touch-target-min);
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-top: 14px;
-  font-size: 12px;
-  color: var(--color-text-secondary);
-
-  .anticon {
-    color: var(--color-primary);
-    font-size: 13px;
-  }
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
-/* 会员特权 */
-.features-section {
-  background: white;
-  border-radius: var(--radius-xl);
-  padding: 32px;
-  border: 1px solid var(--color-border);
+.primary-link {
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-secondary);
 }
 
-.features-title {
+.primary-link:hover {
+  border-color: var(--color-primary-light);
+  background: var(--color-primary-light);
+  color: var(--color-secondary);
+}
+
+.secondary-link {
+  padding: 0 16px;
+  border: 1px solid rgba(226, 232, 240, 0.32);
+  color: #e2e8f0;
+}
+
+.secondary-link:hover {
+  border-color: rgba(226, 232, 240, 0.6);
+  color: var(--text-inverse);
+}
+
+.primary-link:focus-visible,
+.secondary-link:focus-visible,
+.faq-list summary:focus-visible {
+  outline: 3px solid rgba(34, 197, 94, 0.32);
+  outline-offset: 3px;
+}
+
+.purchase-button {
+  width: 100%;
+  min-height: var(--control-height-lg);
+  border-color: var(--color-primary) !important;
+  background: var(--color-primary) !important;
+  box-shadow: none !important;
+  color: var(--color-secondary) !important;
+  font-weight: 700;
+}
+
+.purchase-button:hover {
+  border-color: var(--color-primary-dark) !important;
+  background: var(--color-primary-dark) !important;
+  color: var(--text-inverse) !important;
+}
+
+.payment-note {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0 0 24px;
-  color: var(--color-text);
-
-  .anticon {
-    color: var(--color-primary);
-    font-size: 20px;
-  }
+  justify-content: center;
+  gap: 7px;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+.capability-list {
+  padding: 36px 40px 24px;
 }
 
-.feature-card {
+.capability-heading {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 20px;
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-normal);
-
-  &:hover {
-    background: rgba(34, 197, 94, 0.06);
-  }
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
 }
 
-.feature-icon-wrapper {
-  flex-shrink: 0;
+.section-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--state-success-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.capability-heading h2,
+.section-heading h2 {
+  margin: 0;
+  color: var(--text-strong);
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.capability-count {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.capability-list ul {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border-default);
+  list-style: none;
+}
+
+.capability-list li {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 92px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.capability-icon {
+  display: inline-flex;
   width: 40px;
   height: 40px;
-  display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid #bbf7d0;
   border-radius: var(--radius-md);
+  background: var(--state-success-bg);
+  color: var(--state-success-text);
+  font-size: 17px;
 }
 
-.feature-icon {
-  font-size: 18px;
-  color: var(--color-primary);
-}
-
-.feature-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.feature-title {
-  font-size: 14px;
-  font-weight: 600;
+.capability-content h3 {
   margin: 0 0 4px;
-  color: var(--color-text);
-}
-
-.feature-desc {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  margin: 0;
-  line-height: 1.5;
-}
-
-/* FAQ 部分 */
-.faq-section {
-  background: white;
-  border-radius: var(--radius-xl);
-  padding: 32px;
-  border: 1px solid var(--color-border);
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 24px;
-}
-
-.section-icon {
-  font-size: 20px;
-  color: var(--color-primary);
-}
-
-.section-title {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0;
-  color: var(--color-text);
-}
-
-.faq-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-}
-
-.faq-card {
-  padding: 20px;
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-lg);
-}
-
-.faq-question {
+  color: var(--text-strong);
   font-size: 14px;
-  font-weight: 600;
-  margin: 0 0 8px;
-  color: var(--color-text);
+  font-weight: 650;
 }
 
-.faq-answer {
-  font-size: 13px;
-  color: var(--color-text-secondary);
+.capability-content p {
   margin: 0;
-  line-height: 1.6;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
-/* 响应式 */
-@media (max-width: 992px) {
-  .main-section {
+.capability-status {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.capability-status--active {
+  color: var(--state-success-text);
+}
+
+.faq-section {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 48px;
+  padding-top: 8px;
+}
+
+.section-heading {
+  padding-top: 17px;
+}
+
+.faq-list {
+  border-top: 1px solid var(--border-strong);
+}
+
+.faq-list details {
+  border-bottom: 1px solid var(--border-default);
+}
+
+.faq-list summary {
+  display: flex;
+  min-height: 64px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  color: var(--text-strong);
+  font-size: 14px;
+  font-weight: 650;
+  list-style: none;
+}
+
+.faq-list summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-toggle {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  transition: transform var(--transition-fast);
+}
+
+.faq-list details[open] .faq-toggle {
+  transform: rotate(45deg);
+}
+
+.faq-list details p {
+  max-width: 680px;
+  margin: -4px 40px 20px 0;
+  color: var(--text-subtle);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+@media (max-width: 900px) {
+  .membership-panel {
     grid-template-columns: 1fr;
   }
 
-  .pricing-card {
-    position: static;
-    max-width: 400px;
-    margin: 0 auto;
+  .membership-summary {
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-default);
   }
 
-  .features-grid {
-    grid-template-columns: 1fr;
+  .membership-summary--active {
+    border-bottom-color: var(--color-secondary-light);
   }
 
-  .faq-grid {
+  .membership-copy {
+    min-height: 0;
+  }
+
+  .membership-actions {
+    margin-top: 28px;
+  }
+
+  .faq-section {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 640px) {
   .vip-page {
-    padding: 32px 16px 60px;
+    padding: 28px 16px 56px;
   }
 
-  .page-title {
-    font-size: 28px;
+  .page-heading {
+    margin-bottom: 22px;
   }
 
-  .page-subtitle {
+  .page-heading h1 {
+    font-size: 32px;
+  }
+
+  .page-heading p {
     font-size: 14px;
   }
 
-  .pricing-card {
-    padding: 28px 24px;
+  .refresh-button {
+    position: static;
+    width: 100%;
+    margin-top: 4px;
   }
 
-  .price {
-    font-size: 44px;
+  .membership-panel {
+    margin-bottom: 40px;
+    border-radius: var(--radius-lg);
   }
 
-  .features-section,
-  .faq-section {
-    padding: 24px;
+  .membership-summary,
+  .capability-list {
+    padding: 24px 20px;
+  }
+
+  .status-line {
+    margin-bottom: 24px;
+  }
+
+  .membership-summary h2 {
+    font-size: 24px;
+  }
+
+  .membership-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .secondary-link {
+    min-height: var(--touch-target-min);
+  }
+
+  .capability-list li {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 12px;
+    padding: 16px 0;
+  }
+
+  .capability-status {
+    grid-column: 2;
+  }
+
+  .faq-list summary {
+    min-height: 60px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary-link,
+  .secondary-link,
+  .faq-toggle {
+    transition: none;
   }
 }
 </style>

@@ -1,911 +1,413 @@
 <template>
-  <div class="article-detail-page">
-    <div class="page-header">
-      <div class="header-container">
-        <div class="header-actions">
-          <a-button @click="goBack" class="back-btn">
-            <template #icon>
-              <ArrowLeftOutlined />
-            </template>
-            返回
-          </a-button>
-          <div class="right-actions">
-            <a-button
-              v-if="article?.fullContent || article?.content"
-              @click="skillLauncherOpen = true"
-              class="skill-btn"
-            >
-              <template #icon>
-                <ShareAltOutlined />
-              </template>
-              转为社交文案
-            </a-button>
-            <a-button
-              v-if="article?.status === 'FAILED'"
-              type="primary"
-              danger
-              @click="handleRetry"
-              class="retry-btn"
-            >
-              <template #icon>
-                <RedoOutlined />
-              </template>
-              重新创建
-            </a-button>
-            <a-button type="primary" @click="exportMarkdown" class="export-btn">
-              <template #icon>
-                <DownloadOutlined />
-              </template>
-              导出 Markdown
-            </a-button>
-          </div>
-        </div>
+  <section class="detail-page" aria-label="文章详情">
+    <div class="action-bar">
+      <a-button @click="goBack"><template #icon><ArrowLeftOutlined /></template>返回历史</a-button>
+      <div class="primary-actions">
+        <a-button v-if="hasContent" @click="skillLauncherOpen = true">
+          <template #icon><ShareAltOutlined /></template>转为社交文案
+        </a-button>
+        <a-button v-if="article?.status === 'FAILED'" danger @click="handleRetry">
+          <template #icon><RedoOutlined /></template>重新创建
+        </a-button>
+        <a-button type="primary" :disabled="!hasContent" @click="exportMarkdown">
+          <template #icon><DownloadOutlined /></template>导出 Markdown
+        </a-button>
       </div>
     </div>
 
-    <div class="container">
-      <a-spin :spinning="loading" tip="加载中...">
-        <a-card :bordered="false" v-if="article" class="article-card">
-          <!-- 标题 -->
-          <div class="title-section">
-            <h1 class="main-title">{{ article.mainTitle }}</h1>
-            <p class="sub-title">{{ article.subTitle }}</p>
-            <div class="meta-info">
-              <a-tag :color="getStatusColor(article.status ?? '')" class="status-tag">
-                {{ getStatusText(article.status ?? '') }}
-              </a-tag>
-              <span class="time">创建于 {{ article.createTime ? formatDate(article.createTime) : '' }}</span>
-            </div>
-          </div>
+    <div class="detail-shell">
+      <div v-if="loading" class="page-state" aria-label="文章加载中">
+        <a-skeleton active :title="{ width: '70%' }" :paragraph="{ rows: 12 }" />
+      </div>
 
-          <a-divider />
+      <a-result
+        v-else-if="errorMessage"
+        status="warning"
+        title="文章暂时无法加载"
+        :sub-title="errorMessage"
+        class="page-state"
+      >
+        <template #extra>
+          <a-button type="primary" @click="loadArticle">重新加载</a-button>
+          <a-button @click="goBack">返回历史</a-button>
+        </template>
+      </a-result>
 
-          <!-- 执行日志面板 -->
-          <div v-if="executionStats && executionStats.logs && executionStats.logs.length > 0" class="execution-logs-section">
-            <div class="logs-header" @click="showExecutionLogs = !showExecutionLogs">
-              <h2 class="section-title">
-                <ClockCircleOutlined class="section-icon" />
-                执行日志
-                <a-tag :color="getStatusColor(executionStats.overallStatus ?? '')" class="status-tag-small">
-                  {{ executionStats.overallStatus ?? '' }}
-                </a-tag>
-              </h2>
-              <ThunderboltOutlined :class="['toggle-icon', { expanded: showExecutionLogs }]" />
-            </div>
+      <a-result
+        v-else-if="!article"
+        status="404"
+        title="没有找到这篇文章"
+        sub-title="记录可能已被删除，或链接已经失效。"
+        class="page-state"
+      >
+        <template #extra><a-button type="primary" @click="goBack">返回历史</a-button></template>
+      </a-result>
 
-            <Transition name="expand">
-              <div v-show="showExecutionLogs" class="logs-content">
-                <!-- 统计概览 -->
-                <div class="stats-summary">
-                  <div class="stat-item">
-                    <span class="label">总耗时</span>
-                    <span class="value">{{ executionStats.totalDurationMs ?? 0 }}ms</span>
+      <template v-else>
+        <ArticleReadingView :article="article" title-id="article-detail-title" />
+
+        <section class="execution-panel" aria-labelledby="execution-title">
+          <button
+            type="button"
+            :aria-expanded="showExecutionLogs"
+            aria-controls="execution-content"
+            @click="showExecutionLogs = !showExecutionLogs"
+          >
+            <span>
+              <ClockCircleOutlined />
+              <strong id="execution-title">执行信息</strong>
+              <small v-if="executionStats?.logs?.length">{{ executionStats.logs.length }} 个步骤</small>
+            </span>
+            <DownOutlined :class="{ expanded: showExecutionLogs }" />
+          </button>
+
+          <div v-if="showExecutionLogs" id="execution-content" class="execution-content">
+            <a-skeleton v-if="logsLoading" active :paragraph="{ rows: 3 }" />
+            <a-alert
+              v-else-if="logsError"
+              type="warning"
+              :message="logsError"
+              show-icon
+            >
+              <template #action><a-button size="small" @click="loadExecutionLogs">重试</a-button></template>
+            </a-alert>
+            <a-empty
+              v-else-if="!executionStats?.logs?.length"
+              description="当前没有可查看的执行记录"
+            />
+            <template v-else>
+              <dl class="execution-summary">
+                <div><dt>总耗时</dt><dd>{{ formatDuration(executionStats.totalDurationMs) }}</dd></div>
+                <div><dt>执行步骤</dt><dd>{{ executionStats.agentCount ?? executionStats.logs.length }}</dd></div>
+                <div><dt>整体状态</dt><dd>{{ executionStats.overallStatus || '未知' }}</dd></div>
+              </dl>
+              <ol class="execution-list">
+                <li v-for="log in executionStats.logs" :key="log.id">
+                  <div>
+                    <strong>{{ getAgentDisplayName(log.agentName || '') }}</strong>
+                    <span>{{ formatDuration(log.durationMs) }}</span>
                   </div>
-                  <div class="stat-item">
-                    <span class="label">智能体数量</span>
-                    <span class="value">{{ executionStats.agentCount ?? 0 }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="label">平均耗时</span>
-                    <span class="value">
-                      {{ executionStats.agentCount && executionStats.totalDurationMs ? Math.round(executionStats.totalDurationMs / executionStats.agentCount) : 0 }}ms
-                    </span>
-                  </div>
-                </div>
-
-                <!-- 智能体时间线 -->
-                <div class="agent-timeline">
-                  <div
-                    v-for="log in executionStats.logs"
-                    :key="log.id"
-                    :class="['timeline-item', log.status?.toLowerCase()]"
-                  >
-                    <div class="timeline-indicator">
-                      <CheckCircleOutlined v-if="log.status === 'SUCCESS'" class="icon success" />
-                      <CloseCircleOutlined v-else-if="log.status === 'FAILED'" class="icon failed" />
-                      <LoadingOutlined v-else class="icon running" />
-                    </div>
-                    <div class="timeline-content">
-                      <div class="timeline-header">
-                        <span class="agent-name">{{ getAgentDisplayName(log.agentName ?? '') }}</span>
-                        <span class="duration">{{ log.durationMs ?? 0 }}ms</span>
-                      </div>
-                      <div class="timeline-time">
-                        {{ log.startTime ? formatDate(log.startTime) : '' }}
-                      </div>
-                      <div v-if="log.errorMessage" class="error-message">
-                        <CloseCircleOutlined /> {{ log.errorMessage }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Transition>
+                  <small>{{ log.startTime ? formatDate(log.startTime) : '时间未知' }}</small>
+                  <p v-if="log.errorMessage">{{ log.errorMessage }}</p>
+                </li>
+              </ol>
+            </template>
           </div>
-
-          <a-divider v-if="executionStats && executionStats.logs && executionStats.logs.length > 0" />
-
-          <!-- 大纲 -->
-          <div v-if="article.outline && article.outline.length > 0" class="outline-section">
-            <h2 class="section-title">
-              <OrderedListOutlined class="section-icon" />
-              文章大纲
-            </h2>
-            <div class="outline-list">
-              <div v-for="item in article.outline" :key="item.section" class="outline-item">
-                <div class="outline-title">{{ item.section }}. {{ item.title }}</div>
-                <ul class="outline-points">
-                  <li v-for="(point, idx) in item.points" :key="idx">{{ point }}</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <a-divider v-if="article.outline && article.outline.length > 0" />
-
-          <!-- 完整图文（优先展示） -->
-          <div v-if="article.fullContent" class="content-section">
-            <h2 class="section-title">
-              <FileTextOutlined class="section-icon" />
-              完整图文
-            </h2>
-            <div v-html="markdownToHtml(article.fullContent)" class="markdown-content"></div>
-          </div>
-
-          <!-- 普通正文（无 fullContent 时展示） -->
-          <div v-else-if="article.content" class="content-section">
-            <h2 class="section-title">
-              <FileTextOutlined class="section-icon" />
-              文章正文
-            </h2>
-            <div v-html="markdownToHtml(article.content)" class="markdown-content"></div>
-          </div>
-
-          <!-- 配图（仅在没有 fullContent 时单独展示） -->
-          <div v-if="!article.fullContent && article.images && article.images.length > 0" class="images-section">
-            <h2 class="section-title">
-              <PictureOutlined class="section-icon" />
-              文章配图
-            </h2>
-            <div class="images-grid">
-              <div v-for="image in article.images" :key="image.position" class="image-item">
-                <img :src="image.url" :alt="image.description" />
-                <div class="image-info">
-                  <span class="badge">{{ image.method }}</span>
-                  <span class="keywords">{{ image.keywords }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </a-card>
-      </a-spin>
+        </section>
+      </template>
     </div>
+
     <SkillLauncher
       v-if="article"
       v-model:open="skillLauncherOpen"
       skill-name="article-to-x"
       :initial-inputs="{ articleContent: article.fullContent || article.content || '' }"
     />
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { message, Modal } from 'ant-design-vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Alert as AAlert, Modal, message } from 'ant-design-vue'
 import {
   ArrowLeftOutlined,
-  DownloadOutlined,
-  OrderedListOutlined,
-  FileTextOutlined,
-  PictureOutlined,
   ClockCircleOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  LoadingOutlined,
+  DownOutlined,
+  DownloadOutlined,
   RedoOutlined,
-  ThunderboltOutlined,
   ShareAltOutlined,
 } from '@ant-design/icons-vue'
-import { getArticle, getExecutionLogs } from '@/api/articleController'
-import { marked } from 'marked'
-import dayjs from 'dayjs'
+import ArticleReadingView from '@/components/ArticleReadingView.vue'
 import SkillLauncher from '@/pages/skill/components/SkillLauncher.vue'
+import { getArticle, getExecutionLogs } from '@/api/articleController'
+import { exportAsMarkdown } from '@/utils/article'
+import { formatDate } from '@/utils/date'
 
 const router = useRouter()
 const route = useRoute()
-
 const loading = ref(false)
 const article = ref<API.ArticleVO | null>(null)
+const errorMessage = ref('')
 const executionStats = ref<API.AgentExecutionStats | null>(null)
 const logsLoading = ref(false)
+const logsError = ref('')
 const showExecutionLogs = ref(false)
 const skillLauncherOpen = ref(false)
+const hasContent = computed(() => Boolean(article.value?.fullContent || article.value?.content))
+const taskId = computed(() => (typeof route.params.taskId === 'string' ? route.params.taskId : ''))
 
-// Markdown 转 HTML
-const markdownToHtml = (markdown: string) => {
-  return marked(markdown)
-}
-
-// 加载文章
 const loadArticle = async () => {
-  const taskId = route.params.taskId as string
-  if (!taskId) {
-    message.error('文章ID不存在')
+  if (!taskId.value) {
+    errorMessage.value = '文章链接缺少任务编号。'
     return
   }
-
   loading.value = true
+  errorMessage.value = ''
   try {
-    const res = await getArticle({ taskId })
-    article.value = res.data.data || null
-    // 自动加载执行日志
-    await loadExecutionLogs(taskId)
+    const response = await getArticle({ taskId: taskId.value })
+    if (response.data.code !== 0) throw new Error(response.data.message || '文章加载失败')
+    article.value = response.data.data || null
+    if (article.value) void loadExecutionLogs()
   } catch (error) {
-    message.error((error as Error).message || '加载失败')
+    errorMessage.value = error instanceof Error ? error.message : '请稍后重试'
   } finally {
     loading.value = false
   }
 }
 
-// 加载执行日志
-const loadExecutionLogs = async (taskId: string) => {
+const loadExecutionLogs = async () => {
+  if (!taskId.value) return
   logsLoading.value = true
+  logsError.value = ''
   try {
-    const res = await getExecutionLogs({ taskId })
-    executionStats.value = res.data.data || null
+    const response = await getExecutionLogs({ taskId: taskId.value })
+    if (response.data.code !== 0) throw new Error(response.data.message || '执行记录加载失败')
+    executionStats.value = response.data.data || null
   } catch (error) {
-    console.error('加载执行日志失败:', error)
+    logsError.value = error instanceof Error ? error.message : '执行记录暂时不可用'
   } finally {
     logsLoading.value = false
   }
 }
 
-// 返回
-const goBack = () => {
-  router.back()
-}
-
-// 导出 Markdown
+const goBack = () => router.push('/article/list')
 const exportMarkdown = () => {
-  if (!article.value) return
-
-  let markdown = `# ${article.value.mainTitle}\n\n`
-  markdown += `> ${article.value.subTitle}\n\n`
-
-  // 优先使用完整图文
-  if (article.value.fullContent) {
-    markdown += article.value.fullContent
-  } else {
-    if (article.value.outline && article.value.outline.length > 0) {
-      markdown += `## 目录\n\n`
-      article.value.outline.forEach(item => {
-        markdown += `${item.section}. ${item.title}\n`
-      })
-      markdown += `\n---\n\n`
-    }
-
-    markdown += article.value.content || ''
-
-    if (article.value.images && article.value.images.length > 0) {
-      markdown += `\n\n## 配图\n\n`
-      article.value.images.forEach(image => {
-        markdown += `![${image.description}](${image.url})\n\n`
-      })
-    }
-  }
-
-  const blob = new Blob([markdown], { type: 'text/markdown' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${article.value.mainTitle}.md`
-  a.click()
-  URL.revokeObjectURL(url)
-
-  message.success('导出成功')
+  if (!article.value || !hasContent.value) return
+  exportAsMarkdown({
+    title: article.value.mainTitle || article.value.topic || '文章',
+    subTitle: article.value.subTitle,
+    content: article.value.content,
+    fullContent: article.value.fullContent,
+    outline: article.value.outline?.map((item, index) => ({
+      section: item.section ?? index + 1,
+      title: item.title || `第 ${index + 1} 节`,
+    })),
+    images: article.value.images
+      ?.filter((image) => Boolean(image.url))
+      .map((image) => ({
+        description: image.description || image.keywords || '文章配图',
+        url: image.url || '',
+      })),
+  })
+  message.success('文章已导出')
 }
-
-// 格式化日期
-const formatDate = (date: string) => {
-  return dayjs(date).format('YYYY-MM-DD HH:mm:ss')
-}
-
-// 获取状态颜色
-const getStatusColor = (status: string) => {
-  const colorMap: Record<string, string> = {
-    PENDING: 'default',
-    PROCESSING: 'processing',
-    COMPLETED: 'success',
-    FAILED: 'error',
-  }
-  return colorMap[status] || 'default'
-}
-
-// 获取状态文本
-const getStatusText = (status: string) => {
-  const textMap: Record<string, string> = {
-    PENDING: '等待中',
-    PROCESSING: '生成中',
-    COMPLETED: '已完成',
-    FAILED: '失败',
-  }
-  return textMap[status] || status
-}
-
-// 获取智能体显示名称
-const getAgentDisplayName = (agentName: string) => {
-  const nameMap: Record<string, string> = {
-    'agent1_generate_titles': '生成标题',
-    'agent2_generate_outline': '生成大纲',
-    'agent3_generate_content': '生成正文',
-    'agent4_analyze_image_requirements': '分析配图需求',
-    'agent5_generate_images': '生成配图',
-    'agent6_merge_content': '图文合成',
-    'ai_modify_outline': 'AI修改大纲'
-  }
-  return nameMap[agentName] || agentName
-}
-
-// 重试（重新创建文章）
 const handleRetry = () => {
   if (!article.value) return
-
   Modal.confirm({
-    title: '确认重试',
-    content: '将使用相同的选题和配置重新创建文章，是否继续？',
-    okText: '确认',
+    title: '重新创建这篇文章？',
+    content: '将保留当前选题并返回创作页，你可以先调整设置再提交。',
+    okText: '返回创作页',
     cancelText: '取消',
-    onOk: () => {
-      router.push({
-        path: '/create',
-        query: {
-          topic: article.value?.topic
-        }
-      })
-    }
+    onOk: () => router.push({ path: '/create', query: { topic: article.value?.topic || '' } }),
   })
 }
-
-onMounted(() => {
-  loadArticle()
-})
-</script>
-
-<style scoped lang="scss">
-.article-detail-page {
-  background: var(--color-background-secondary);
-  min-height: 100vh;
-  padding-bottom: 60px;
-
-  .page-header {
-    background: var(--gradient-hero);
-    padding: 20px;
-    margin-bottom: 24px;
+const formatDuration = (value?: number) => {
+  const ms = value ?? 0
+  return ms < 1000 ? `${ms} 毫秒` : `${(ms / 1000).toFixed(1)} 秒`
+}
+const getAgentDisplayName = (name: string) => {
+  const labels: Record<string, string> = {
+    agent1_generate_titles: '生成标题',
+    agent2_generate_outline: '生成大纲',
+    agent3_generate_content: '生成正文',
+    agent4_analyze_image_requirements: '分析配图需求',
+    agent5_generate_images: '生成配图',
+    agent6_merge_content: '图文合成',
+    ai_modify_outline: '调整大纲',
   }
-
-  .header-container {
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .header-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .right-actions {
-    display: flex;
-    gap: 12px;
-  }
-
-  .back-btn {
-    background: white;
-    border: 1px solid var(--color-border);
-    color: var(--color-text);
-    font-size: 13px;
-    transition: all var(--transition-fast);
-    border-radius: var(--radius-md);
-
-    &:hover {
-      background: var(--color-background-secondary);
-      border-color: var(--color-border);
-      color: var(--color-text);
-    }
-  }
-
-  .retry-btn {
-    background: #ff4d4f;
-    color: white;
-    border: none;
-    font-weight: 600;
-    font-size: 13px;
-    transition: all var(--transition-fast);
-    border-radius: var(--radius-md);
-
-    &:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-    }
-  }
-
-  .export-btn {
-    background: var(--gradient-primary);
-    color: white;
-    border: none;
-    font-weight: 600;
-    font-size: 13px;
-    transition: all var(--transition-fast);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-green);
-
-    &:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-    }
-  }
-
-  .skill-btn {
-    border-color: var(--color-border);
-    color: var(--color-text);
-    font-weight: 600;
-
-    &:hover {
-      border-color: var(--color-primary);
-      color: var(--color-primary-dark);
-    }
-  }
-
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-  }
-
-  .article-card {
-    border-radius: var(--radius-xl);
-    border: 1px solid var(--color-border);
-    box-shadow: var(--shadow-md);
-    background: white;
-
-    :deep(.ant-card-body) {
-      padding: 40px;
-    }
-  }
-
-  .title-section {
-    margin-bottom: 28px;
-    text-align: center;
-
-    .main-title {
-      font-size: 28px;
-      font-weight: 700;
-      margin: 0 0 10px;
-      color: var(--color-text);
-      line-height: 1.3;
-      letter-spacing: -0.5px;
-    }
-
-    .sub-title {
-      font-size: 16px;
-      color: var(--color-text-secondary);
-      margin: 0 0 20px;
-    }
-
-    .meta-info {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      color: var(--color-text-muted);
-      font-size: 13px;
-    }
-
-    .status-tag {
-      border-radius: var(--radius-full);
-      font-size: 12px;
-      padding: 2px 12px;
-    }
-  }
-
-  .section-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 16px;
-    color: var(--color-text);
-  }
-
-  .section-icon {
-    font-size: 18px;
-    color: var(--color-text-secondary);
-  }
-
-  .status-tag-small {
-    font-size: 11px;
-    padding: 2px 8px;
-    margin-left: 8px;
-  }
-
-  /* 执行日志部分 */
-  .execution-logs-section {
-    margin-bottom: 28px;
-    background: var(--color-background-secondary);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--color-border);
-    overflow: hidden;
-
-    .logs-header {
-      padding: 16px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      transition: background var(--transition-fast);
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.02);
-      }
-
-      .section-title {
-        margin: 0;
-        display: flex;
-        align-items: center;
-      }
-
-      .toggle-icon {
-        font-size: 14px;
-        color: var(--color-text-secondary);
-        transition: transform var(--transition-fast);
-
-        &.expanded {
-          transform: rotate(180deg);
-        }
-      }
-    }
-
-    .logs-content {
-      padding: 0 20px 20px;
-    }
-
-    .stats-summary {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-bottom: 24px;
-      padding: 16px;
-      background: white;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--color-border-light);
-
-      .stat-item {
-        text-align: center;
-
-        .label {
-          display: block;
-          font-size: 12px;
-          color: var(--color-text-muted);
-          margin-bottom: 4px;
-        }
-
-        .value {
-          display: block;
-          font-size: 20px;
-          font-weight: 600;
-          color: var(--color-primary);
-        }
-      }
-    }
-
-    .agent-timeline {
-      position: relative;
-
-      &::before {
-        content: '';
-        position: absolute;
-        left: 16px;
-        top: 12px;
-        bottom: 12px;
-        width: 2px;
-        background: var(--color-border);
-      }
-
-      .timeline-item {
-        position: relative;
-        padding-left: 48px;
-        padding-bottom: 20px;
-
-        &:last-child {
-          padding-bottom: 0;
-        }
-
-        .timeline-indicator {
-          position: absolute;
-          left: 8px;
-          top: 2px;
-          width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          background: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 2px solid var(--color-border);
-
-          .icon {
-            font-size: 12px;
-
-            &.success {
-              color: var(--color-success);
-            }
-
-            &.failed {
-              color: var(--color-error);
-            }
-
-            &.running {
-              color: var(--color-primary);
-            }
-          }
-        }
-
-        &.success .timeline-indicator {
-          border-color: var(--color-success);
-        }
-
-        &.failed .timeline-indicator {
-          border-color: var(--color-error);
-        }
-
-        .timeline-content {
-          background: white;
-          padding: 12px 16px;
-          border-radius: var(--radius-md);
-          border: 1px solid var(--color-border-light);
-
-          .timeline-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
-
-            .agent-name {
-              font-size: 14px;
-              font-weight: 600;
-              color: var(--color-text);
-            }
-
-            .duration {
-              font-size: 13px;
-              font-weight: 600;
-              color: var(--color-primary);
-            }
-          }
-
-          .timeline-time {
-            font-size: 12px;
-            color: var(--color-text-muted);
-          }
-
-          .error-message {
-            margin-top: 8px;
-            padding: 8px;
-            background: rgba(255, 77, 79, 0.1);
-            border-radius: var(--radius-md);
-            font-size: 12px;
-            color: var(--color-error);
-            display: flex;
-            align-items: flex-start;
-            gap: 6px;
-
-            .anticon {
-              flex-shrink: 0;
-              margin-top: 2px;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  /* 展开/收起动画 */
-  .expand-enter-active,
-  .expand-leave-active {
-    transition: all 0.3s ease;
-    overflow: hidden;
-  }
-
-  .expand-enter-from,
-  .expand-leave-to {
-    opacity: 0;
-    max-height: 0;
-  }
-
-  .expand-enter-to,
-  .expand-leave-from {
-    opacity: 1;
-    max-height: 2000px;
-  }
-
-  .outline-section {
-    margin-bottom: 28px;
-
-    .outline-list {
-      .outline-item {
-        margin-bottom: 12px;
-        padding: 16px;
-        background: var(--color-background-secondary);
-        border-radius: var(--radius-md);
-        border: 1px solid var(--color-border-light);
-        transition: all var(--transition-fast);
-
-        &:hover {
-          border-color: var(--color-border);
-        }
-
-        .outline-title {
-          font-size: 14px;
-          font-weight: 600;
-          margin-bottom: 8px;
-          color: var(--color-text);
-        }
-
-        .outline-points {
-          margin: 0;
-          padding-left: 18px;
-
-          li {
-            margin-bottom: 4px;
-            color: var(--color-text-secondary);
-            line-height: 1.6;
-            font-size: 13px;
-          }
-        }
-      }
-    }
-  }
-
-  .content-section {
-    margin-bottom: 28px;
-
-    .markdown-content {
-      line-height: 1.8;
-      font-size: 15px;
-      color: var(--color-text);
-
-      :deep(h2) {
-        font-size: 20px;
-        font-weight: 600;
-        margin: 28px 0 14px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid var(--color-border);
-        color: var(--color-text);
-      }
-
-      :deep(h3) {
-        font-size: 17px;
-        font-weight: 600;
-        margin: 22px 0 10px;
-        color: var(--color-text);
-      }
-
-      :deep(p) {
-        margin-bottom: 14px;
-        text-indent: 2em;
-        color: var(--color-text);
-      }
-
-      :deep(ul), :deep(ol) {
-        margin-bottom: 14px;
-        padding-left: 2em;
-      }
-
-      :deep(li) {
-        margin-bottom: 6px;
-        color: var(--color-text);
-      }
-
-      :deep(img) {
-        display: block;
-        max-width: 100%;
-        max-height: 600px;
-        width: auto;
-        height: auto;
-        margin: 20px auto;
-        border-radius: var(--radius-md);
-        box-shadow: var(--shadow-md);
-        object-fit: contain;
-      }
-
-      // Mermaid 图表特殊处理（SVG 格式）
-      :deep(img[src$=".svg"]) {
-        max-width: 800px;
-        max-height: 500px;
-      }
-    }
-  }
-
-  .images-section {
-    .images-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 16px;
-
-      .image-item {
-        border-radius: var(--radius-md);
-        overflow: hidden;
-        border: 1px solid var(--color-border);
-        transition: all var(--transition-normal);
-        cursor: pointer;
-
-        &:hover {
-          border-color: var(--color-text-muted);
-          box-shadow: var(--shadow-md);
-        }
-
-        img {
-          width: 100%;
-          height: 160px;
-          object-fit: cover;
-        }
-
-        .image-info {
-          padding: 12px;
-          background: white;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-
-          .badge {
-            padding: 3px 10px;
-            background: var(--color-text);
-            color: white;
-            border-radius: var(--radius-md);
-            font-size: 11px;
-            font-weight: 500;
-          }
-
-          .keywords {
-            font-size: 11px;
-            color: var(--color-text-muted);
-          }
-        }
-      }
-    }
-  }
+  return labels[name] || name || '未知步骤'
 }
 
-@media (max-width: 768px) {
-  .article-detail-page {
-    .header-actions {
-      align-items: flex-start;
-      flex-direction: column;
-      gap: 12px;
-    }
+onMounted(loadArticle)
+</script>
 
-    .right-actions {
-      width: 100%;
-      flex-wrap: wrap;
-    }
+<style scoped>
+.detail-page {
+  min-height: calc(100dvh - 64px);
+  padding: 24px 20px 72px;
+  background: var(--surface-page);
+}
 
-    .article-card {
-      :deep(.ant-card-body) {
-        padding: 24px;
-      }
-    }
+.action-bar,
+.detail-shell {
+  width: min(1080px, 100%);
+  margin-inline: auto;
+}
 
-    .title-section {
-      .main-title {
-        font-size: 22px;
-      }
+.action-bar {
+  position: sticky;
+  z-index: 5;
+  top: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+  padding: 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-subtle);
+}
 
-      .sub-title {
-        font-size: 14px;
-      }
-    }
+.primary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-shell {
+  padding: 36px 48px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+}
+
+.page-state {
+  min-height: 520px;
+  display: grid;
+  align-content: center;
+}
+
+.execution-panel {
+  width: min(760px, 100%);
+  margin: 56px auto 0;
+  border-top: 1px solid var(--border-default);
+}
+
+.execution-panel > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 64px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-body);
+}
+
+.execution-panel > button > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.execution-panel > button small {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.execution-panel .anticon-down {
+  transition: transform var(--transition-fast);
+}
+
+.execution-panel .anticon-down.expanded {
+  transform: rotate(180deg);
+}
+
+.execution-content {
+  padding: 18px 0 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.execution-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 0 24px;
+  border: 1px solid var(--border-default);
+}
+
+.execution-summary div {
+  padding: 14px;
+  border-right: 1px solid var(--border-default);
+}
+
+.execution-summary div:last-child {
+  border-right: 0;
+}
+
+.execution-summary dt {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.execution-summary dd {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.execution-list {
+  margin: 0;
+  padding-left: 24px;
+}
+
+.execution-list li {
+  margin-bottom: 18px;
+  padding-left: 6px;
+}
+
+.execution-list li > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.execution-list span,
+.execution-list small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.execution-list p {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  background: var(--state-error-bg);
+  color: var(--state-error-text);
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .detail-page {
+    padding: 16px 0 56px;
+  }
+
+  .action-bar {
+    position: static;
+    align-items: stretch;
+    flex-direction: column;
+    width: calc(100% - 32px);
+  }
+
+  .primary-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .primary-actions .ant-btn {
+    width: 100%;
+  }
+
+  .detail-shell {
+    padding: 28px 20px;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+
+  .execution-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .execution-summary div {
+    border-right: 0;
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  .execution-summary div:last-child {
+    border-bottom: 0;
   }
 }
 </style>
