@@ -32,11 +32,12 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { Drawer as ADrawer } from 'ant-design-vue'
 import { ArrowRightOutlined, LoadingOutlined } from '@ant-design/icons-vue'
 import { getSkillUiConfig } from '@/config/skill'
 import SkillExecuteSurface from './SkillExecuteSurface.vue'
 
-type ExecutionState = 'INPUT' | 'EXECUTING' | 'COMPLETED' | 'FAILED'
+type ExecutionState = 'INPUT' | 'EXECUTING' | 'AWAITING_CONFIRMATION' | 'COMPLETED' | 'FAILED'
 
 const props = withDefaults(
   defineProps<{
@@ -64,7 +65,7 @@ const executionState = ref<ExecutionState>('INPUT')
 const uiConfig = computed(() => getSkillUiConfig(props.skillName))
 const drawerWidth = 'min(720px, 100vw)'
 
-const handleStateChange = (nextState: ExecutionState) => {
+const handleStateChange = (nextState: ExecutionState, _executionId?: string) => {
   executionState.value = nextState
 }
 </script>
