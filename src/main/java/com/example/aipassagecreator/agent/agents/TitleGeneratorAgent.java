@@ -4,6 +4,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.beans.factory.annotation.Qualifier;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import com.example.aipassagecreator.aop.TokenUsageHolder;
 import com.example.aipassagecreator.constant.PromptConstant;
 import com.example.aipassagecreator.enums.ArticleStyleEnum;
 import com.example.aipassagecreator.model.dto.article.ArticleState;
@@ -58,6 +59,8 @@ public class TitleGeneratorAgent implements NodeAction {
         //调用 LLM
         ChatResponse response = chatModel.call(new Prompt(new UserMessage(prompt)));
         String content = response.getResult().getOutput().getText();
+        // 记录 Token 用量与模型名
+        TokenUsageHolder.record(response, "dashscope");
 
         //解析结果
         List<ArticleState.TitleOption> titleOptions = GsonUtils.fromJson(content, new TypeToken<List<ArticleState.TitleOption>>(){});

@@ -62,6 +62,9 @@ public class AgentExecutionAspect {
             agentLog.setEndTime(LocalDateTime.now());
             agentLog.setDurationMs((int) (System.currentTimeMillis() - startTime));
             agentLog.setOutputData(extractOutputData(result));
+            // 采集 Token 用量与模型名（由 Agent 方法内通过 TokenUsageHolder 注入）
+            agentLog.setTokenUsage(TokenUsageHolder.getAndClearTokenUsage());
+            agentLog.setModelUsed(TokenUsageHolder.getAndClearModelUsed());
             
             log.info("智能体执行成功: {}, taskId={}, 耗时={}ms", 
                     agentExecution.value(), taskId, agentLog.getDurationMs());
@@ -72,6 +75,9 @@ public class AgentExecutionAspect {
             agentLog.setEndTime(LocalDateTime.now());
             agentLog.setDurationMs((int) (System.currentTimeMillis() - startTime));
             agentLog.setErrorMessage(e.getMessage() != null ? e.getMessage() : e.getClass().getName());
+            // 失败时也记录已消耗的 Token
+            agentLog.setTokenUsage(TokenUsageHolder.getAndClearTokenUsage());
+            agentLog.setModelUsed(TokenUsageHolder.getAndClearModelUsed());
             
             log.error("智能体执行失败: {}, taskId={}, 错误={}", 
                     agentExecution.value(), taskId, e.getMessage(), e);

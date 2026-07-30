@@ -4,6 +4,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.beans.factory.annotation.Qualifier;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import com.example.aipassagecreator.aop.TokenUsageHolder;
 import com.example.aipassagecreator.constant.PromptConstant;
 import com.example.aipassagecreator.agent.context.StreamHandlerContext;
 import com.example.aipassagecreator.enums.ArticleStyleEnum;
@@ -96,6 +97,11 @@ public class ContentGeneratorAgent implements NodeAction {
 
         streamResponse
                 .doOnNext(response -> {
+                    // 记录 Token 用量（取最大值，仅末尾分片携带整次用量）
+                    if (response.getMetadata() != null && response.getMetadata().getUsage() != null
+                            && response.getMetadata().getUsage().getTotalTokens() != null) {
+                        TokenUsageHolder.recordTokens(response.getMetadata().getUsage().getTotalTokens());
+                    }
                     String chunk = response.getResult().getOutput().getText();
                     if(chunk!=null&& !chunk.isEmpty()){
                         contentBuilder.append(chunk);
@@ -108,6 +114,8 @@ public class ContentGeneratorAgent implements NodeAction {
                 .doOnError(error -> log.error("ContentGeneratorAgent 流式输出错误: {}", error.getMessage()))
                 .blockLast();
 
+        // 记录模型名
+        TokenUsageHolder.recordModel("dashscope");
         return contentBuilder.toString();
     }
 

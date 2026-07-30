@@ -60,7 +60,9 @@ public class AgentLogServiceImpl extends ServiceImpl<AgentLogMapper, AgentLog> i
 
         // 计算统计数据
         int totalDuration = 0;
+        int totalTokenUsage = 0;
         Map<String, Integer> agentDurations = new HashMap<>();
+        Map<String, Integer> agentTokenUsage = new HashMap<>();
         String overallStatus = "SUCCESS";
 
         for (AgentLog log : logs) {
@@ -68,6 +70,12 @@ public class AgentLogServiceImpl extends ServiceImpl<AgentLogMapper, AgentLog> i
             if (log.getDurationMs() != null) {
                 totalDuration += log.getDurationMs();
                 agentDurations.put(log.getAgentName(), log.getDurationMs());
+            }
+
+            // 累加 Token 消耗
+            if (log.getTokenUsage() != null) {
+                totalTokenUsage += log.getTokenUsage();
+                agentTokenUsage.merge(log.getAgentName(), log.getTokenUsage(), Integer::sum);
             }
 
             // 判断总体状态
@@ -81,6 +89,8 @@ public class AgentLogServiceImpl extends ServiceImpl<AgentLogMapper, AgentLog> i
         return AgentExecutionStats.builder()
                 .taskId(taskId)
                 .totalDurationMs(totalDuration)
+                .totalTokenUsage(totalTokenUsage)
+                .agentTokenUsage(agentTokenUsage)
                 .agentCount(logs.size())
                 .agentDurations(agentDurations)
                 .overallStatus(overallStatus)

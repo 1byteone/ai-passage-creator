@@ -3,6 +3,7 @@ package com.example.aipassagecreator.service.impl;
 import com.example.aipassagecreator.constant.UserConstant;
 import com.example.aipassagecreator.enums.ArticleStatusEnum;
 import com.example.aipassagecreator.mapper.ArticleMapper;
+import com.example.aipassagecreator.mapper.SkillExecutionMapper;
 import com.example.aipassagecreator.mapper.UserMapper;
 import com.example.aipassagecreator.model.po.Article;
 import com.example.aipassagecreator.model.po.User;
@@ -46,6 +47,9 @@ public class StatisticsServiceImpl implements StatisticsService {
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Resource
+    private SkillExecutionMapper skillExecutionMapper;
+
     @Override
     public StatisticsVO getStatistics() {
         // 先从缓存获取
@@ -86,6 +90,11 @@ public class StatisticsServiceImpl implements StatisticsService {
         // 配额使用情况（总配额 - 剩余配额）
         Long quotaUsed = calculateQuotaUsed();
 
+        // Skill 统计数据
+        Long skillTotalCount = countTotalSkillExecutions();
+        Double skillSuccessRate = calculateSkillSuccessRate();
+        Long skillTokenUsage = calculateSkillTokenUsage();
+
         StatisticsVO statistics = StatisticsVO.builder()
                 .todayCount(todayCount)
                 .weekCount(weekCount)
@@ -97,6 +106,9 @@ public class StatisticsServiceImpl implements StatisticsService {
                 .totalUserCount(totalUserCount)
                 .vipUserCount(vipUserCount)
                 .quotaUsed(quotaUsed)
+                .skillTotalCount(skillTotalCount)
+                .skillSuccessRate(skillSuccessRate)
+                .skillTokenUsage(skillTokenUsage)
                 .build();
 
         // 存入缓存，1 小时过期
@@ -259,5 +271,68 @@ public class StatisticsServiceImpl implements StatisticsService {
         return LocalDateTime.of(firstDay, LocalTime.MIN);
     }
 
+    /**
+     * 统计 Skill 执行总次数
+     */
+    private Long countTotalSkillExecutions() {
+        try {
+            return skillExecutionMapper.selectCountByQuery(QueryWrapper.create()
+                    .eq("is_delete", 0));
+        } catch (Exception e) {
+            log.warn("统计 Skill 执行次数失败", e);
+            return 0L;
+        }
+    }
 
+    /**
+     * 计算 Skill 执行成功率
+     */
+    private Double calculateSkillSuccessRate() {
+        try {
+            Long total = countTotalSkillExecutions();
+            if (total == 0) {
+                return 0.0;
+            }
+            QueryWrapper successWrapper = QueryWrapper.create()
+                    .eq("is_delete", 0)
+                    .eq("status", "SUCCESS");
+            Long successCount = skillExecutionMapper.selectCountByQuery(successWrapper);
+            return (successCount.doubleValue() / total.doubleValue()) * 100;
+        } catch (Exception e) {
+            log.warn("计算 Skill 成功率失败", e);
+            return 0.0;
+        }
+    }
+
+    /**
+     * 统计 Skill Token 总消耗
+     * <p>
+     * 通过聚合查询计算所有非删除记录的 token_usage 总和。
+     * 单条记录 token_usage 为空时视为 0。
+     */
+    private Long calculateSkillTokenUsage() {
+        try {
+            Long result = skillExecutionMapper.selectCountByQuery(QueryWrapper.create()
+                    .isNotNull("token_usage")
+                    .eq("is_delete", 0));
+            // 使用 MyBatis-Flex 的 selectOneByQueryAs 聚合查询
+            // 实际查询逻辑：SELECT COALESCE(SUM(token_usage), 0) FROM skill_execution WHERE is_delete = 0
+            // 因 MyBatis-Flex 不直接支持聚合函数，通过自定义 SQL 实现
+            var sumWrapper = QueryWrapper.create()
+                    .select("COALESCE(SUM(token_usage), 0) as total")
+                    .eq("is_delete", 0);
+            // 简化处理：通过遍历所有记录累加
+            // 生产环境建议用 SELECT SUM(token_usage) 原生 SQL
+            var allExecutions = skillExecutionMapper.selectListByQuery(QueryWrapper.create()
+                    .isNotNull("token_usage")
+                    .eq("is_delete", 0));
+            return allExecutions.stream()
+                    .filter(e -> e.getTokenUsage() != null)
+                    .mapToLong(com.example.aipassagecreator.model.po.SkillExecutionPo::getTokenUsage)
+                    .sum();
+        } catch (Exception e) {
+            log.warn("统计 Skill Token 总消耗失败", e);
+            return 0L;
+        }
+    }
 }

@@ -4,6 +4,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.beans.factory.annotation.Qualifier;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import com.example.aipassagecreator.aop.TokenUsageHolder;
 import com.example.aipassagecreator.constant.PromptConstant;
 import com.example.aipassagecreator.enums.ImageMethodEnum;
 import com.example.aipassagecreator.model.dto.article.ArticleState;
@@ -75,6 +76,8 @@ public class ImageAnalyzerAgent implements NodeAction {
         // 调用 LLM
         ChatResponse response = chatModel.call(new Prompt(new UserMessage(prompt)));
         String responseContent = response.getResult().getOutput().getText();
+        // 记录 Token 用量与模型名
+        TokenUsageHolder.record(response, "dashscope");
 
         // 解析结果
         ArticleState.Agent4Result agent4Result = GsonUtils.fromJson(
