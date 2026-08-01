@@ -121,6 +121,14 @@ create table if not exists article_quality (
     model_used varchar(64),
     token_usage int default 0,
     duration_ms int default 0,
+    score_type varchar(16) default 'GENERIC' not null,
+    user_id bigint null,
+    viral_score decimal(5,2) null,
+    viral_scores text null,
+    title_strategy_hit varchar(32) null,
+    methodology_used varchar(64) null,
+    content_hash varchar(64) null,
+    version_no int default 1 null,
     create_time datetime default CURRENT_TIMESTAMP
 );
 

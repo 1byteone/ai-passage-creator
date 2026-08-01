@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.controller;
 
+import com.example.aipassagecreator.annotation.RateLimit;
 import com.example.aipassagecreator.aop.AuthCheck;
 import com.example.aipassagecreator.common.BaseResponse;
 import com.example.aipassagecreator.common.DeleteRequest;
@@ -9,6 +10,7 @@ import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.exception.ThrowUtils;
 import com.example.aipassagecreator.manager.SseEmitterManager;
 import com.example.aipassagecreator.model.dto.article.*;
+import com.example.aipassagecreator.model.po.ArticleQuality;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.model.vo.AgentExecutionStats;
 import com.example.aipassagecreator.model.vo.ArticleVO;
@@ -304,6 +306,36 @@ public class ArticleController {
 
         try {
             var result = contentQualityService.evaluate(taskId);
+            return ResultUtils.success(result);
+        } catch (IllegalArgumentException e) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR, e.getMessage());
+        }
+    }
+
+    /**
+     * 爆款维度评测
+     */
+    @PostMapping("/evaluate-viral")
+    @Operation(summary = "爆款维度评测")
+    @AuthCheck(mustRole = "user")
+    @RateLimit(limit = 5, window = 60, key = "viral_evaluate")
+    public BaseResponse<?> evaluateViral(@RequestBody ArticleEvaluateViralRequest request,
+                                         HttpServletRequest httpServletRequest) {
+        ThrowUtils.throwIf(request == null || request.getTaskId() == null
+                || request.getTaskId().trim().isEmpty(), ErrorCode.PARAMS_ERROR, "任务ID不能为空");
+
+        User loginUser = userService.getLoginUser(httpServletRequest);
+
+        // 归属校验：防止 IDOR
+        var article = articleService.getByTaskId(request.getTaskId());
+        if (article == null || !article.getUserId().equals(loginUser.getId())) {
+            throw new com.example.aipassagecreator.exception.BusinessException(
+                    ErrorCode.NO_AUTH_ERROR, "无权操作此文章");
+        }
+
+        try {
+            ArticleQuality result = contentQualityService.evaluateViral(
+                    request.getTaskId(), request.getMethodologyName(), loginUser.getId());
             return ResultUtils.success(result);
         } catch (IllegalArgumentException e) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR, e.getMessage());

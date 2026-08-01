@@ -22,4 +22,23 @@ public interface ContentQualityService {
      * @return 最新评分，无记录时返回 null
      */
     ArticleQuality getLatest(String taskId);
+
+    /**
+     * 爆款维度评测：按方法论维度加权归一化出爆款综合分，幂等落库（同 taskId 复用行）
+     *
+     * @param taskId          文章任务 ID
+     * @param methodologyName 方法论模板名称（默认 default）
+     * @param loginUserId     当前登录用户 ID
+     * @return 爆款评测结果
+     * @throws IllegalArgumentException 文章不存在或未完成、方法论不存在时抛出
+     */
+    ArticleQuality evaluateViral(String taskId, String methodologyName, Long loginUserId);
+
+    /**
+     * 获取文章最新爆款评测（score_type='VIRAL'）
+     *
+     * @param taskId 文章任务 ID
+     * @return 最新爆款评测，无记录时返回 null
+     */
+    ArticleQuality getLatestViral(String taskId);
 }
