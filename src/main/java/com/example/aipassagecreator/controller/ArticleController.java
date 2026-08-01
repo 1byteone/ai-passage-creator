@@ -15,6 +15,7 @@ import com.example.aipassagecreator.model.vo.ArticleVO;
 import com.example.aipassagecreator.service.AgentLogService;
 import com.example.aipassagecreator.service.ArticleAsyncService;
 import com.example.aipassagecreator.service.ArticleService;
+import com.example.aipassagecreator.service.ContentQualityService;
 import com.example.aipassagecreator.service.UserService;
 import com.mybatisflex.core.paginate.Page;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,6 +44,9 @@ public class ArticleController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private ContentQualityService contentQualityService;
 
     /**
      * 创建文章任务
@@ -243,6 +247,28 @@ public class ArticleController {
         boolean result = articleService.deleteArticle(deleteRequest.getId(), loginUser);
 
         return ResultUtils.success(result);
+    }
+
+    /**
+     * 对文章进行多维质量评分
+     */
+    @PostMapping("/evaluate-quality")
+    @Operation(summary = "对文章进行多维质量评分")
+    @AuthCheck(mustRole = "user")
+    public BaseResponse<?> evaluateQuality(@RequestBody DeleteRequest request,
+                                           HttpServletRequest httpServletRequest) {
+        ThrowUtils.throwIf(request == null || request.getId() == null,
+                ErrorCode.PARAMS_ERROR);
+
+        User loginUser = userService.getLoginUser(httpServletRequest);
+        String taskId = String.valueOf(request.getId());
+
+        try {
+            var result = contentQualityService.evaluate(taskId);
+            return ResultUtils.success(result);
+        } catch (IllegalArgumentException e) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR, e.getMessage());
+        }
     }
 
 }

@@ -104,3 +104,24 @@ create table if not exists payment_record (
     updateTime datetime default CURRENT_TIMESTAMP,
     isDelete tinyint default 0
 );
+
+create table if not exists article_quality (
+    id bigint auto_increment primary key,
+    task_id varchar(64) not null,
+    article_content_snapshot text,
+    structure_score int,
+    logic_score int,
+    language_score int,
+    seo_score int,
+    readability_score int,
+    overall_score int,
+    suggestions text,
+    strengths text,
+    model_used varchar(64),
+    token_usage int default 0,
+    duration_ms int default 0,
+    create_time datetime default CURRENT_TIMESTAMP
+);
+
+create index idx_aq_task_id on article_quality(task_id);
+create index idx_aq_overall_score on article_quality(overall_score);

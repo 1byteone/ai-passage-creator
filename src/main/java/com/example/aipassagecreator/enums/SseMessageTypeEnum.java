@@ -66,6 +66,11 @@ public enum SseMessageTypeEnum {
     ALL_COMPLETE("ALL_COMPLETE", "全部完成"),
 
     /**
+     * 内容质量评分完成
+     */
+    QUALITY_SCORED("QUALITY_SCORED", "内容质量评分完成"),
+
+    /**
      * 错误
      */
     ERROR("ERROR", "错误");
