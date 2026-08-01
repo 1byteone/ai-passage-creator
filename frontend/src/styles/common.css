@@ -1,0 +1,370 @@
+/**
+ * 公共样式类
+ */
+
+/* ==================== 全局基础样式 ==================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  overflow-x: clip;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--surface-canvas);
+  color: var(--text-body);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  min-height: 100%;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text-strong);
+  font-family: var(--font-heading);
+  letter-spacing: 0;
+}
+
+a {
+  color: var(--color-text);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-primary);
+}
+
+::selection {
+  background: rgba(34, 197, 94, 0.2);
+  color: var(--color-text);
+}
+
+/* ==================== 焦点与可访问性 ==================== */
+
+:where(a, button, input, textarea, select, [role='button'], [tabindex]):focus-visible {
+  outline: 3px solid rgba(34, 197, 94, 0.35) !important;
+  outline-offset: 3px !important;
+}
+
+:where(.ant-btn, .ant-input, .ant-input-affix-wrapper, .ant-select-selector, .ant-checkbox-wrapper, .ant-radio-wrapper):focus-visible {
+  box-shadow: var(--shadow-focus) !important;
+}
+
+.clickable,
+[role='button'],
+button,
+.ant-btn,
+.ant-card.hoverable {
+  cursor: pointer;
+}
+
+/* ==================== 按钮样式 ==================== */
+
+/* 渐变主按钮 */
+.btn-primary-gradient {
+  min-height: var(--touch-target-min);
+  padding: 0 24px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: var(--radius-lg);
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: var(--shadow-green) !important;
+  transition: opacity var(--transition-normal) !important;
+}
+
+.btn-primary-gradient:hover,
+.btn-primary-gradient:focus,
+.btn-primary-gradient:active {
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: var(--shadow-green) !important;
+  opacity: 0.92;
+}
+
+.btn-primary-gradient:disabled,
+.btn-primary-gradient.ant-btn-disabled {
+  background: var(--color-border) !important;
+  box-shadow: none !important;
+  opacity: 0.6;
+  color: var(--color-text-muted) !important;
+}
+
+/* 隐藏波纹效果 */
+.btn-primary-gradient .ant-wave {
+  display: none;
+}
+
+/* ==================== Ant Design 全局覆盖 ==================== */
+
+.ant-btn {
+  min-height: var(--control-height-md);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  transition:
+    background var(--transition-normal),
+    border-color var(--transition-normal),
+    box-shadow var(--transition-normal),
+    color var(--transition-normal),
+    opacity var(--transition-normal);
+}
+
+.ant-btn-primary {
+  background: var(--bg-primary);
+  border-color: var(--bg-primary);
+  box-shadow: var(--shadow-green);
+}
+
+.ant-btn-primary:not(:disabled):hover {
+  background: var(--bg-primary-hover);
+  border-color: var(--bg-primary-hover);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+}
+
+.ant-btn:disabled,
+.ant-btn.ant-btn-disabled {
+  background: var(--color-border) !important;
+  border-color: var(--color-border) !important;
+  box-shadow: none !important;
+  color: var(--color-text-muted) !important;
+}
+
+.ant-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition:
+    border-color var(--transition-normal),
+    box-shadow var(--transition-normal);
+}
+
+.ant-menu-horizontal > .ant-menu-item:hover::after,
+.ant-menu-horizontal > .ant-menu-item-active::after,
+.ant-menu-horizontal > .ant-menu-item-selected::after {
+  border-bottom-color: var(--color-primary) !important;
+}
+
+.ant-menu-horizontal > .ant-menu-item:hover,
+.ant-menu-horizontal > .ant-menu-item-active {
+  color: var(--color-text) !important;
+}
+
+.ant-steps .ant-steps-item-process .ant-steps-item-icon {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.ant-steps .ant-steps-item-finish .ant-steps-item-icon {
+  border-color: var(--color-primary);
+}
+
+.ant-steps .ant-steps-item-finish .ant-steps-item-icon > .ant-steps-icon {
+  color: var(--color-primary);
+}
+
+.ant-steps .ant-steps-item-finish > .ant-steps-item-container > .ant-steps-item-tail::after {
+  background-color: var(--color-primary);
+}
+
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper:focus,
+.ant-input-affix-wrapper-focused {
+  border-color: var(--color-primary) !important;
+  box-shadow: var(--shadow-focus) !important;
+}
+
+.ant-input:hover {
+  border-color: var(--color-primary-light);
+}
+
+.ant-input-textarea-show-count::after {
+  color: var(--color-text-muted);
+}
+
+.ant-progress-bg {
+  background: var(--gradient-primary);
+}
+
+.ant-spin-dot-item {
+  background-color: var(--color-primary);
+}
+
+/* ==================== 空状态样式 ==================== */
+
+.empty-state {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.empty-state .empty-icon {
+  font-size: 48px;
+  color: var(--color-text-muted);
+  margin-bottom: 16px;
+}
+
+.empty-state .empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 8px;
+}
+
+.empty-state .empty-desc {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin: 0 0 20px;
+}
+
+/* ==================== 页面头部样式 ==================== */
+
+.page-header {
+  background: var(--gradient-hero);
+  padding: 32px 20px;
+  margin-bottom: 24px;
+}
+
+.page-header .header-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-header .page-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  letter-spacing: -0.5px;
+  color: var(--color-text);
+}
+
+.page-header .page-subtitle {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+/* ==================== 容器样式 ==================== */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ==================== 表格样式 ==================== */
+
+.table-card {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.table-card .ant-card-body {
+  padding: 0;
+}
+
+/* ==================== 筛选栏样式 ==================== */
+
+.filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 16px 20px;
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+
+/* ==================== Markdown 内容样式 ==================== */
+
+.markdown-content {
+  line-height: 1.8;
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+.markdown-content h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 28px 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.markdown-content h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 22px 0 10px;
+  color: var(--color-text);
+}
+
+.markdown-content p {
+  margin-bottom: 14px;
+  text-indent: 2em;
+  color: var(--color-text);
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-bottom: 14px;
+  padding-left: 2em;
+}
+
+.markdown-content li {
+  margin-bottom: 6px;
+  color: var(--color-text);
+}
+
+.markdown-content img {
+  display: block;
+  max-width: 100%;
+  margin: 20px auto;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
