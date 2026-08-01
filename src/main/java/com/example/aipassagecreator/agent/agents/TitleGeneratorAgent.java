@@ -5,6 +5,7 @@ import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.example.aipassagecreator.constant.PromptConstant;
 import com.example.aipassagecreator.enums.ArticleStyleEnum;
+import com.example.aipassagecreator.methodology.MethodologyPromptAssembler;
 import com.example.aipassagecreator.model.dto.article.ArticleState;
 import com.example.aipassagecreator.utils.GsonUtils;
 import com.google.gson.reflect.TypeToken;
@@ -29,8 +30,10 @@ import java.util.Map;
 public class TitleGeneratorAgent implements NodeAction {
 
     private final DashScopeChatModel chatModel;
+    private final MethodologyPromptAssembler methodologyPromptAssembler;
 
     public static final String INPUT_TOPIC = "topic";
+    public static final String INPUT_METHODOLOGY = "methodology";
     private static final String INPUT_STYLE = "style";
     private static final String OUTPUT_TITLE_OPTIONS = "titleOptions";
 
@@ -48,9 +51,11 @@ public class TitleGeneratorAgent implements NodeAction {
         log.info("TitleGeneratorAgent 开始执行标：topic={},style={}", topic, style);
 
         //构建prompt
+        String methodology = state.value(INPUT_METHODOLOGY).map(Object::toString).orElse("default");
         String prompt = PromptConstant.AGENT1_TITLE_PROMPT
                 .replace("{topic}", topic)
-                +getStylePrompt(style);
+                +getStylePrompt(style)
+                +methodologyPromptAssembler.buildTitleGuidance(methodology);
 
         //调用 LLM
         ChatResponse response = chatModel.call(new Prompt(new UserMessage(prompt)));

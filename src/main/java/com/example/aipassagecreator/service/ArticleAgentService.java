@@ -7,6 +7,7 @@ import com.example.aipassagecreator.enums.ArticleStyleEnum;
 import com.example.aipassagecreator.enums.ImageMethodEnum;
 import com.example.aipassagecreator.enums.SseMessageTypeEnum;
 import com.example.aipassagecreator.manager.SseEmitterManager;
+import com.example.aipassagecreator.methodology.MethodologyPromptAssembler;
 import com.example.aipassagecreator.model.dto.article.ArticleState;
 import com.example.aipassagecreator.model.dto.image.ImageRequest;
 import com.example.aipassagecreator.utils.GsonUtils;
@@ -41,6 +42,9 @@ public class ArticleAgentService {
 
     @Resource
     private SseEmitterManager sseEmitterManager;
+
+    @Resource
+    private MethodologyPromptAssembler methodologyPromptAssembler;
 
     /**
      * 获取当前类的代理对象
@@ -217,7 +221,8 @@ public class ArticleAgentService {
     public void agent1GenerateTitleOptions(ArticleState state) {
         String prompt = PromptConstant.AGENT1_TITLE_PROMPT
                 .replace("{topic}", state.getTopic())
-                + getStylePrompt(state.getStyle());
+                + getStylePrompt(state.getStyle())
+                + methodologyPromptAssembler.buildTitleGuidance(state.getMethodology());
 
         String content = callLlm(prompt);
         List<ArticleState.TitleOption> titleOptions = parseJsonListResponse(
@@ -241,7 +246,8 @@ public class ArticleAgentService {
         String prompt = PromptConstant.AGENT2_OUTLINE_PROMPT
                 .replace("{mainTitle}", state.getTitle().getMainTitle())
                 .replace("{subTitle}", state.getTitle().getSubTitle())
-                +getStylePrompt(state.getStyle());  //添加风格Prompt
+                +getStylePrompt(state.getStyle())  //添加风格Prompt
+                +methodologyPromptAssembler.buildContentGuidance(state.getMethodology());
 
         String content = callLlmWithStreaming(prompt, streamHandler,SseMessageTypeEnum.AGENT2_STREAMING);
         ArticleState.OutlineResult outlineResult = parseJsonResponse(content, ArticleState.OutlineResult.class,"大纲");
@@ -264,7 +270,8 @@ public class ArticleAgentService {
                 .replace("{mainTitle}", state.getTitle().getMainTitle())
                 .replace("{subTitle}", state.getTitle().getSubTitle())
                 .replace("{outline}", outlineText)
-                +getStylePrompt(state.getStyle());  //添加风格Prompt
+                +getStylePrompt(state.getStyle())  //添加风格Prompt
+                +methodologyPromptAssembler.buildContentGuidance(state.getMethodology());
 
 
         String content = callLlmWithStreaming(prompt, streamHandler,SseMessageTypeEnum.AGENT3_STREAMING);

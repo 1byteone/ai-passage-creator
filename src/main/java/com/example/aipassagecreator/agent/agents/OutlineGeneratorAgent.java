@@ -7,6 +7,7 @@ import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.example.aipassagecreator.constant.PromptConstant;
 import com.example.aipassagecreator.agent.context.StreamHandlerContext;
 import com.example.aipassagecreator.enums.ArticleStyleEnum;
+import com.example.aipassagecreator.methodology.MethodologyPromptAssembler;
 import com.example.aipassagecreator.enums.SseMessageTypeEnum;
 import com.example.aipassagecreator.model.dto.article.ArticleState;
 import com.example.aipassagecreator.utils.GsonUtils;
@@ -32,11 +33,13 @@ import java.util.function.Consumer;
 public class OutlineGeneratorAgent implements NodeAction {
 
     private final DashScopeChatModel chatModel;
+    private final MethodologyPromptAssembler methodologyPromptAssembler;
 
     public static final String INPUT_MAIN_TITLE = "mainTitle";
     public static final String INPUT_SUB_TITLE = "subTitle";
     public static final String INPUT_USER_DESCRIPTION = "userDescription";
     public static final String INPUT_STYLE = "style";
+    public static final String INPUT_METHODOLOGY = "methodology";
     public static final String OUTPUT_OUTLINE = "outline";
 
 
@@ -69,11 +72,13 @@ public class OutlineGeneratorAgent implements NodeAction {
         }
 
         //构建prompt
+        String methodology = state.value(INPUT_METHODOLOGY).map(Object::toString).orElse("default");
         String prompt = PromptConstant.AGENT2_OUTLINE_PROMPT
                 .replace("{mainTitle}", mainTitle)
                 .replace("{subTitle}", subTitle)
                 .replace("{descriptionSection}", descriptionSection)
-                +getStylePrompt(style);
+                +getStylePrompt(style)
+                +methodologyPromptAssembler.buildContentGuidance(methodology);
 
        //获取流式处理器
         Consumer<String > streamHandler = StreamHandlerContext.get();
