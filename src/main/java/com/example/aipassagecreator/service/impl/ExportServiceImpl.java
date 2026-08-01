@@ -59,8 +59,9 @@ public class ExportServiceImpl implements ExportService {
 
     private ByteArrayOutputStream exportPdf(String markdown, String title) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        com.lowagie.text.Document doc = null;
         try {
-            com.lowagie.text.Document doc = new com.lowagie.text.Document(PageSize.A4, 50, 50, 50, 50);
+            doc = new com.lowagie.text.Document(PageSize.A4, 50, 50, 50, 50);
             PdfWriter.getInstance(doc, baos);
             doc.open();
 
@@ -88,11 +89,14 @@ public class ExportServiceImpl implements ExportService {
                     doc.add(new Paragraph(line, bodyFont));
                 }
             }
-
-            doc.close();
         } catch (Exception e) {
             log.error("PDF 导出失败: {}", e.getMessage(), e);
             throw new RuntimeException("PDF 导出失败", e);
+        } finally {
+            // 确保 Document 始终关闭，防止资源泄漏
+            if (doc != null && doc.isOpen()) {
+                doc.close();
+            }
         }
         return baos;
     }

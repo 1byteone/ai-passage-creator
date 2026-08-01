@@ -1,0 +1,39 @@
+name: headline-optimizer
+description: 生成多个标题变体用于 A/B 测试，含点击率预测和适用场景
+category: writing
+requiredRoles: [user]
+multiRound: false
+
+variables:
+  articleContent:
+    description: 文章内容或主题
+    required: true
+    source: INPUT
+    uiType: textarea
+    placeholder: 粘贴文章内容或描述文章主题（用于生成匹配的标题）
+    maxLength: 20000
+  count:
+    description: 生成标题数量
+    required: false
+    source: INPUT
+    uiType: select
+    defaultValue: "5"
+    options:
+      - label: 3 个
+        value: "3"
+      - label: 5 个
+        value: "5"
+      - label: 8 个
+        value: "8"
+
+phases:
+  - name: generate_headlines
+    promptFile: skills/headline-optimizer/prompts/phase1_generate.md
+    model: agnes
+    streaming: true
+    outputParser: markdown
+    outputKey: headlines
+    variables:
+      - name: articleContent
+      - name: count
+    requireConfirmation: false

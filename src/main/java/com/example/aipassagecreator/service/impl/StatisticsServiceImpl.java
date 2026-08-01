@@ -52,11 +52,15 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsVO getStatistics() {
-        // 先从缓存获取
-        StatisticsVO cachedStats = (StatisticsVO) redisTemplate.opsForValue().get(STATISTICS_CACHE_KEY);
-        if (cachedStats != null) {
-            log.info("从缓存获取统计数据");
-            return cachedStats;
+        // 先从缓存获取，Redis 故障时降级为直接计算
+        try {
+            StatisticsVO cachedStats = (StatisticsVO) redisTemplate.opsForValue().get(STATISTICS_CACHE_KEY);
+            if (cachedStats != null) {
+                log.info("从缓存获取统计数据");
+                return cachedStats;
+            }
+        } catch (Exception e) {
+            log.warn("Redis 缓存不可用，降级为实时计算: {}", e.getMessage());
         }
 
         // 缓存不存在，重新计算

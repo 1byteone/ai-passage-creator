@@ -13,7 +13,7 @@ export interface SkillUiConfig {
   accent: 'blue' | 'green' | 'amber'
 }
 
-export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x', 'research', 'seo-optimizer', 'content-translator', 'ai-detox', 'seeding-copy', 'rewrite-plagiarism', 'video-script', 'outline-expander'] as const
+export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x', 'research', 'seo-optimizer', 'content-translator', 'ai-detox', 'seeding-copy', 'rewrite-plagiarism', 'video-script', 'outline-expander', 'content-summarizer', 'headline-optimizer'] as const
 
 export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
   'topic-gen': {
@@ -148,6 +148,30 @@ export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
     categoryLabel: '写作',
     accent: 'green',
   },
+  'content-summarizer': {
+    name: 'content-summarizer',
+    title: '摘要生成',
+    shortTitle: '摘要',
+    description: '将长文章提炼为简洁摘要，支持短/中/长三种长度，保留核心观点。',
+    inputLabel: '待总结的文章与目标长度',
+    outputLabel: '精炼摘要（100-600字）',
+    actionLabel: '生成摘要',
+    icon: 'proofreading',
+    categoryLabel: '写作',
+    accent: 'green',
+  },
+  'headline-optimizer': {
+    name: 'headline-optimizer',
+    title: '标题优化',
+    shortTitle: '起标题',
+    description: '生成多个标题变体用于 A/B 测试，含点击率预估和适用平台建议。',
+    inputLabel: '文章内容或主题',
+    outputLabel: '多版本标题方案 + 最佳推荐',
+    actionLabel: '优化标题',
+    icon: 'ideas',
+    categoryLabel: '写作',
+    accent: 'blue',
+  },
 }
 
 export const PHASE_LABELS: Record<string, string> = {
@@ -167,6 +191,8 @@ export const PHASE_LABELS: Record<string, string> = {
   rewrite_plagiarism: '降重改写',
   generate_script: '生成视频脚本',
   expand_outline: '扩展大纲',
+  summarize: '生成摘要',
+  generate_headlines: '生成标题方案',
 }
 
 const FALLBACK_FIELDS: Record<string, Record<string, API.SkillVariableDef>> = {

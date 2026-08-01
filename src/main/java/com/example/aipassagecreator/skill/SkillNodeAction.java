@@ -101,28 +101,49 @@ public class SkillNodeAction implements NodeAction {
         ctx.getSharedData().put("model_" + phase.getName(), modelName);
         ctx.recordModelUsed(modelName);
 
-        // 调用 LLM，并采集本阶段 Token 消耗
+        // 调用 LLM，失败时尝试降级到 fallback 模型
         String output;
         int phaseTokens;
         long startTime = System.currentTimeMillis();
-        if (phase.isStreaming()) {
-            StreamResult streamResult = callStreaming(model, prompt, ctx, executionId, skillName);
-            output = streamResult.text();
-            phaseTokens = streamResult.totalTokens();
-        } else {
-            ChatResponse response;
-            if (!toolCallbacks.isEmpty()) {
-                // 注入工具：LLM 可自主决定调用搜索工具获取真实数据
-                ToolCallingChatOptions toolOptions = ToolCallingChatOptions.builder()
-                        .toolCallbacks(toolCallbacks)
-                        .internalToolExecutionEnabled(true)
-                        .build();
-                response = model.call(new Prompt(List.of(new UserMessage(prompt)), toolOptions));
+        try {
+            if (phase.isStreaming()) {
+                StreamResult streamResult = callStreaming(model, prompt, ctx, executionId, skillName);
+                output = streamResult.text();
+                phaseTokens = streamResult.totalTokens();
             } else {
-                response = model.call(new Prompt(new UserMessage(prompt)));
+                ChatResponse response;
+                if (!toolCallbacks.isEmpty()) {
+                    ToolCallingChatOptions toolOptions = ToolCallingChatOptions.builder()
+                            .toolCallbacks(toolCallbacks)
+                            .internalToolExecutionEnabled(true)
+                            .build();
+                    response = model.call(new Prompt(List.of(new UserMessage(prompt)), toolOptions));
+                } else {
+                    response = model.call(new Prompt(new UserMessage(prompt)));
+                }
+                output = response.getResult().getOutput().getText();
+                phaseTokens = extractTotalTokens(response);
             }
-            output = response.getResult().getOutput().getText();
-            phaseTokens = extractTotalTokens(response);
+        } catch (Exception e) {
+            // 主模型失败，尝试降级到 fallback
+            ChatModel fallbackModel = modelRouter.resolveWithFallback(phase.getModel(),
+                    state.value("skillDefaultModel").map(Object::toString).orElse(null));
+            if (fallbackModel != model) {
+                log.warn("LLM 调用失败，降级到 fallback: phase={}, error={}", phase.getName(), e.getMessage());
+                String fallbackName = modelRouter.resolveModelName(null, null);
+                ctx.recordModelUsed(fallbackName);
+                if (phase.isStreaming()) {
+                    StreamResult streamResult = callStreaming(fallbackModel, prompt, ctx, executionId, skillName);
+                    output = streamResult.text();
+                    phaseTokens = streamResult.totalTokens();
+                } else {
+                    ChatResponse response = fallbackModel.call(new Prompt(new UserMessage(prompt)));
+                    output = response.getResult().getOutput().getText();
+                    phaseTokens = extractTotalTokens(response);
+                }
+            } else {
+                throw e; // fallback 与主模型相同，不再重试
+            }
         }
         long duration = System.currentTimeMillis() - startTime;
         ctx.addTokenUsage(phaseTokens);

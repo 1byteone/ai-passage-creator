@@ -1,0 +1,39 @@
+name: content-summarizer
+description: 将长文章提炼为简洁摘要，支持短/中/长三种长度，保留核心观点
+category: writing
+requiredRoles: [user]
+multiRound: false
+
+variables:
+  articleContent:
+    description: 待总结的文章内容
+    required: true
+    source: INPUT
+    uiType: textarea
+    placeholder: 粘贴需要生成摘要的文章
+    maxLength: 30000
+  length:
+    description: 摘要长度
+    required: false
+    source: INPUT
+    uiType: select
+    defaultValue: medium
+    options:
+      - label: 短摘要（100-150字，适合社交分享）
+        value: short
+      - label: 中摘要（200-300字，适合文章导语）
+        value: medium
+      - label: 长摘要（400-600字，适合 SEO description）
+        value: long
+
+phases:
+  - name: summarize
+    promptFile: skills/content-summarizer/prompts/phase1_summarize.md
+    model: agnes
+    streaming: true
+    outputParser: markdown
+    outputKey: summary
+    variables:
+      - name: articleContent
+      - name: length
+    requireConfirmation: false
