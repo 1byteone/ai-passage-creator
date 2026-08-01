@@ -200,3 +200,23 @@ create table if not exists webhook_delivery (
     create_time datetime default CURRENT_TIMESTAMP,
     update_time datetime
 );
+
+create table if not exists article_card (
+    id bigint auto_increment primary key,
+    task_id varchar(64) not null,
+    page_no int not null,
+    page_type varchar(16) default 'CONTENT' not null,
+    style varchar(16) not null,
+    image_url varchar(512) null,
+    image_key varchar(256) null,
+    width int default 1080,
+    height int default 1920,
+    bytes int default 0,
+    status varchar(16) default 'PENDING' not null,
+    compliance_report text null,
+    error_message text null,
+    render_ms int default 0,
+    create_time datetime default CURRENT_TIMESTAMP,
+    update_time datetime default CURRENT_TIMESTAMP,
+    unique key uk_task_page (task_id, page_no)
+);

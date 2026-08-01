@@ -170,6 +170,8 @@ public class MethodologyRegistry {
         merged.setMinChars(child.getMinChars() != null ? child.getMinChars() : parent.getMinChars());
         merged.setMaxChars(child.getMaxChars() != null ? child.getMaxChars() : parent.getMaxChars());
         merged.setStyle(child.getStyle() != null ? child.getStyle() : parent.getStyle());
+        merged.setCardStyle(child.getCardStyle() != null
+                ? child.getCardStyle() : parent.getCardStyle());
         if (child.getEvaluationWeights() != null || parent.getEvaluationWeights() != null) {
             Map<String, Integer> weights = new HashMap<>();
             if (parent.getEvaluationWeights() != null) {

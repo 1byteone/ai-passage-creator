@@ -61,4 +61,21 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * 卡片渲染异步线程池（Playwright 渲染，控制并发防 OOM）
+     */
+    @Bean(name = "cardExecutor")
+    public Executor cardExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(50);
+        executor.setThreadNamePrefix("card-exec-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(60);
+        executor.initialize();
+        return executor;
+    }
 }

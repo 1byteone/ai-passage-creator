@@ -1,5 +1,35 @@
-# douyin.yaml（骨架，第二阶段填充）
 name: douyin
-description: 抖音爆款方法论（待扩展）
-version: 0.1
+description: 抖音爆款方法论
+version: 1.0
 parent: default
+creationDimensions:
+  - key: hook
+    name: 前 3 秒钩子
+    guidance: 开头是否抓住注意力？前 3 秒定生死
+  - key: emotionalTrigger
+    name: 情绪触发点
+    guidance: 击中读者的什么情绪
+titleStrategies:
+  - key: curiosityGap
+    name: 好奇心缺口
+  - key: dataImpact
+    name: 数据冲击
+evaluationDimensions:
+  - key: hook
+    name: 前 3 秒钩子
+    weight: 30
+    rubric: 开头是否吸引注意力
+  - key: emotionalTrigger
+    name: 情感触发
+    weight: 20
+    rubric: 是否触及读者情绪点
+platform:
+  name: douyin
+  audience: 抖音用户
+  minChars: 200
+  maxChars: 500
+  style: 口播短句、前 3 秒定生死
+  cardStyle: minimal
+  evaluationWeights:
+    hook: 30
+    emotionalTrigger: 20

@@ -55,3 +55,9 @@ evaluationDimensions:
     name: 标题策略命中
     weight: 10
     rubric: 标题是否命中某一种策略且有效
+
+platform:
+  name: default
+  minChars: 200
+  maxChars: 1000
+  cardStyle: warm

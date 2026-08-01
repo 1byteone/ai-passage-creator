@@ -52,6 +52,8 @@ public class MethodologyDefinition {
         private Integer minChars;
         private Integer maxChars;
         private String style;
+        /** 卡片风格 (warm/minimal/free)，默认 warm */
+        private String cardStyle;
         /** 平台覆盖的评测维度权重（按 key patch） */
         private Map<String, Integer> evaluationWeights;
     }

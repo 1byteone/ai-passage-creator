@@ -198,6 +198,26 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
+
+		<!-- Thymeleaf 模板引擎（卡片 HTML 渲染） -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+
+		<!-- Playwright Java（HTML→PNG 截图） -->
+		<dependency>
+			<groupId>com.microsoft.playwright</groupId>
+			<artifactId>playwright</artifactId>
+			<version>1.61.0</version>
+		</dependency>
+
+		<!-- flexmark Markdown→HTML 解析 -->
+		<dependency>
+			<groupId>com.vladsch.flexmark</groupId>
+			<artifactId>flexmark-all</artifactId>
+			<version>0.64.8</version>
+		</dependency>
 	</dependencies>
 
 	<build>

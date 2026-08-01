@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    width: 1080px; height: 1920px; overflow: hidden;
+    background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%); padding: 60px;
+  }
+  .card-page { width: 960px; height: 1800px; background: #FFFFFF;
+    border-radius: 32px; padding: 60px; box-shadow: 0 8px 32px rgba(0,0,0,0.08); }
+  .card-title { font-size: 48px; font-weight: bold; color: #1F2937; margin-bottom: 24px; }
+  .card-content { font-size: 32px; line-height: 1.8; color: #374151; }
+  .card-page-num { position: absolute; bottom: 60px; right: 80px; font-size: 24px; color: #9CA3AF; }
+</style>
+</head>
+<body>
+<div class="card-page" th:each="page : ${pages}">
+  <div th:if="${page.title}" class="card-title" th:text="${page.title}">标题</div>
+  <div class="card-content" th:text="${page.content}">内容</div>
+  <div class="card-page-num" th:text="${page.pageNo}">1</div>
+</div>
+</body>
+</html>

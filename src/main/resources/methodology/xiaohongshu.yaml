@@ -1,5 +1,48 @@
-# xiaohongshu.yaml（骨架，第二阶段填充）
 name: xiaohongshu
-description: 小红书爆款方法论（待扩展）
-version: 0.1
+description: 小红书爆款方法论
+version: 1.0
 parent: default
+creationDimensions:
+  - key: emotionalTrigger
+    name: 情绪触发点
+    guidance: 击中读者的什么情绪（共鸣/好奇/焦虑）？
+  - key: goldenSentence
+    name: 金句
+    guidance: 金句从内容自然生长，可独立转发
+  - key: visualHook
+    name: 视觉钩子
+    guidance: 第一张卡片的封面图是否吸引点击？图文并茂
+titleStrategies:
+  - key: curiosityGap
+    name: 好奇心缺口
+  - key: painResonance
+    name: 痛点共鸣
+evaluationDimensions:
+  - key: emotionalTrigger
+    name: 情感触发
+    weight: 25
+    rubric: 是否触及读者情绪点
+  - key: goldenSentence
+    name: 金句
+    weight: 20
+    rubric: 是否有可独立传播的金句
+  - key: visualHook
+    name: 视觉钩子
+    weight: 15
+    rubric: 视觉设计是否吸引点击
+  - key: titleStrategy
+    name: 标题策略命中
+    weight: 10
+    rubric: 标题是否命中某一种策略
+platform:
+  name: xiaohongshu
+  audience: 小红书用户
+  minChars: 300
+  maxChars: 800
+  style: 图文并茂、emoji 列表、如友聊天
+  cardStyle: warm
+  evaluationWeights:
+    emotionalTrigger: 25
+    goldenSentence: 20
+    visualHook: 15
+    titleStrategy: 10
