@@ -21,6 +21,17 @@ public interface ArticleRewriteService {
     ArticleVersion rewrite(String taskId, String instruction, int maxRounds, Long userId);
 
     /**
+     * 按章节定向改写（v1 退化为整篇改写，sectionLocator 预留）
+     *
+     * @param taskId         文章任务 ID
+     * @param instruction    定向改写指令
+     * @param sectionLocator 章节定位符（v1 预留，传 null 表示整篇）
+     * @param userId         用户 ID
+     * @return 新建的版本
+     */
+    ArticleVersion rewriteSection(String taskId, String instruction, String sectionLocator, Long userId);
+
+    /**
      * 获取文章所有版本历史
      */
     List<ArticleVersion> getVersionHistory(String taskId);

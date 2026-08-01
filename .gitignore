@@ -47,3 +47,6 @@ frontend/node_modules/
 .codegraph/
 frontend/performance-results/
 frontend/test-results/
+
+### Visual check artifacts
+frontend/.visual-check/

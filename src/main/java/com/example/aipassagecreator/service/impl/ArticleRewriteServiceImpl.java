@@ -134,6 +134,65 @@ public class ArticleRewriteServiceImpl implements ArticleRewriteService {
     }
 
     @Override
+    public ArticleVersion rewriteSection(String taskId, String instruction, String sectionLocator, Long userId) {
+        Article article = articleMapper.selectOneByQuery(
+                QueryWrapper.create().eq("taskId", taskId));
+        if (article == null) {
+            throw new IllegalArgumentException("文章不存在: " + taskId);
+        }
+        String currentContent = article.getContent();
+        if (currentContent == null || currentContent.isBlank()) {
+            throw new IllegalArgumentException("文章内容为空");
+        }
+
+        var lastVer = articleVersionMapper.selectOneByQuery(
+                QueryWrapper.create().eq("task_id", taskId)
+                        .orderBy("version_no", false).limit(1));
+        int nextVersion = (lastVer != null ? lastVer.getVersionNo() : 0) + 1;
+
+        String snapshot = currentContent.length() > MAX_CONTENT_LENGTH
+                ? currentContent.substring(0, MAX_CONTENT_LENGTH) : currentContent;
+
+        ChatModel model = modelRouter.resolveWithFallback(null, null);
+        String modelName = modelRouter.resolveModelName(null, null);
+        long start = System.currentTimeMillis();
+
+        // 与 rewrite() 一致的注入防护：系统指令与用户内容分离为不同角色消息。
+        // 用户提供的改写指令放入 UserMessage 模板，不拼接进 SystemMessage。
+        String prompt = REWRITE_PROMPT
+                .replace("{instruction}", instruction)
+                .replace("{content}", snapshot);
+        ChatResponse response = model.call(new Prompt(
+                List.of(new SystemMessage(REWRITE_SYSTEM_PROMPT),
+                        new UserMessage(prompt))));
+        String rewritten = response.getResult().getOutput().getText();
+        long duration = System.currentTimeMillis() - start;
+        int tokenUsage = extractTokens(response);
+
+        ArticleVersion version = ArticleVersion.builder()
+                .taskId(taskId).versionNo(nextVersion).round(1)
+                .content(rewritten)
+                .changeSummary("方法论定向改写 (第 " + nextVersion + " 版)")
+                .promptUsed(promptSummary(instruction))
+                .diffBaseVersion(nextVersion - 1 == 0 ? null : nextVersion - 1)
+                .modelUsed(modelName).tokenUsage(tokenUsage).durationMs((int) duration)
+                .createdBy(userId)
+                .build();
+        articleVersionMapper.insert(version);
+
+        article.setContent(rewritten);
+        articleMapper.update(article);
+        log.info("定向改写完成: taskId={}, versionNo={}, model={}, duration={}ms",
+                taskId, nextVersion, modelName, duration);
+        return version;
+    }
+
+    private String promptSummary(String instruction) {
+        String s = "定向改写: " + instruction;
+        return s.length() > 500 ? s.substring(0, 500) + "..." : s;
+    }
+
+    @Override
     public List<ArticleVersion> getVersionHistory(String taskId) {
         return articleVersionMapper.selectListByQuery(
                 QueryWrapper.create()

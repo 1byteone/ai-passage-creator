@@ -60,6 +60,9 @@ public class ArticleController {
     @Resource
     private com.example.aipassagecreator.methodology.MethodologyRegistry methodologyRegistry;
 
+    @Resource
+    private com.example.aipassagecreator.methodology.MethodologyRefiner methodologyRefiner;
+
     /**
      * 创建文章任务
      * @param request
@@ -340,6 +343,32 @@ public class ArticleController {
         } catch (IllegalArgumentException e) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR, e.getMessage());
         }
+    }
+
+    /**
+     * 爆款反哺闭环：低分维度定向改写
+     */
+    @PostMapping("/refine")
+    @Operation(summary = "爆款反哺（低分维度定向改写）")
+    @AuthCheck(mustRole = "user")
+    @RateLimit(limit = 3, window = 60, key = "viral_refine")
+    public BaseResponse<?> refine(@RequestBody ArticleEvaluateViralRequest request,
+                                  HttpServletRequest httpServletRequest) {
+        ThrowUtils.throwIf(request == null || request.getTaskId() == null
+                || request.getTaskId().trim().isEmpty(), ErrorCode.PARAMS_ERROR, "任务ID不能为空");
+
+        User loginUser = userService.getLoginUser(httpServletRequest);
+
+        // 归属校验：防止 IDOR
+        var article = articleService.getByTaskId(request.getTaskId());
+        if (article == null || !article.getUserId().equals(loginUser.getId())) {
+            throw new com.example.aipassagecreator.exception.BusinessException(
+                    ErrorCode.NO_AUTH_ERROR, "无权操作此文章");
+        }
+
+        var result = methodologyRefiner.refine(
+                request.getTaskId(), request.getMethodologyName(), loginUser.getId());
+        return ResultUtils.success(result);
     }
 
     /**
