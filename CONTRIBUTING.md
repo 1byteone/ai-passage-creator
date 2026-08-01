@@ -204,7 +204,52 @@ This reverts commit <原提交 hash>.
 
 ---
 
-## 6. 紧急/临时提交约定
+## 6. 推送规范（GitHub 稳定性）
+
+### 6.1 环境配置（一次性）
+
+```bash
+# 根治大提交推送失败（RPC failed / HTTP 413 / 慢速超时）
+git config --global http.postBuffer 524288000
+git config --global http.lowSpeedLimit 1000
+git config --global http.lowSpeedTime 60
+
+# 启用本地钩子（提交格式 + 推送安全检查）
+git config core.hooksPath .githooks
+```
+
+### 6.2 推送命令
+
+```bash
+# 推荐：带重试的推送脚本（指数退避，最多 3 次）
+bash scripts/git-push.sh github dev
+
+# 或直接推送
+git push github dev
+```
+
+### 6.3 pre-push 自动检查
+
+每次推送前自动拦截：
+
+| 检查 | 拦截条件 |
+|------|----------|
+| 大文件 | 推送中新增 >2MB 文件 |
+| 硬编码密钥 | 疑似生产密钥（`sk_test_` / `whsec_` / `AKID`） |
+| 构建产物 | 提示（不拦截） |
+
+### 6.4 常见推送失败
+
+| 症状 | 处理 |
+|------|------|
+| `RPC failed; HTTP 413` | 检查 `http.postBuffer` 是否 500MB |
+| `connection reset` | 重试脚本（网络抖动）或检查低速率配置 |
+| `pre-push` 拦截 | 按提示处理（加 .gitignore / 移除密钥） |
+| 推送后 CI 失败 | 检查 `.github/workflows/ci.yml` |
+
+---
+
+## 7. 紧急/临时提交约定
 
 - 推送前务必清理：`feat`, `fix` 等临时描述不得进入主线
 - 冲突解决后需在 body 注明 `merge-conflict: <说明>`
