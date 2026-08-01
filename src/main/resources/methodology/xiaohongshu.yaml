@@ -1,0 +1,5 @@
+# xiaohongshu.yaml（骨架，第二阶段填充）
+name: xiaohongshu
+description: 小红书爆款方法论（待扩展）
+version: 0.1
+parent: default

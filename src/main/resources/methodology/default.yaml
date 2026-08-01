@@ -1,0 +1,57 @@
+name: default
+description: 通用爆款方法论
+version: 1.0
+
+# 创作维度（事前引导，注入正文 Agent prompt）
+creationDimensions:
+  - key: coreViewpoint
+    name: 核心观点
+    guidance: 读者只能记住一句话，是哪句？开头点明，全文围绕展开
+  - key: persuasion
+    name: 说服策略
+    guidance: 数据/故事/权威/类比/社会认同，选 2-3 种组合 + 主策略
+  - key: emotionalTrigger
+    name: 情绪触发点
+    guidance: 击中读者的什么情绪（共鸣/好奇/焦虑/向往）？
+  - key: goldenSentence
+    name: 金句
+    guidance: 金句从内容自然生长，结尾提炼，可独立转发
+  - key: interactionHook
+    name: 互动钩子
+    guidance: 开放提问/争议观点/投票/晒图，让读者有话想说
+
+# 标题策略（生成标题时按策略标注）
+titleStrategies:
+  - key: curiosityGap
+    name: 好奇心缺口
+  - key: dataImpact
+    name: 数据冲击
+  - key: painResonance
+    name: 痛点共鸣
+  - key: counterIntuitive
+    name: 反常识
+  - key: socialCurrency
+    name: 社交货币
+
+# 评测维度（事后评测；key 与创作维度对齐）
+evaluationDimensions:
+  - key: emotionalTrigger
+    name: 情感触发
+    weight: 20
+    rubric: 是否触及读者情绪点，引起共鸣或向往
+  - key: goldenSentence
+    name: 金句
+    weight: 15
+    rubric: 是否有可独立传播的金句，且从内容自然生长
+  - key: interactionHook
+    name: 互动钩子
+    weight: 15
+    rubric: 是否有引导读者参与互动的设计
+  - key: persuasion
+    name: 说服策略
+    weight: 15
+    rubric: 是否有效运用数据/故事/类比等说服手段
+  - key: titleStrategy
+    name: 标题策略命中
+    weight: 10
+    rubric: 标题是否命中某一种策略且有效

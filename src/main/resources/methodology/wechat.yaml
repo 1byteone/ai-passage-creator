@@ -1,0 +1,18 @@
+# wechat.yaml
+name: wechat
+description: 公众号爆款方法论
+version: 1.0
+# 继承 default 的创作维度/标题策略/评测维度（实现中对应字段 parent）
+parent: default
+platform:
+  name: wechat
+  audience: 公众号读者
+  minChars: 1500
+  maxChars: 3000
+  style: 长论证、信息密度高
+  evaluationWeights:
+    emotionalTrigger: 20
+    goldenSentence: 20
+    interactionHook: 10
+    persuasion: 15
+    titleStrategy: 10
