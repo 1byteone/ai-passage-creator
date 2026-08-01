@@ -331,7 +331,7 @@ declare namespace API {
     requireConfirmation?: boolean
   }
 
-  type SkillConfirmAction = 'approve' | 'modify'
+  type SkillConfirmAction = 'approve' | 'modify' | 'retry'
 
   type SkillProgressEvent = {
     type:

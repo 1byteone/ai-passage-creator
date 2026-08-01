@@ -6,7 +6,7 @@ export interface AwaitingConfirmation {
   /** 阶段序号 */
   phaseIndex: number
   /** 后端支持的确认动作 */
-  supportedActions: Array<'approve' | 'modify'>
+  supportedActions: Array<'approve' | 'modify' | 'retry'>
   /** 待用户审阅的上一阶段产出 */
   pendingOutput?: unknown
 }
@@ -60,7 +60,7 @@ export const applySkillProgressEvent = (
     next.awaiting = {
       phase: event.phase || snapshot.phase,
       phaseIndex: event.phaseIndex || snapshot.phaseIndex,
-      supportedActions: (event.supportedActions as Array<'approve' | 'modify'>) || ['approve'],
+      supportedActions: (event.supportedActions as Array<'approve' | 'modify' | 'retry'>) || ['approve'],
       pendingOutput: event.pendingOutput,
     }
     next.terminalState = null

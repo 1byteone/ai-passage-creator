@@ -113,8 +113,8 @@ class SkillConfirmationTest {
         assertEquals("AWAITING_CONFIRMATION", payload.get("status"));
         assertEquals(2.0, payload.get("phaseIndex"));
         assertEquals(2.0, payload.get("totalPhases"));
-        // 明确告知前端本轮支持的动作，retry 不在其中
-        assertEquals(List.of("approve", "modify"), payload.get("supportedActions"));
+        // 明确告知前端本轮支持的动作，含 retry（重新生成当前阶段）
+        assertEquals(List.of("approve", "modify", "retry"), payload.get("supportedActions"));
         assertNotNull(payload.get("pendingOutput"), "应带上待审阅的上一阶段产出");
     }
 

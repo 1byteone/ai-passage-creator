@@ -52,8 +52,9 @@ public final class SkillEventFactory {
         payload.put("phase", phase);
         payload.put("phaseIndex", phaseIndex);
         payload.put("totalPhases", totalPhases);
-        // 前端据此渲染确认面板；approve 直接续跑，modify 可回传修改后的数据
-        payload.put("supportedActions", java.util.List.of("approve", "modify"));
+        // 前端据此渲染确认面板；approve 直接续跑，modify 可回传修改后的数据，
+        // retry 清除当前阶段输出重新生成
+        payload.put("supportedActions", java.util.List.of("approve", "modify", "retry"));
         if (pendingOutput != null) {
             payload.put("pendingOutput", pendingOutput);
         }

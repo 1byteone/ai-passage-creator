@@ -85,6 +85,13 @@
               修改后继续
             </a-button>
             <a-button
+              v-if="supportsAction('retry')"
+              :loading="confirming"
+              @click="handleConfirm('retry')"
+            >
+              重新生成此阶段
+            </a-button>
+            <a-button
               danger
               :disabled="confirming"
               @click="returnToInput"
@@ -201,7 +208,7 @@ const errorMessage = ref('')
 const pollingStartedAt = ref(0)
 const awaitingPhase = ref('')
 const pendingOutput = ref<unknown>(null)
-const supportedActions = ref<Array<'approve' | 'modify'>>([])
+const supportedActions = ref<API.SkillConfirmAction[]>([])
 const confirming = ref(false)
 
 let sseConnection: SkillSSEConnection | null = null
@@ -279,11 +286,11 @@ const loadDefinition = async () => {
   }
 }
 
-const supportsAction = (action: 'approve' | 'modify'): boolean => {
+const supportsAction = (action: API.SkillConfirmAction): boolean => {
   return supportedActions.value.includes(action)
 }
 
-const handleConfirm = async (action: 'approve' | 'modify') => {
+const handleConfirm = async (action: API.SkillConfirmAction) => {
   if (!executionId.value) return
   confirming.value = true
   try {

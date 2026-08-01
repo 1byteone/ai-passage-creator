@@ -46,6 +46,7 @@ public class SkillController {
 
     private static final String ACTION_APPROVE = "approve";
     private static final String ACTION_MODIFY = "modify";
+    private static final String ACTION_RETRY = "retry";
 
     private final SkillRegistry skillRegistry;
     private final SkillSseEmitterManager sseEmitterManager;
@@ -137,8 +138,8 @@ public class SkillController {
      * 多轮交互确认
      * <p>
      * 仅在执行暂停于 AWAITING_CONFIRMATION 时可调用。
-     * 支持 approve（直接续跑）与 modify（写入修改后再续跑）；
-     * retry 需回退节点重跑，本轮暂不支持。
+     * 支持 approve（直接续跑）、modify（写入修改后再续跑）与
+     * retry（清除当前阶段输出，重新生成该阶段）。
      */
     @PostMapping("/{executionId}/confirm")
     public BaseResponse<?> confirm(
@@ -161,9 +162,9 @@ public class SkillController {
         String action = request == null || request.getAction() == null
                 ? ACTION_APPROVE
                 : request.getAction().trim().toLowerCase();
-        if (!ACTION_APPROVE.equals(action) && !ACTION_MODIFY.equals(action)) {
+        if (!ACTION_APPROVE.equals(action) && !ACTION_MODIFY.equals(action) && !ACTION_RETRY.equals(action)) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR,
-                    "暂不支持的确认动作: " + action + "，当前支持 approve / modify");
+                    "暂不支持的确认动作: " + action + "，当前支持 approve / modify / retry");
         }
 
         // 检查点存于进程内，应用重启后执行实例会丢失
@@ -193,7 +194,8 @@ public class SkillController {
         }
 
         log.info("Skill 确认: executionId={}, phase={}, action={}", executionId, po.getPhase(), action);
-        skillExecutionService.resumeAsync(execution, loginUser.getId(), modifiedData);
+        skillExecutionService.resumeAsync(execution, loginUser.getId(), modifiedData,
+                ACTION_RETRY.equals(action));
 
         return ResultUtils.success(Map.of(
                 "skillExecutionId", executionId,

@@ -118,11 +118,20 @@ public class SkillExecution {
     }
 
     /**
+     * 从检查点续跑 — 由用户确认后触发（兼容重载，默认非 retry）
+     */
+    public synchronized void resume(Map<String, Object> modifiedData, Consumer<String> streamHandler) {
+        resume(modifiedData, streamHandler, false);
+    }
+
+    /**
      * 从检查点续跑 — 由用户确认后触发
      *
      * @param modifiedData 用户修改后的数据（modify 动作），为空则表示直接 approve
+     * @param retry        是否重新生成当前待确认阶段（清除该阶段输出，使其重跑）
      */
-    public synchronized void resume(Map<String, Object> modifiedData, Consumer<String> streamHandler) {
+    public synchronized void resume(Map<String, Object> modifiedData, Consumer<String> streamHandler,
+                                    boolean retry) {
         if (!SkillExecutionStatusEnum.AWAITING_CONFIRMATION.getValue().equals(status)) {
             throw new IllegalStateException("当前状态不允许续跑: " + status);
         }
@@ -143,9 +152,18 @@ public class SkillExecution {
         try {
             // 关键：续跑必须使用带 checkPointId 的 config。
             // 直接传原 runnableConfig 会从 START 重跑已完成阶段（见 GraphInterruptMechanismTest）。
-            RunnableConfig resumeConfig = modifiedData == null || modifiedData.isEmpty()
-                    ? graph.getState(runnableConfig).config()
-                    : graph.updateState(runnableConfig, modifiedData, null);
+            RunnableConfig resumeConfig;
+            if (retry) {
+                // retry：清除当前待确认阶段的 outputKey，使图重新执行该阶段节点。
+                // 上游阶段结果保留在检查点中，不白烧 token。
+                Map<String, Object> resetState = new HashMap<>();
+                resetState.put(resolvePendingOutputKey(), null);
+                resumeConfig = graph.updateState(runnableConfig, resetState, null);
+            } else if (modifiedData == null || modifiedData.isEmpty()) {
+                resumeConfig = graph.getState(runnableConfig).config();
+            } else {
+                resumeConfig = graph.updateState(runnableConfig, modifiedData, null);
+            }
 
             NodeOutput last = graph.stream(null, resumeConfig).blockLast();
 
@@ -307,6 +325,20 @@ public class SkillExecution {
                 .filter(p -> p.getName().equals(phaseName))
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * 解析待确认阶段对应的 outputKey（retry 时清除该键触发重跑）
+     */
+    private String resolvePendingOutputKey() {
+        if (pendingPhase != null) {
+            PhaseDefinition pending = findPhase(pendingPhase);
+            if (pending != null) {
+                return pending.getOutputKey();
+            }
+        }
+        // 回退：取最后一个阶段的 outputKey
+        return definition.getPhases().get(definition.getPhases().size() - 1).getOutputKey();
     }
 
     private SkillExecutionPo buildPo(String status, String outputData, String errorMessage, Long userId) {

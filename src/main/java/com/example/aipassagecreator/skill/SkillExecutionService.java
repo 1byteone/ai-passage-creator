@@ -38,12 +38,15 @@ public class SkillExecutionService {
      * 用户确认后续跑
      *
      * @param modifiedData modify 动作携带的修改数据，approve 时为 null
+     * @param retry        是否重新生成当前待确认阶段（清除该阶段输出重跑）
      */
     @Async("skillExecutor")
-    public void resumeAsync(SkillExecution execution, Long userId, Map<String, Object> modifiedData) {
+    public void resumeAsync(SkillExecution execution, Long userId, Map<String, Object> modifiedData,
+                            boolean retry) {
         execution.resume(
                 modifiedData,
-                event -> sseEmitterManager.publish(execution.getExecutionId(), event)
+                event -> sseEmitterManager.publish(execution.getExecutionId(), event),
+                retry
         );
         settle(execution, userId);
     }
