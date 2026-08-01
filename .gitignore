@@ -31,3 +31,19 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Environment ###
+.env
+.env.*
+*.log
+hs_err_pid*
+replay_pid*
+
+### Frontend (build artifacts) ###
+frontend/dist/
+frontend/node_modules/
+
+### Tool artifacts
+.codegraph/
+frontend/performance-results/
+frontend/test-results/
