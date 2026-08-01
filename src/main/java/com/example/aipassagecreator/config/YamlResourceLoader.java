@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.config;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
@@ -32,7 +33,8 @@ public class YamlResourceLoader {
     private static final long MAX_FILE_SIZE = 100 * 1024L;
 
     private final ResourcePatternResolver resolver;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     public YamlResourceLoader(ResourceLoader resourceLoader) {
         this.resolver = ResourcePatternUtils.getResourcePatternResolver(resourceLoader);
