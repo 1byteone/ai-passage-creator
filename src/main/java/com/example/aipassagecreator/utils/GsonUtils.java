@@ -127,4 +127,59 @@ public class GsonUtils {
             return null;
         }
     }
+
+    /**
+     * 修复 LLM 输出的非法 JSON。
+     * <p>处理三种情况：①剥离 ```json 围栏及前后说明文本；②补全截断的括号；③空输入返回空对象。
+     *
+     * @param json 原始 LLM 输出
+     * @return 修复后的 JSON 字符串（无法修复时原样返回）
+     */
+    public static String tryFixJson(String json) {
+        if (json == null || json.trim().isEmpty()) {
+            return "{}";
+        }
+        String s = json.trim();
+        // 1) 剥离代码围栏与前后非 JSON 文本：取第一个 { 到最后一个 } 或 ] 之间的内容
+        int firstOpen = Math.min(indexOf(s, '{'), indexOf(s, '['));
+        if (firstOpen == Integer.MAX_VALUE) {
+            return s;
+        }
+        int lastClose = Math.max(s.lastIndexOf('}'), s.lastIndexOf(']'));
+        if (lastClose > firstOpen) {
+            s = s.substring(firstOpen, lastClose + 1);
+        }
+        // 2) 补全截断的括号（遍历统计 + 引号配对）
+        int braces = 0, brackets = 0;
+        boolean inString = false;
+        char prev = 0;
+        for (char c : s.toCharArray()) {
+            if (inString) {
+                if (c == '"' && prev != '\\') {
+                    inString = false;
+                }
+            } else {
+                switch (c) {
+                    case '"' -> inString = true;
+                    case '{' -> braces++;
+                    case '}' -> braces--;
+                    case '[' -> brackets++;
+                    case ']' -> brackets--;
+                    default -> { /* ignore */ }
+                }
+            }
+            prev = c;
+        }
+        if (inString) {
+            s = s + '"';
+        }
+        while (brackets > 0) { s = s + "]"; brackets--; }
+        while (braces > 0) { s = s + "}"; braces--; }
+        return s;
+    }
+
+    private static int indexOf(String s, char c) {
+        int idx = s.indexOf(c);
+        return idx < 0 ? Integer.MAX_VALUE : idx;
+    }
 }
