@@ -155,15 +155,26 @@ public class SkillController {
         try {
             SkillExecutionChain chain = skillRegistry.createChain(
                     chainId, request.getSkillNames().toArray(new String[0]));
-            Map<String, Object> outputs = chain.executeSync(
+            SkillExecutionChain.ChainResult result = chain.executeSync(
                     msg -> sseEmitterManager.publish(chainId, msg),
                     inputs,
                     loginUser.getId());
 
+            if (!result.isSuccess()) {
+                // 链式执行中途失败 — 已执行成功的 skill 配额不退，失败及后续 skill 已在 executeSync 内退还
+                return ResultUtils.success(Map.of(
+                        "chainId", chainId,
+                        "skills", request.getSkillNames(),
+                        "outputs", result.outputs(),
+                        "failedSkill", result.failedSkill(),
+                        "status", "PARTIAL"));
+            }
+
             return ResultUtils.success(Map.of(
                     "chainId", chainId,
                     "skills", request.getSkillNames(),
-                    "outputs", outputs));
+                    "outputs", result.outputs(),
+                    "status", "SUCCESS"));
         } catch (Exception e) {
             log.error("链式编排失败: skills={}", request.getSkillNames(), e);
             // 失败退还配额（未全部完成）

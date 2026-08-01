@@ -163,22 +163,43 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
 
         PaymentRecord paymentRecord = findLatestSuccessfulPayment(userId);
         if (paymentRecord == null) {
-            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR,"未找到支付记录");
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "未找到支付记录");
         }
-
-        if(paymentRecord.getStripePaymentIntentId() == null){
-            throw new BusinessException(ErrorCode.OPERATION_ERROR,"支付记录无效");
+        if (paymentRecord.getStripePaymentIntentId() == null) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "支付记录无效");
         }
-
-        Refund refund = createStripeRefund(paymentRecord.getStripePaymentIntentId());
-        if(!"succeeded".equals(refund.getStatus())){
+        // 幂等保护：已退款的记录不再发起 Stripe 退款（防并发双重退款）
+        if (PaymentStatusEnum.REFUNDED.getValue().equals(paymentRecord.getStatus())) {
+            log.warn("退款请求重复，支付记录已退款: userId={}, recordId={}", userId, paymentRecord.getId());
             return false;
         }
 
-        updateRefundRecord(paymentRecord.getId(),reason);
+        // 先用 CAS 抢占退款状态，防止并发双重退款
+        PaymentRecord update = new PaymentRecord();
+        update.setStatus(PaymentStatusEnum.REFUNDED.getValue());
+        update.setRefundReason(reason);
+        update.setRefundTime(LocalDateTime.now());
+        int claimed = paymentRecordMapper.updateByQuery(update,
+                QueryWrapper.create()
+                        .eq("id", paymentRecord.getId())
+                        .eq("status", PaymentStatusEnum.SUCCEEDED.getValue()));
+        if (claimed == 0) {
+            // 并发或已退款
+            log.warn("退款抢占失败，支付记录已被处理: userId={}, recordId={}", userId, paymentRecord.getId());
+            return false;
+        }
+
+        // 抢占成功后执行外部 Stripe 退款（外部效应不可回滚，但已状态保护）
+        Refund refund = createStripeRefund(paymentRecord.getStripePaymentIntentId());
+        if (!"succeeded".equals(refund.getStatus())) {
+            log.error("Stripe 退款失败: userId={}, pi={}", userId, paymentRecord.getStripePaymentIntentId());
+            // 退款失败不撤销本地状态 — 管理员可手动重试
+            return false;
+        }
+
         revokeVipStatus(userId);
 
-        log.info("退款成功，已取消 VIP 身份，userId = {},refundId={}",userId,refund.getId());
+        log.info("退款成功，已取消 VIP 身份，userId = {}, refundId={}", userId, refund.getId());
         return true;
     }
 

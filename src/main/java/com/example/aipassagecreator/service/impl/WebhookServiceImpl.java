@@ -77,6 +77,7 @@ public class WebhookServiceImpl implements WebhookService {
         List<WebhookDelivery> failed = deliveryMapper.selectListByQuery(
                 QueryWrapper.create()
                         .eq("status", "FAILED")
+                        .ne("status", "PERMANENTLY_FAILED")
                         .le("next_retry_at", LocalDateTime.now())
                         .limit(20));
         int count = 0;
@@ -161,6 +162,12 @@ public class WebhookServiceImpl implements WebhookService {
             delivery.setLastError(e.getMessage());
             if (delivery.getAttemptCount() < MAX_RETRY) {
                 delivery.setNextRetryAt(LocalDateTime.now().plusMinutes(5L * delivery.getAttemptCount()));
+            } else {
+                // 超过最大重试次数，标记为永久失败，不再重试
+                delivery.setStatus("PERMANENTLY_FAILED");
+                delivery.setNextRetryAt(null);
+                log.warn("Webhook 投递永久失败(attempt={}): deliveryId={}, error={}",
+                        delivery.getAttemptCount(), delivery.getId(), e.getMessage());
             }
             log.warn("Webhook 投递失败(attempt={}): deliveryId={}, error={}",
                     delivery.getAttemptCount(), delivery.getId(), e.getMessage());

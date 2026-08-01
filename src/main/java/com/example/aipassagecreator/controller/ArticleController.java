@@ -298,17 +298,15 @@ public class ArticleController {
                 ErrorCode.PARAMS_ERROR);
 
         User loginUser = userService.getLoginUser(httpServletRequest);
-        String taskId = String.valueOf(request.getId());
-
-        // 归属校验：防止 IDOR，仅文章作者可评分
-        var article = articleService.getByTaskId(taskId);
+        // 修复: request.getId() 是 DB 主键 Long，先用主键查 article，再获取真实 taskId
+        var article = articleService.getById(request.getId());
         if (article == null || !article.getUserId().equals(loginUser.getId())) {
             throw new com.example.aipassagecreator.exception.BusinessException(
                     ErrorCode.NO_AUTH_ERROR, "无权操作此文章");
         }
 
         try {
-            var result = contentQualityService.evaluate(taskId);
+            var result = contentQualityService.evaluate(article.getTaskId());
             return ResultUtils.success(result);
         } catch (IllegalArgumentException e) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR, e.getMessage());

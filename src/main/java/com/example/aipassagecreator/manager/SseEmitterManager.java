@@ -29,27 +29,33 @@ public class SseEmitterManager {
     public SseEmitter createEmitter(String taskId) {
         // 设置超时时间为 10 分钟，避免长时间无输出导致超时
         SseEmitter emitter = new SseEmitter(10 * 60 * 1000L);
-        
-        // 设置超时回调
+
+        // 完成旧 emitter（若有），并清理回调引用
+        SseEmitter old = emitterMap.put(taskId, emitter);
+        if (old != null) {
+            try {
+                old.complete();
+            } catch (Exception ignored) {
+                // 旧连接可能已断开
+            }
+        }
+
+        // 回调使用身份守卫（identity-guarded）：仅当 map 中仍是 *本* emitter 时才移除
+        // 防止浏览器 EventSource 重连时旧 emitter 的回调误删新 emitter
         emitter.onTimeout(() -> {
             log.warn("SSE 连接超时, taskId={}", taskId);
-            emitterMap.remove(taskId);
+            emitterMap.remove(taskId, emitter);
         });
-        
-        // 设置完成回调
+
         emitter.onCompletion(() -> {
             log.info("SSE 连接完成, taskId={}", taskId);
-            emitterMap.remove(taskId);
+            emitterMap.remove(taskId, emitter);
         });
-        
-        // 设置错误回调
+
         emitter.onError((e) -> {
             log.error("SSE 连接错误, taskId={}", taskId, e);
-            emitterMap.remove(taskId);
+            emitterMap.remove(taskId, emitter);
         });
-        
-        emitterMap.put(taskId, emitter);
-        log.info("SSE 连接已创建, taskId={}", taskId);
         
         return emitter;
     }

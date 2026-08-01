@@ -45,6 +45,7 @@ public class SkillRegistry {
     private final SkillExecutionMapper skillExecutionMapper;
     private final WebSearchTool webSearchTool;
     private final YamlResourceLoader yamlResourceLoader;
+    private final SkillExecutionRegistry executionRegistry;
     private SkillExecutionService skillExecutionService;
 
     public SkillRegistry(ResourceLoader resourceLoader,
@@ -53,7 +54,8 @@ public class SkillRegistry {
                          OutputParserRegistry parserRegistry,
                          SkillExecutionMapper skillExecutionMapper,
                          WebSearchTool webSearchTool,
-                         YamlResourceLoader yamlResourceLoader) {
+                         YamlResourceLoader yamlResourceLoader,
+                         SkillExecutionRegistry executionRegistry) {
         this.resourceLoader = resourceLoader;
         this.templateEngine = templateEngine;
         this.modelRouter = modelRouter;
@@ -61,6 +63,7 @@ public class SkillRegistry {
         this.skillExecutionMapper = skillExecutionMapper;
         this.webSearchTool = webSearchTool;
         this.yamlResourceLoader = yamlResourceLoader;
+        this.executionRegistry = executionRegistry;
     }
 
     @Autowired
@@ -113,7 +116,7 @@ public class SkillRegistry {
     }
 
     public SkillExecutionChain createChain(String chainExecutionId, String... skillNames) {
-        return new SkillExecutionChain(skillNames, this, skillExecutionService, chainExecutionId);
+        return new SkillExecutionChain(skillNames, this, skillExecutionService, executionRegistry, chainExecutionId);
     }
 
     public SkillExecutionChain createChain(String... skillNames) {
