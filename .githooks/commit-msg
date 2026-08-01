@@ -1,31 +1,92 @@
 #!/bin/sh
-# commit-msg 钩子 — 校验 Conventional Commits 格式
+# commit-msg 钩子 — 校验 Conventional Commits 格式 + 50/72 规则
+# 规范依据: CONTRIBUTING.md §1 (Conventional Commits + EC/Angular)
 # 用法: 通过 git config core.hooksPath .githooks 启用
 
 MSG_FILE="$1"
 MSG=$(cat "$MSG_FILE")
 
-# 提取第一行 subject（去掉注释行后）
+# 提取非注释、非空的第一行作为 header
 SUBJECT=$(grep -v '^#' "$MSG_FILE" | grep -v '^$' | head -1)
 
-# 允许的类型枚举
-TYPES="feat|fix|refactor|perf|test|docs|style|chore|ci|build|revert"
+# 允许的类型枚举（不含 revert，revert 走独立格式）
+TYPES="feat|fix|refactor|perf|test|docs|style|chore|ci|build"
 
-# 格式: type(scope): subject 或 type: subject
-if ! echo "$SUBJECT" | grep -qE "^(${TYPES})(\([a-z0-9_-]+\))?: .{1,72}$"; then
+# ─── 规则 1: revert 特殊格式 ────────────────────────────
+if echo "$SUBJECT" | grep -qE "^revert: "; then
+    if ! echo "$MSG" | grep -q "This reverts commit"; then
+        echo ""
+        echo "❌ revert 提交缺少 'This reverts commit <hash>.' body"
+        echo "   参考: CONTRIBUTING.md §1.7"
+        echo ""
+        exit 1
+    fi
+    exit 0
+fi
+
+# ─── 规则 2: header 格式校验 ─────────────────────────────
+# 格式: type(scope): subject 或 type: subject，支持 ! 破坏性变更标记
+if ! echo "$SUBJECT" | grep -qE "^(${TYPES})(\([a-z0-9_-]+\))?!?: .+$"; then
     echo ""
-    echo "❌ 提交信息格式不符合 Conventional Commits 规范"
+    echo "❌ header 不符合 Conventional Commits 规范"
     echo ""
     echo "   正确格式: <type>(<scope>): <subject>"
     echo "   示例:     feat(article): 新增五维质量评分"
-    echo "             fix(auth): 修复 SSE 端点 401 问题"
+    echo "             fix(auth): 修复 SSE 端点 401"
+    echo "             feat(api)!: 破坏性变更可用 !"
     echo ""
-    echo "   当前提交: $SUBJECT"
+    echo "   当前 header: $SUBJECT"
     echo ""
-    echo "   type 枚举: $TYPES"
-    echo "   参考: CONTRIBUTING.md §1 提交信息规范"
+    echo "   type 枚举: $TYPES (另含 revert)"
+    echo "   参考: CONTRIBUTING.md §1"
     echo ""
     exit 1
+fi
+
+# ─── 规则 3: 50/72 规则 ─────────────────────────────────
+# subject 去掉 type(scope) 前缀后应 ≤ 50 字符
+SUBJECT_ONLY=$(echo "$SUBJECT" | sed -E 's/^[a-z]+(\([^)]*\))?!?: //')
+SUBJECT_LEN=${#SUBJECT_ONLY}
+
+if [ "$SUBJECT_LEN" -gt 72 ]; then
+    echo ""
+    echo "❌ subject 超过 72 字符硬上限（当前 $SUBJECT_LEN）"
+    echo "   推荐 ≤ 50 字符，最长 ≤ 72（50/72 规则）"
+    echo "   参考: CONTRIBUTING.md §1.4"
+    echo ""
+    exit 1
+fi
+
+if [ "$SUBJECT_LEN" -gt 50 ]; then
+    echo ""
+    echo "⚠️  subject 超过 50 字符推荐上限（当前 $SUBJECT_LEN），建议精简"
+    echo "   （50/72 规则: subject ≤50，body 每行 ≤72）"
+    echo "   参考: CONTRIBUTING.md §1.4"
+    echo ""
+    # 超过 50 但 ≤72 仅警告，不阻断（保留中文长主题的空间）
+fi
+
+# ─── 规则 4: 句号检查 ──────────────────────────────────
+if echo "$SUBJECT_ONLY" | grep -qE "\.$|。$|！$|？$"; then
+    echo ""
+    echo "❌ subject 不应以句号/感叹号结尾"
+    echo "   参考: CONTRIBUTING.md §1.4"
+    echo ""
+    exit 1
+fi
+
+# ─── 规则 5: body 每行 ≤ 72 字符 ───────────────────────
+# 跳过以 # 开头的注释行
+BODY_BAD=$(grep -v '^#' "$MSG_FILE" | grep -v '^$' | grep -v "^[a-z].*:.*$" | awk 'length($0) > 72 { print }')
+if [ -n "$BODY_BAD" ]; then
+    echo ""
+    echo "⚠️  存在超过 72 字符的 body 行（50/72 规则），建议换行"
+    echo ""
+    echo "$BODY_BAD" | head -5 | while read -r line; do
+        echo "  $line"
+    done
+    echo ""
+    # 仅警告，不阻断
 fi
 
 exit 0
