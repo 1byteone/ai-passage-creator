@@ -96,14 +96,15 @@ public class ArticleAsyncService {
     /**
      * 阶段1：生成标题方案
      *
-     * @param taskId 任务 ID
-     * @param topic  选题
-     * @param style 文章风格（可为空）
+     * @param taskId      任务 ID
+     * @param topic       选题
+     * @param style       文章风格（可为空）
+     * @param methodology 方法论模板名称（可为空，回退 default）
      * */
     @Async("articleExecutor")
-    public void executePhase1(String taskId, String topic, String style){
+    public void executePhase1(String taskId, String topic, String style, String methodology){
         boolean orchestratorEnabled = agentConfig.isOrchestratorEnabled();
-        log.info("阶段1异步任务开始，taskId={},topic={},style={}",taskId, topic, style);
+        log.info("阶段1异步任务开始，taskId={},topic={},style={},methodology={}",taskId, topic, style, methodology);
 
         try{
             //更新状态和阶段
@@ -115,6 +116,7 @@ public class ArticleAsyncService {
             state.setTaskId(taskId);
             state.setTopic(topic);
             state.setStyle(style);
+            state.setMethodology(methodology != null ? methodology : "default");
 
             //执行阶段1：生成标题方案
             if(orchestratorEnabled){
@@ -170,6 +172,7 @@ public class ArticleAsyncService {
             ArticleState state = new ArticleState();
             state.setTaskId(taskId);
             state.setStyle(article.getStyle());
+            state.setMethodology(article.getMethodology() != null ? article.getMethodology() : "default");
             state.setUserDescription(article.getUserDescription());
 
             //设置标题
@@ -238,6 +241,7 @@ public class ArticleAsyncService {
             ArticleState state = new ArticleState();
             state.setTaskId(taskId);
             state.setStyle(article.getStyle());
+            state.setMethodology(article.getMethodology() != null ? article.getMethodology() : "default");
 
             // 从数据库获取允许的配图方式
             List<String> enabledMethods = null;

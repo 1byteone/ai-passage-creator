@@ -30,6 +30,7 @@ create table if not exists article (
     userDescription text null,
     enabledImageMethods json null,
     style varchar(50) null,
+    methodology varchar(64) default 'default' null,
     mainTitle varchar(200) null,
     subTitle varchar(300) null,
     titleOptions json null,

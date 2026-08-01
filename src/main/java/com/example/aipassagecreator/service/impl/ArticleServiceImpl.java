@@ -100,7 +100,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     }
 
     @Override
-    public String createArticleTask(String topic, String style, List<String> enabledImageMethods, User loginUser) {
+    public String createArticleTask(String topic, String style, String methodology,
+                                    List<String> enabledImageMethods, User loginUser) {
         // 处理配图方式：如果用户未选择，给普通用户设置默认的非 VIP 方式
         List<String> finalImageMethods = processImageMethods(enabledImageMethods, loginUser);
 
@@ -116,6 +117,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         article.setUserId(loginUser.getId());
         article.setTopic(topic);
         article.setStyle(style);
+        article.setMethodology(methodology == null || methodology.isBlank() ? "default" : methodology);
         article.setEnabledImageMethods(finalImageMethods != null && !finalImageMethods.isEmpty()
                 ? GsonUtils.toJson(finalImageMethods) : null);
         article.setStatus(ArticleStatusEnum.PENDING.getValue());
@@ -124,17 +126,19 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
         this.save(article);
 
-        log.info("文章任务已创建, taskId={}, userId={}, style={}", taskId, loginUser.getId(), style);
+        log.info("文章任务已创建, taskId={}, userId={}, style={}, methodology={}",
+                taskId, loginUser.getId(), style, article.getMethodology());
         return taskId;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String createArticleTaskWithQuotaCheck(String topic, String style,List< String> enableImageMehodies, User loginUser) {
-        //再同一事务中：先知配额，再创建任务
+    public String createArticleTaskWithQuotaCheck(String topic, String style, String methodology,
+                                                  List<String> enabledImageMethods, User loginUser) {
+        //在同一个事务中：先扣配额，再创建任务
         //如果任务创建失败，配额会自动回滚
         quotaService.checkAndConsumeQuota(loginUser);
-        return createArticleTask(topic,style,enableImageMehodies,loginUser);
+        return createArticleTask(topic, style, methodology, enabledImageMethods, loginUser);
     }
 
     @Override

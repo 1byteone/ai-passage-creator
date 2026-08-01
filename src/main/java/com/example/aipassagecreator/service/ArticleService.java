@@ -27,9 +27,11 @@ public interface ArticleService extends IService<Article> {
 
     ArticleVO getArticleDetail(String taskId, User loginUser);
 
-    String createArticleTask(String topic, String style, List<String> enabledImageMethods, User loginUser);
+    String createArticleTask(String topic, String style, String methodology,
+                             List<String> enabledImageMethods, User loginUser);
 
-    String createArticleTaskWithQuotaCheck(String topic, String style, List< String> enableImageMehodies, User loginUser);
+    String createArticleTaskWithQuotaCheck(String topic, String style, String methodology,
+                                           List<String> enabledImageMethods, User loginUser);
 
     /**
      * 确认标题（用户选择后）

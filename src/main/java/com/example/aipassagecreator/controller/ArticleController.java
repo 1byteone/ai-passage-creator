@@ -55,6 +55,9 @@ public class ArticleController {
     @Resource
     private com.example.aipassagecreator.service.ExportService exportService;
 
+    @Resource
+    private com.example.aipassagecreator.methodology.MethodologyRegistry methodologyRegistry;
+
     /**
      * 创建文章任务
      * @param request
@@ -69,18 +72,25 @@ public class ArticleController {
                 , ErrorCode.PARAMS_ERROR, "选题不能为空");
         ThrowUtils.throwIf(!ArticleStyleEnum.isValid(request.getStyle()), ErrorCode.PARAMS_ERROR, "无效的文章风格");
 
+        // 校验方法论：未知值回退 "default"
+        String methodology = request.getMethodology();
+        if (methodology == null || methodology.isBlank() || !methodologyRegistry.exists(methodology)) {
+            methodology = "default";
+        }
+
         User  loginUser = userService.getLoginUser(httpServletRequest);
 
         // 检查并消耗配额 + 创建文章任务（在同一事务中）
         String taskId = articleService.createArticleTaskWithQuotaCheck(
                 request.getTopic(),
                 request.getStyle(),
+                methodology,
                 request.getEnabledImageMethods(),
                 loginUser
         );
 
         // 异步执行阶段1：生成标题方案
-        articleAsyncService.executePhase1(taskId, request.getTopic(),request.getStyle());
+        articleAsyncService.executePhase1(taskId, request.getTopic(), request.getStyle(), methodology);
 
         return ResultUtils.success(taskId);
     }

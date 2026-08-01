@@ -65,6 +65,11 @@ public class Article implements Serializable {
     private String style;
 
     /**
+     * 方法论模板（default/wechat/xiaohongshu/douyin），默认 default
+     */
+    private String methodology;
+
+    /**
      * 主标题
      */
     private String mainTitle;

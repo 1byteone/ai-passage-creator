@@ -8,6 +8,7 @@ create table if not exists article
     userDescription       text                               null comment '用户补充描述',
     enabledImageMethods   json                               null comment '允许的配图方式列表（JSON 格式）',
     style                 varchar(50)                        null comment '文章风格：tech/emotional/educational/humorous',
+    methodology           varchar(64)                        null default 'default' comment '方法论模板（default/wechat/xiaohongshu/douyin），默认 default',
     mainTitle             varchar(200)                       null comment '主标题',
     subTitle              varchar(300)                       null comment '副标题',
     titleOptions          json                               null comment '标题方案列表（JSON 格式）',

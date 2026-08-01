@@ -32,5 +32,10 @@ public class ArticleConfirmTitleRequest implements Serializable {
      */
     private String userDescription;
 
+    /**
+     * 选中标题命中的策略 key（可选）
+     */
+    private String strategyKey;
+
     private static final long serialVersionUID = 1L;
 }

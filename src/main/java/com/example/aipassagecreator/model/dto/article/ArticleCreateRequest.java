@@ -24,6 +24,11 @@ public class ArticleCreateRequest implements Serializable {
     private String style;
 
     /**
+     * 方法论模板名称（默认 default）
+     */
+    private String methodology;
+
+    /**
      * 允许的配图方式列表（为空或 null 表示支持所有方式）
      * 可选值：PEXELS, NANO_BANANA, MERMAID, ICONIFY, EMOJI_PACK, SVG_DIAGRAM
      */

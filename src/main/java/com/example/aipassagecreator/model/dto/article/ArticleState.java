@@ -34,6 +34,11 @@ public class ArticleState implements Serializable {
     private String style;
 
     /**
+     * 方法论模板名称（默认 default）
+     */
+    private String methodology;
+
+    /**
      * 当前阶段
      */
     private String phase;
@@ -85,6 +90,10 @@ public class ArticleState implements Serializable {
     public static class TitleOption implements Serializable {
         private String mainTitle;
         private String subTitle;
+        /**
+         * 标题命中的策略 key（titleStrategies[].key），可选
+         */
+        private String strategyKey;
     }
 
     /**
