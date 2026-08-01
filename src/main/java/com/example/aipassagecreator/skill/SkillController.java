@@ -46,7 +46,7 @@ public class SkillController {
 
     private static final List<String> PUBLIC_SKILLS =
             List.of("topic-gen", "proofreading", "article-to-x", "research",
-                    "seo-optimizer", "content-translator");
+                    "seo-optimizer", "content-translator", "ai-detox", "seeding-copy");
 
     private static final String ACTION_APPROVE = "approve";
     private static final String ACTION_MODIFY = "modify";

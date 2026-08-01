@@ -1,0 +1,57 @@
+name: seeding-copy
+description: 生成小红书/抖音/微博风格的内容种草文案，含标题、正文、标签和互动引导
+category: writing
+requiredRoles: [user]
+multiRound: false
+
+variables:
+  productInfo:
+    description: 产品/服务信息（名称、卖点、使用场景等）
+    required: true
+    source: INPUT
+    uiType: textarea
+    placeholder: 描述你的产品/服务：名称、核心卖点、目标用户、使用场景...
+    maxLength: 5000
+  platform:
+    description: 目标平台
+    required: true
+    source: INPUT
+    uiType: select
+    defaultValue: xiaohongshu
+    options:
+      - label: 小红书
+        value: xiaohongshu
+      - label: 抖音/短视频
+        value: douyin
+      - label: 微博
+        value: weibo
+      - label: 微信公众号
+        value: wechat
+  tone:
+    description: 文案风格
+    required: false
+    source: INPUT
+    uiType: select
+    defaultValue: authentic
+    options:
+      - label: 真实体验（第一人称、真实感受）
+        value: authentic
+      - label: 专业种草（数据支撑、理性分析）
+        value: professional
+      - label: 有趣种草（轻松幽默、网感强）
+        value: humorous
+      - label: 紧迫营销（限时优惠、稀缺感）
+        value: urgent
+
+phases:
+  - name: generate_copy
+    promptFile: skills/seeding-copy/prompts/phase1_generate_copy.md
+    model: agnes
+    streaming: true
+    outputParser: markdown
+    outputKey: seedingCopy
+    variables:
+      - name: productInfo
+      - name: platform
+      - name: tone
+    requireConfirmation: false

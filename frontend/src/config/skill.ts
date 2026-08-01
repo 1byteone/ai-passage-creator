@@ -13,7 +13,7 @@ export interface SkillUiConfig {
   accent: 'blue' | 'green' | 'amber'
 }
 
-export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x', 'research', 'seo-optimizer', 'content-translator'] as const
+export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x', 'research', 'seo-optimizer', 'content-translator', 'ai-detox', 'seeding-copy'] as const
 
 export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
   'topic-gen': {
@@ -88,6 +88,30 @@ export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
     categoryLabel: '写作',
     accent: 'amber',
   },
+  'ai-detox': {
+    name: 'ai-detox',
+    title: 'AI 检测率优化',
+    shortTitle: '去 AI 味',
+    description: '两阶段降低 AI 检测率：审计高风险模式 + 句法变异/词汇替换重写。',
+    inputLabel: '待优化的文章与优化强度',
+    outputLabel: 'AI 痕迹审计报告 + 自然化改写稿',
+    actionLabel: '去 AI 味',
+    icon: 'proofreading',
+    categoryLabel: '写作',
+    accent: 'green',
+  },
+  'seeding-copy': {
+    name: 'seeding-copy',
+    title: '内容种草文案',
+    shortTitle: '种草文案',
+    description: '生成小红书/抖音/微博风格的种草文案，含标题、正文、标签和互动引导。',
+    inputLabel: '产品信息（卖点/场景/目标用户）',
+    outputLabel: '平台适配的种草文案',
+    actionLabel: '生成种草文案',
+    icon: 'social',
+    categoryLabel: '写作',
+    accent: 'amber',
+  },
 }
 
 export const PHASE_LABELS: Record<string, string> = {
@@ -101,6 +125,9 @@ export const PHASE_LABELS: Record<string, string> = {
   seo_audit: 'SEO 审计评分',
   seo_rewrite: 'SEO 优化改写',
   translate: '多语言翻译',
+  ai_audit: 'AI 痕迹审计',
+  detox_rewrite: 'AI 痕迹优化改写',
+  generate_copy: '生成种草文案',
 }
 
 const FALLBACK_FIELDS: Record<string, Record<string, API.SkillVariableDef>> = {
@@ -208,6 +235,56 @@ const FALLBACK_FIELDS: Record<string, Record<string, API.SkillVariableDef>> = {
         { label: 'Français (法文)', value: 'fr' },
         { label: 'Deutsch (德文)', value: 'de' },
         { label: 'Español (西班牙文)', value: 'es' },
+      ],
+    },
+  },
+  'ai-detox': {
+    articleContent: {
+      description: '待优化的文章',
+      required: true,
+      uiType: 'textarea',
+      placeholder: '粘贴需要降低 AI 检测率的文章',
+      maxLength: 20000,
+    },
+    intensity: {
+      description: '优化强度',
+      uiType: 'select',
+      defaultValue: 'medium',
+      options: [
+        { label: '轻度（微调表达，保留原结构）', value: 'light' },
+        { label: '中度（句法变化 + 词汇替换）', value: 'medium' },
+        { label: '重度（深度重写，最大化自然度）', value: 'heavy' },
+      ],
+    },
+  },
+  'seeding-copy': {
+    productInfo: {
+      description: '产品/服务信息',
+      required: true,
+      uiType: 'textarea',
+      placeholder: '描述产品/服务：名称、核心卖点、目标用户、使用场景...',
+      maxLength: 5000,
+    },
+    platform: {
+      description: '目标平台',
+      uiType: 'select',
+      defaultValue: 'xiaohongshu',
+      options: [
+        { label: '小红书', value: 'xiaohongshu' },
+        { label: '抖音/短视频', value: 'douyin' },
+        { label: '微博', value: 'weibo' },
+        { label: '微信公众号', value: 'wechat' },
+      ],
+    },
+    tone: {
+      description: '文案风格',
+      uiType: 'select',
+      defaultValue: 'authentic',
+      options: [
+        { label: '真实体验（第一人称）', value: 'authentic' },
+        { label: '专业种草（数据支撑）', value: 'professional' },
+        { label: '有趣种草（轻松幽默）', value: 'humorous' },
+        { label: '紧迫营销（限时优惠）', value: 'urgent' },
       ],
     },
   },

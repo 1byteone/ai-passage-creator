@@ -1,0 +1,51 @@
+name: ai-detox
+description: 降低文章 AI 检测率，通过句法变异、词汇替换、段落节奏调整使内容更自然
+category: writing
+requiredRoles: [user]
+multiRound: false
+
+variables:
+  articleContent:
+    description: 待优化文章内容
+    required: true
+    source: INPUT
+    uiType: textarea
+    placeholder: 粘贴需要降低 AI 检测率的文章
+    maxLength: 20000
+  intensity:
+    description: 优化强度（轻度/中度/重度）
+    required: false
+    source: INPUT
+    uiType: select
+    defaultValue: medium
+    options:
+      - label: 轻度（微调表达，保留原结构）
+        value: light
+      - label: 中度（句法变化 + 词汇替换）
+        value: medium
+      - label: 重度（深度重写，最大化自然度）
+        value: heavy
+
+phases:
+  - name: ai_audit
+    promptFile: skills/ai-detox/prompts/phase1_ai_audit.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: auditReport
+    variables:
+      - name: articleContent
+    requireConfirmation: false
+
+  - name: detox_rewrite
+    promptFile: skills/ai-detox/prompts/phase2_detox_rewrite.md
+    model: agnes
+    streaming: true
+    outputParser: markdown
+    outputKey: detoxedContent
+    variables:
+      - name: articleContent
+      - name: auditReport
+        ref: ai_audit
+      - name: intensity
+    requireConfirmation: false
