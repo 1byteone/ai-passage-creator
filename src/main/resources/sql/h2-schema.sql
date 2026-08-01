@@ -15,9 +15,9 @@ create table if not exists `user` (
     constraint uq_userAccount UNIQUE (userAccount)
 );
 
-create index idx_userName on `user`(userName);
 
-INSERT INTO `user` (id, userAccount, userPassword, userName, userAvatar, userProfile, userRole) VALUES
+-- 幂等插入：共享 H2 内存库跨测试上下文复用，重复执行需安全（MERGE 避免主键冲突）
+MERGE INTO `user` (id, userAccount, userPassword, userName, userAvatar, userProfile, userRole) KEY(id) VALUES
 (1, 'admin', '10670d38ec32fa8102be6a37f8cb52bf', '管理员', 'https://www.codefather.cn/logo.png', '系统管理员', 'admin'),
 (2, 'user', '10670d38ec32fa8102be6a37f8cb52bf', '普通用户', 'https://www.codefather.cn/logo.png', '我是一个普通用户', 'user'),
 (3, 'test', '10670d38ec32fa8102be6a37f8cb52bf', '测试账号', 'https://www.codefather.cn/logo.png', '这是一个测试账号', 'user');
@@ -132,8 +132,6 @@ create table if not exists article_quality (
     create_time datetime default CURRENT_TIMESTAMP
 );
 
-create index idx_aq_task_id on article_quality(task_id);
-create index idx_aq_overall_score on article_quality(overall_score);
 create table if not exists workspace (
     id bigint auto_increment primary key,
     name varchar(128) not null,

@@ -1,7 +1,9 @@
-DROP TABLE IF EXISTS article;
-DROP TABLE IF EXISTS user;
+-- VIP 测试账号专用 schema
+-- 注意：不能 DROP 共享库中的其他表（skill_execution/publish_schedule 等），
+-- 否则会破坏共享 H2 内存库中其他 @SpringBootTest 的 schema。
+-- 这里仅确保 user / article 表存在（IF NOT EXISTS），并在缺失列时补充。
 
-CREATE TABLE user
+CREATE TABLE IF NOT EXISTS user
 (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY,
     userAccount  VARCHAR(256) NOT NULL,
@@ -19,7 +21,7 @@ CREATE TABLE user
     CONSTRAINT uk_user_account UNIQUE (userAccount)
 );
 
-CREATE TABLE article
+CREATE TABLE IF NOT EXISTS article
 (
     id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
     taskId              VARCHAR(64),
@@ -44,7 +46,3 @@ CREATE TABLE article
     updateTime          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     isDelete            TINYINT NOT NULL DEFAULT 0
 );
-
-CREATE INDEX idx_article_user_id ON article (userId);
-CREATE INDEX idx_article_task_id ON article (taskId);
-CREATE INDEX idx_article_status ON article (status);
