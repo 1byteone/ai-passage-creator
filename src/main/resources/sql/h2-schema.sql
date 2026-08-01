@@ -176,3 +176,17 @@ create table if not exists publish_schedule (
     created_by bigint,
     create_time datetime default CURRENT_TIMESTAMP
 );
+
+create table if not exists webhook_delivery (
+    id bigint auto_increment primary key,
+    event_type varchar(64) not null,
+    payload text,
+    target_url varchar(512),
+    signature varchar(128),
+    attempt_count int default 0,
+    status varchar(20),
+    last_error varchar(1024),
+    next_retry_at datetime,
+    create_time datetime default CURRENT_TIMESTAMP,
+    update_time datetime
+);
