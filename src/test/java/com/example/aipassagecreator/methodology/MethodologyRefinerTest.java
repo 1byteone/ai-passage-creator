@@ -50,8 +50,12 @@ class MethodologyRefinerTest {
     @MockitoBean
     private ArticleRewriteService articleRewriteService;
 
+    /** refine_maxRounds_capsAtThree 中记录 evaluateViral 调用次数，返回递增分数 */
+    private int invocationCount;
+
     @BeforeEach
     void setUp() {
+        invocationCount = 0;
         when(contentQualityService.getLatestViral(TASK_ID)).thenReturn(null);
     }
 
@@ -193,7 +197,10 @@ class MethodologyRefinerTest {
         verify(articleRewriteService, never()).revertTo(any(), anyInt(), any());
     }
 
-    /** 每轮都提升但低分维度持续不达标 → 最多 3 轮封顶 */
+    /**
+     * 每轮都提升（viralScore 逐轮递增）但低分维度持续不达标 → 最多 3 轮封顶。
+     * 注意：evaluateViral 按调用次数返回递增分数，避免 <#40 平局回退> 提前终止。
+     */
     @Test
     void refine_maxRounds_capsAtThree() {
         ArticleQuality initial = quality("{\"emotionalTrigger\":40,\"goldenSentence\":55,\"interactionHook\":80,\"persuasion\":75,\"titleStrategy\":70}");
@@ -201,9 +208,16 @@ class MethodologyRefinerTest {
         initial.setVersionNo(1);
         when(contentQualityService.getLatestViral(TASK_ID)).thenReturn(initial);
 
-        ArticleQuality improved = quality("{\"emotionalTrigger\":70,\"goldenSentence\":40,\"interactionHook\":85,\"persuasion\":80,\"titleStrategy\":75}");
-        improved.setViralScore(new BigDecimal("72.00"));
-        when(contentQualityService.evaluateViral(eq(TASK_ID), eq("default"), eq(1L))).thenReturn(improved);
+        // 每轮 viralScore 递增：50 → 60 → 70 → 80，均大于前值，永不触发平局回退
+        List<BigDecimal> scores = List.of(
+                new BigDecimal("60.00"), new BigDecimal("70.00"), new BigDecimal("80.00"));
+        when(contentQualityService.evaluateViral(eq(TASK_ID), eq("default"), eq(1L)))
+                .thenAnswer(inv -> {
+                    int idx = (int) Math.min(scores.size() - 1, invocationCount++);
+                    ArticleQuality improved = quality("{\"emotionalTrigger\":70,\"goldenSentence\":40,\"interactionHook\":85,\"persuasion\":80,\"titleStrategy\":75}");
+                    improved.setViralScore(scores.get(idx));
+                    return improved;
+                });
         when(articleRewriteService.rewriteSection(eq(TASK_ID), anyString(), isNull(), eq(1L)))
                 .thenReturn(ArticleVersion.builder().taskId(TASK_ID).versionNo(1).build());
 

@@ -2,10 +2,12 @@ package com.example.aipassagecreator.service;
 
 import com.example.aipassagecreator.enums.ArticleStatusEnum;
 import com.example.aipassagecreator.mapper.ArticleMapper;
+import com.example.aipassagecreator.mapper.ArticleQualityMapper;
 import com.example.aipassagecreator.model.po.Article;
 import com.example.aipassagecreator.model.po.ArticleQuality;
 import com.example.aipassagecreator.skill.ModelRouter;
 import com.example.aipassagecreator.utils.GsonUtils;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -42,6 +44,9 @@ class ContentQualityServiceViralTest {
 
     @Autowired
     private ArticleMapper articleMapper;
+
+    @Autowired
+    private ArticleQualityMapper qualityMapper;
 
     private ChatModel mockChatModel;
 
@@ -117,10 +122,14 @@ class ContentQualityServiceViralTest {
         assertEquals("curiosityGap", q.getTitleStrategyHit());
         assertEquals(Integer.valueOf(1), q.getVersionNo());
 
-        // 幂等：同 taskId 二次评测复用同一行，versionNo 递增
+        // 幂等：同 taskId 二次评测仍只有一行 VIRAL 记录（delete+insert），versionNo 递增
         ArticleQuality again = contentQualityService.evaluateViral(taskId, "default", 2L);
-        assertEquals(q.getId(), again.getId(), "VIRAL 评测应复用同一行");
+        assertNotNull(again);
         assertEquals(Integer.valueOf(2), again.getVersionNo());
+        // 每任务仅一行 VIRAL 评测（新行替换旧行，而非累积）
+        List<ArticleQuality> allViralRows = qualityMapper.selectListByQuery(
+                QueryWrapper.create().eq("task_id", taskId).eq("score_type", "VIRAL"));
+        assertEquals(1, allViralRows.size(), "VIRAL 评测每任务仅保留一行");
 
         // 归属用户落库
         ArticleQuality latest = contentQualityService.getLatestViral(taskId);
