@@ -38,6 +38,14 @@ const router = createRouter({
       component: () => import('@/pages/skill/SkillCenterPage.vue'),
     },
     {
+      path: '/skill/chain',
+      name: 'Skill 链式编排',
+      component: () => import('@/pages/skill/SkillChainPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/skill/:skillName',
       name: '执行 AI 技能',
       component: () => import('@/pages/skill/SkillExecutePage.vue'),

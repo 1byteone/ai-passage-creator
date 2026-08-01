@@ -73,6 +73,20 @@
         <p>稍后刷新，或返回首页开始文章创作。</p>
         <button type="button" class="retry-button" @click="loadSkills">刷新</button>
       </div>
+
+      <RouterLink to="/skill/chain" class="chain-banner">
+        <div class="chain-banner-icon">
+          <PartitionOutlined aria-hidden="true" />
+        </div>
+        <div class="chain-banner-copy">
+          <h2>Skill 链式编排</h2>
+          <p>串联多个技能，前一个输出自动作为后一个输入。如「长文 → 社交文案 → 翻译」。</p>
+        </div>
+        <span class="chain-banner-open">
+          去编排
+          <ArrowRightOutlined aria-hidden="true" />
+        </span>
+      </RouterLink>
     </div>
   </section>
 </template>
@@ -83,6 +97,7 @@ import {
   ArrowRightOutlined,
   BulbOutlined,
   FileDoneOutlined,
+  PartitionOutlined,
   ShareAltOutlined,
 } from '@ant-design/icons-vue'
 import { getSkillUiConfig, PUBLIC_SKILL_ORDER } from '@/config/skill'
@@ -503,6 +518,70 @@ onMounted(loadSkills)
 
   .skill-open span {
     display: none;
+  }
+}
+
+.chain-banner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+  padding: 18px 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: white;
+  text-decoration: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.chain-banner:hover,
+.chain-banner:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 12px rgba(250, 140, 22, 0.12);
+}
+
+.chain-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-md);
+  background: #fff7e6;
+  color: var(--color-primary-dark);
+  font-size: 20px;
+}
+
+.chain-banner-copy h2 {
+  margin: 0 0 4px;
+  color: var(--color-text);
+  font-size: 16px;
+}
+
+.chain-banner-copy p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.chain-banner-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-primary-dark);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .chain-banner {
+    grid-template-columns: auto 1fr;
+  }
+
+  .chain-banner-open {
+    grid-column: 2;
   }
 }
 
