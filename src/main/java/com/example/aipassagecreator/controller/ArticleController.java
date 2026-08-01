@@ -263,6 +263,13 @@ public class ArticleController {
         User loginUser = userService.getLoginUser(httpServletRequest);
         String taskId = String.valueOf(request.getId());
 
+        // 归属校验：防止 IDOR，仅文章作者可评分
+        var article = articleService.getByTaskId(taskId);
+        if (article == null || !article.getUserId().equals(loginUser.getId())) {
+            throw new com.example.aipassagecreator.exception.BusinessException(
+                    ErrorCode.NO_AUTH_ERROR, "无权操作此文章");
+        }
+
         try {
             var result = contentQualityService.evaluate(taskId);
             return ResultUtils.success(result);
