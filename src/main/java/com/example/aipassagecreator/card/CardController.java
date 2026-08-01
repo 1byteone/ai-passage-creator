@@ -99,6 +99,12 @@ public class CardController {
         User loginUser = userService.getLoginUser(httpServletRequest);
         Article article = validateAndGetArticle(request.getTaskId(), loginUser);
 
+        // 方法论预校验：未知方法论直接拒绝，避免扣配额后才异步失败（配额无谓消耗）
+        if (request.getMethodologyName() != null && !request.getMethodologyName().isBlank()
+                && !methodologyRegistry.exists(request.getMethodologyName())) {
+            throw new IllegalArgumentException("未知方法论: " + request.getMethodologyName());
+        }
+
         // 配额扣减（原子）：不足则抛 BusinessException，直接返回不派发
         try {
             quotaService.checkAndConsumeQuota(loginUser, "卡片生成配额不足，请升级会员");
