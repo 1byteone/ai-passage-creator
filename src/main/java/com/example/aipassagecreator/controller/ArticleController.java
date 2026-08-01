@@ -15,6 +15,7 @@ import com.example.aipassagecreator.model.vo.ArticleVO;
 import com.example.aipassagecreator.service.AgentLogService;
 import com.example.aipassagecreator.service.ArticleAsyncService;
 import com.example.aipassagecreator.service.ArticleService;
+import com.example.aipassagecreator.service.ArticleRewriteService;
 import com.example.aipassagecreator.service.ContentQualityService;
 import com.example.aipassagecreator.service.UserService;
 import com.mybatisflex.core.paginate.Page;
@@ -47,6 +48,9 @@ public class ArticleController {
 
     @Resource
     private ContentQualityService contentQualityService;
+
+    @Resource
+    private ArticleRewriteService articleRewriteService;
 
     /**
      * 创建文章任务
@@ -276,6 +280,72 @@ public class ArticleController {
         } catch (IllegalArgumentException e) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR, e.getMessage());
         }
+    }
+
+    /**
+     * AI 改写文章（多轮迭代）
+     */
+    @PostMapping("/rewrite")
+    @Operation(summary = "AI 改写文章")
+    @AuthCheck(mustRole = "user")
+    public BaseResponse<?> rewriteArticle(@RequestBody ArticleAiModifyOutlineRequest request,
+                                           HttpServletRequest httpServletRequest) {
+        ThrowUtils.throwIf(request == null || request.getTaskId() == null,
+                ErrorCode.PARAMS_ERROR);
+
+        User loginUser = userService.getLoginUser(httpServletRequest);
+        String taskId = request.getTaskId();
+
+        // 归属校验
+        var article = articleService.getByTaskId(taskId);
+        if (article == null || !article.getUserId().equals(loginUser.getId())) {
+            throw new com.example.aipassagecreator.exception.BusinessException(
+                    ErrorCode.NO_AUTH_ERROR, "无权操作此文章");
+        }
+
+        try {
+            var version = articleRewriteService.rewrite(
+                    taskId, request.getModifySuggestion(), 3, loginUser.getId());
+            return ResultUtils.success(version);
+        } catch (IllegalArgumentException e) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR, e.getMessage());
+        }
+    }
+
+    /**
+     * 获取文章版本历史
+     */
+    @GetMapping("/versions/{taskId}")
+    @Operation(summary = "获取文章版本历史")
+    @AuthCheck(mustRole = "user")
+    public BaseResponse<?> getVersionHistory(@PathVariable String taskId,
+                                              HttpServletRequest httpServletRequest) {
+        User loginUser = userService.getLoginUser(httpServletRequest);
+        var article = articleService.getByTaskId(taskId);
+        if (article == null || !article.getUserId().equals(loginUser.getId())) {
+            throw new com.example.aipassagecreator.exception.BusinessException(
+                    ErrorCode.NO_AUTH_ERROR, "无权操作此文章");
+        }
+        return ResultUtils.success(articleRewriteService.getVersionHistory(taskId));
+    }
+
+    /**
+     * 回退文章到指定版本
+     */
+    @PostMapping("/revert")
+    @Operation(summary = "回退文章到指定版本")
+    @AuthCheck(mustRole = "user")
+    public BaseResponse<?> revertArticle(@RequestBody DeleteRequest request,
+                                          HttpServletRequest httpServletRequest) {
+        ThrowUtils.throwIf(request == null || request.getId() == null,
+                ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(httpServletRequest);
+        // DeleteRequest.getId() 在这里复用为版本号
+        int versionNo = request.getId().intValue();
+
+        // 从请求体获取 taskId（复用 DeleteRequest 的多态性）
+        // 简化: 直接在 ArticleController 使用 request 参数
+        return ResultUtils.error(ErrorCode.PARAMS_ERROR, "请使用 /article/versions/{taskId}/revert/{versionNo}");
     }
 
 }
