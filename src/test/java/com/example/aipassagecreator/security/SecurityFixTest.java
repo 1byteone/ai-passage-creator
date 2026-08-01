@@ -1,22 +1,24 @@
 package com.example.aipassagecreator.security;
 
 import com.example.aipassagecreator.service.ArticleRewriteService;
-import com.example.aipassagecreator.skill.ModelRouter;
 import org.junit.jupiter.api.Test;
-import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.mock.web.MockHttpServletRequest;
 
-import java.lang.reflect.Method;
-import java.util.List;
+import java.lang.reflect.Field;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Prompt 注入安全修复验证
+ * <p>
+ * 背景：ArticleRewriteService 原先用 REWRITE_PROMPT.formatted(instruction, content)
+ * 把用户输入的改写指令和文章内容直接拼进单一 prompt，存在 prompt injection 风险
+ * （用户内容可注入"忽略以上指令"等引导文本覆盖系统角色）。
+ * <p>
+ * 修复：系统指令独立为 SystemMessage，用户输入放入 UserMessage，角色隔离。
+ */
 @SpringBootTest
 class SecurityFixTest {
 
@@ -25,12 +27,21 @@ class SecurityFixTest {
 
     @Test
     void rewritePrompt_separatesUserInstructionFromSystem() throws Exception {
-        // 通过反射读取 REWRITE_PROMPT 常量，验证其不再包含 {instruction} 占位符拼进用户消息
-        java.lang.reflect.Field f = articleRewriteService.getClass().getDeclaredField("REWRITE_PROMPT");
-        f.setAccessible(true);
-        String prompt = (String) f.get(articleRewriteService);
-        // 修复后：指令应放入独立的 SystemMessage，prompt 模板只包含 {content}
-        assertTrue(prompt.contains("{content}"), "重写 prompt 必须仍包含文章占位符");
-        assertTrue(prompt.contains("系统指令"), "修复后 SystemMessage 应明确标识系统指令来源");
+        Class<?> clazz = articleRewriteService.getClass();
+
+        // 1. 系统指令独立常量必须存在，且明确标识来源，防止与用户内容混淆
+        Field systemField = clazz.getDeclaredField("REWRITE_SYSTEM_PROMPT");
+        systemField.setAccessible(true);
+        String systemPrompt = (String) systemField.get(articleRewriteService);
+        assertTrue(systemPrompt.contains("系统指令"),
+                "系统指令必须明确标识，用户内容不能伪装成系统指令");
+
+        // 2. 用户消息模板不应再用 %s 拼接占位（旧实现的安全隐患），改用命名占位符
+        Field promptField = clazz.getDeclaredField("REWRITE_PROMPT");
+        promptField.setAccessible(true);
+        String userPrompt = (String) promptField.get(articleRewriteService);
+        assertTrue(userPrompt.contains("{content}"), "用户消息模板必须保留文章内容占位符");
+        assertFalse(userPrompt.contains("%s"),
+                "用户消息模板不得使用 sprintf %s 拼接，须用命名占位符以便语义隔离");
     }
 }
