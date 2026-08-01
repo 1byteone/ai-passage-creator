@@ -15,15 +15,22 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Aspect
 @Component
 public class RateLimitInterceptor {
 
-    /** Redis 可选：不可用时限流降级为放行（测试环境/Redis 故障） */
+    /** Redis 可选：不可用时降级为进程内内存限流（非放行，避免 fail-open） */
     private final RedisTemplate<String, Object> redisTemplate;
+
+    /** 内存降级限流器：key → (窗口起始, 计数) */
+    private final Map<String, InMemoryWindow> localLimit = new ConcurrentHashMap<>();
 
     public RateLimitInterceptor(ObjectProvider<RedisTemplate<String, Object>> provider) {
         this.redisTemplate = provider.getIfAvailable();
@@ -41,24 +48,50 @@ public class RateLimitInterceptor {
         String method = ((MethodSignature) joinPoint.getSignature()).getMethod().getName();
         String key = rateLimit.key() + ":" + method + ":" + userId;
 
-        // Redis 不可用时跳过限流（放行），避免限流依赖拖垮主流程
-        if (redisTemplate == null || redisTemplate.getConnectionFactory() == null) {
-            return joinPoint.proceed();
-        }
+        boolean redisAvailable = redisTemplate != null
+                && redisTemplate.getConnectionFactory() != null;
 
-        Long count = redisTemplate.opsForValue().increment(key);
-        if (count != null && count == 1) {
-            // 首次访问，设置过期时间
-            redisTemplate.expire(key, rateLimit.window(), TimeUnit.SECONDS);
-        }
-
-        if (count != null && count > rateLimit.limit()) {
-            log.warn("接口限流触发: method={}, userId={}, count={}, limit={}",
-                    method, userId, count, rateLimit.limit());
-            throw new BusinessException(ErrorCode.OPERATION_ERROR,
-                    "请求过于频繁，请稍后重试");
+        if (redisAvailable) {
+            Long count = redisTemplate.opsForValue().increment(key);
+            if (count != null && count == 1) {
+                redisTemplate.expire(key, rateLimit.window(), TimeUnit.SECONDS);
+            }
+            if (count != null && count > rateLimit.limit()) {
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "请求过于频繁，请稍后重试");
+            }
+        } else {
+            // Redis 故障降级：内存限流，保证限流语义不因依赖中断而失效
+            if (checkLocalLimit(key, rateLimit.limit(), rateLimit.window(), rateLimit.unit())) {
+                log.warn("内存限流触发(Redis 不可用降级): method={}, userId={}, limit={}",
+                        method, userId, rateLimit.limit());
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "请求过于频繁，请稍后重试");
+            }
         }
 
         return joinPoint.proceed();
+    }
+
+    /**
+     * 内存窗口限流检查
+     *
+     * @return true 表示超限（应拒绝）
+     */
+    private boolean checkLocalLimit(String key, int limit, int window, TimeUnit unit) {
+        long now = Instant.now().toEpochMilli();
+        long windowMillis = unit.toMillis(window);
+
+        InMemoryWindow windowEntry = localLimit.compute(key, (k, existing) -> {
+            if (existing == null || now - existing.windowStartMillis >= windowMillis) {
+                // 新窗口
+                return new InMemoryWindow(now, new AtomicInteger(1));
+            }
+            existing.counter.incrementAndGet();
+            return existing;
+        });
+        return windowEntry.counter.get() > limit;
+    }
+
+    /** 内存限流窗口：窗口起始时间 + 请求计数 */
+    private record InMemoryWindow(long windowStartMillis, AtomicInteger counter) {
     }
 }
