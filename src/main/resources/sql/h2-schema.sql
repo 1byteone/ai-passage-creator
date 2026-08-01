@@ -154,3 +154,25 @@ create table if not exists workspace_resource (
     create_time datetime default CURRENT_TIMESTAMP,
     constraint uq_ws_res unique (workspace_id, resource_type, resource_id)
 );
+
+create table if not exists approval_record (
+    id bigint auto_increment primary key,
+    article_task_id varchar(64) not null,
+    version_no int,
+    status varchar(20) default 'PENDING',
+    submitted_by bigint,
+    reviewer_id bigint,
+    comment varchar(1024),
+    submit_time datetime default CURRENT_TIMESTAMP,
+    review_time datetime
+);
+
+create table if not exists publish_schedule (
+    id bigint auto_increment primary key,
+    article_task_id varchar(64) not null,
+    publish_at datetime not null,
+    status varchar(20) default 'SCHEDULED',
+    published_at datetime,
+    created_by bigint,
+    create_time datetime default CURRENT_TIMESTAMP
+);
