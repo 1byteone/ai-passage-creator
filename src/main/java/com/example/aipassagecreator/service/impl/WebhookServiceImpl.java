@@ -34,16 +34,21 @@ public class WebhookServiceImpl implements WebhookService {
     @Resource
     private WebhookDeliveryMapper deliveryMapper;
 
+    /** 密钥未配置时 webhook 功能降级为不可用（不阻止应用启动） */
     public WebhookServiceImpl(@Value("${WEBHOOK_SHARED_SECRET:${webhook.shared-secret:}}") String sharedSecret) {
-        if (sharedSecret == null || sharedSecret.isBlank()) {
-            throw new IllegalStateException(
-                    "WEBHOOK_SHARED_SECRET 环境变量未配置。请设置后才可启用 Webhook 功能。");
-        }
         this.sharedSecret = sharedSecret;
+        if (sharedSecret == null || sharedSecret.isBlank()) {
+            log.warn("WEBHOOK_SHARED_SECRET 未配置，Webhook 功能禁用。设置环境变量后重启生效。");
+        }
     }
 
     @Override
     public void publish(String eventType, Map<String, Object> payload, String targetUrl) {
+        // 密钥未配置时功能禁用
+        if (sharedSecret == null || sharedSecret.isBlank()) {
+            throw new IllegalStateException(
+                    "Webhook 功能未启用：请配置 WEBHOOK_SHARED_SECRET 环境变量");
+        }
         // SSRF 防护：仅允许 https 外网地址，拒绝内网/环回/元数据地址
         validateTargetUrl(targetUrl);
 

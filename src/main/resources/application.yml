@@ -117,6 +117,10 @@ model:
 langsearch:
   api-key: ${LANGSEARCH_API_KEY:}
 
+# Webhook 共享签名密钥（生产必填；留空则 WebhookService 启动失败）
+webhook:
+  shared-secret: ${WEBHOOK_SHARED_SECRET:}
+
 # Skill 超时确认收割间隔（毫秒）
 skill:
   confirmation:

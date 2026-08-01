@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.skill;
 
+import com.example.aipassagecreator.annotation.RateLimit;
 import com.example.aipassagecreator.common.BaseResponse;
 import com.example.aipassagecreator.common.ResultUtils;
 import com.example.aipassagecreator.exception.BusinessException;
@@ -31,6 +32,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -57,6 +59,7 @@ public class SkillController {
      * 执行 Skill
      */
     @PostMapping("/{skillName}/execute")
+    @RateLimit(limit = 10, window = 60, unit = TimeUnit.SECONDS, key = "skill_execute")
     public BaseResponse<?> executeSkill(
             @PathVariable String skillName,
             @RequestBody SkillExecuteRequest request,
