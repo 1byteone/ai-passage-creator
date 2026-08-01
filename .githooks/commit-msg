@@ -1,0 +1,31 @@
+#!/bin/sh
+# commit-msg 钩子 — 校验 Conventional Commits 格式
+# 用法: 通过 git config core.hooksPath .githooks 启用
+
+MSG_FILE="$1"
+MSG=$(cat "$MSG_FILE")
+
+# 提取第一行 subject（去掉注释行后）
+SUBJECT=$(grep -v '^#' "$MSG_FILE" | grep -v '^$' | head -1)
+
+# 允许的类型枚举
+TYPES="feat|fix|refactor|perf|test|docs|style|chore|ci|build|revert"
+
+# 格式: type(scope): subject 或 type: subject
+if ! echo "$SUBJECT" | grep -qE "^(${TYPES})(\([a-z0-9_-]+\))?: .{1,72}$"; then
+    echo ""
+    echo "❌ 提交信息格式不符合 Conventional Commits 规范"
+    echo ""
+    echo "   正确格式: <type>(<scope>): <subject>"
+    echo "   示例:     feat(article): 新增五维质量评分"
+    echo "             fix(auth): 修复 SSE 端点 401 问题"
+    echo ""
+    echo "   当前提交: $SUBJECT"
+    echo ""
+    echo "   type 枚举: $TYPES"
+    echo "   参考: CONTRIBUTING.md §1 提交信息规范"
+    echo ""
+    exit 1
+fi
+
+exit 0
