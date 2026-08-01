@@ -117,6 +117,10 @@ public class CardRenderPipeline {
                         .setJavaScriptEnabled(false));
              var page = context.newPage()) {
 
+            // 单页操作（setContent/evaluate/screenshot）默认 15s 超时，
+            // 避免挂起页面占用 permit 过长而超出批次 60s 上限
+            page.setDefaultTimeout(RENDER_TIMEOUT_SECONDS * 1000);
+
             // 安全：拒绝所有外部网络请求
             page.route("**", route -> route.abort());
 
