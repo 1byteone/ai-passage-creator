@@ -1,4 +1,4 @@
-export type SkillIconName = 'ideas' | 'proofreading' | 'social'
+export type SkillIconName = 'ideas' | 'proofreading' | 'social' | 'seo' | 'translate'
 
 export interface SkillUiConfig {
   name: string
@@ -13,7 +13,7 @@ export interface SkillUiConfig {
   accent: 'blue' | 'green' | 'amber'
 }
 
-export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x', 'research'] as const
+export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x', 'research', 'seo-optimizer', 'content-translator'] as const
 
 export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
   'topic-gen': {
@@ -64,6 +64,30 @@ export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
     categoryLabel: '写作',
     accent: 'blue',
   },
+  'seo-optimizer': {
+    name: 'seo-optimizer',
+    title: 'SEO 优化',
+    shortTitle: 'SEO 优化',
+    description: '对文章做 SEO 审计评分，优化标题、关键词密度与结构。',
+    inputLabel: '待优化的文章与目标关键词',
+    outputLabel: 'SEO 评分报告与优化后文章',
+    actionLabel: '优化 SEO',
+    icon: 'seo',
+    categoryLabel: '写作',
+    accent: 'green',
+  },
+  'content-translator': {
+    name: 'content-translator',
+    title: '多语言翻译',
+    shortTitle: '翻译',
+    description: '将文章翻译为英文、日文、韩文等 6 种语言，保留 Markdown 格式。',
+    inputLabel: '待翻译的文章与目标语言',
+    outputLabel: '翻译后的完整文章',
+    actionLabel: '开始翻译',
+    icon: 'translate',
+    categoryLabel: '写作',
+    accent: 'amber',
+  },
 }
 
 export const PHASE_LABELS: Record<string, string> = {
@@ -74,6 +98,9 @@ export const PHASE_LABELS: Record<string, string> = {
   condense: '提炼社交文案',
   search: '资料检索',
   summary: '生成调研简报',
+  seo_audit: 'SEO 审计评分',
+  seo_rewrite: 'SEO 优化改写',
+  translate: '多语言翻译',
 }
 
 const FALLBACK_FIELDS: Record<string, Record<string, API.SkillVariableDef>> = {
@@ -145,6 +172,42 @@ const FALLBACK_FIELDS: Record<string, Record<string, API.SkillVariableDef>> = {
         { label: '价值主张型', value: 'value-proposition' },
         { label: '金句型', value: 'quote' },
         { label: '数据型', value: 'data' },
+      ],
+    },
+  },
+  'seo-optimizer': {
+    articleContent: {
+      description: '待优化的文章',
+      required: true,
+      uiType: 'textarea',
+      placeholder: '粘贴需要做 SEO 优化的文章正文',
+      maxLength: 20000,
+    },
+    primaryKeyword: {
+      description: '主要目标关键词',
+      uiType: 'input',
+      placeholder: '例如：Spring AI 入门指南',
+    },
+  },
+  'content-translator': {
+    articleContent: {
+      description: '待翻译的文章',
+      required: true,
+      uiType: 'textarea',
+      placeholder: '粘贴需要翻译的文章',
+      maxLength: 20000,
+    },
+    targetLang: {
+      description: '目标语言',
+      uiType: 'select',
+      defaultValue: 'en',
+      options: [
+        { label: 'English (英文)', value: 'en' },
+        { label: '日本語 (日文)', value: 'ja' },
+        { label: '한국어 (韩文)', value: 'ko' },
+        { label: 'Français (法文)', value: 'fr' },
+        { label: 'Deutsch (德文)', value: 'de' },
+        { label: 'Español (西班牙文)', value: 'es' },
       ],
     },
   },

@@ -42,7 +42,8 @@ import java.util.stream.Collectors;
 public class SkillController {
 
     private static final List<String> PUBLIC_SKILLS =
-            List.of("topic-gen", "proofreading", "article-to-x", "research");
+            List.of("topic-gen", "proofreading", "article-to-x", "research",
+                    "seo-optimizer", "content-translator");
 
     private static final String ACTION_APPROVE = "approve";
     private static final String ACTION_MODIFY = "modify";

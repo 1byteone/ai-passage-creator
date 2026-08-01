@@ -1,0 +1,45 @@
+name: content-translator
+description: 将文章翻译为英/日/韩等多语言，保留 Markdown 格式
+category: writing
+requiredRoles: [user]
+multiRound: false
+
+variables:
+  articleContent:
+    description: 待翻译的文章内容
+    required: true
+    source: INPUT
+    uiType: textarea
+    placeholder: 粘贴需要翻译的文章
+    maxLength: 20000
+  targetLang:
+    description: 目标语言
+    required: true
+    source: INPUT
+    uiType: select
+    defaultValue: en
+    options:
+      - label: English (英文)
+        value: en
+      - label: 日本語 (日文)
+        value: ja
+      - label: 한국어 (韩文)
+        value: ko
+      - label: Français (法文)
+        value: fr
+      - label: Deutsch (德文)
+        value: de
+      - label: Español (西班牙文)
+        value: es
+
+phases:
+  - name: translate
+    promptFile: skills/content-translator/prompts/phase1_translate.md
+    model: agnes
+    streaming: true
+    outputParser: markdown
+    outputKey: translatedContent
+    variables:
+      - name: articleContent
+      - name: targetLang
+    requireConfirmation: false

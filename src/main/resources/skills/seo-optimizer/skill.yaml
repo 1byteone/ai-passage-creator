@@ -1,0 +1,45 @@
+name: seo-optimizer
+description: 对文章做 SEO 评分与优化，给出标题、关键词和结构调整建议
+category: writing
+requiredRoles: [user]
+multiRound: false
+
+variables:
+  articleContent:
+    description: 待优化的文章内容
+    required: true
+    source: INPUT
+    uiType: textarea
+    placeholder: 粘贴需要做 SEO 优化的文章正文
+    maxLength: 20000
+  primaryKeyword:
+    description: 主要目标关键词（可选）
+    required: false
+    source: INPUT
+    uiType: input
+    placeholder: 例如：Spring AI 入门指南
+
+phases:
+  - name: seo_audit
+    promptFile: skills/seo-optimizer/prompts/phase1_seo_audit.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: seoReport
+    variables:
+      - name: articleContent
+      - name: primaryKeyword
+    requireConfirmation: false
+
+  - name: seo_rewrite
+    promptFile: skills/seo-optimizer/prompts/phase2_seo_rewrite.md
+    model: agnes
+    streaming: true
+    outputParser: markdown
+    outputKey: optimizedContent
+    variables:
+      - name: articleContent
+      - name: primaryKeyword
+      - name: seoReport
+        ref: seo_audit
+    requireConfirmation: false
