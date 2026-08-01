@@ -1654,6 +1654,8 @@ onBeforeUnmount(() => {
 
 /* 正文预览 */
 .content-preview {
+  contain: layout style;
+  overflow-anchor: none;
   line-height: 1.8;
 }
 

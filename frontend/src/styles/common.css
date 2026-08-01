@@ -368,3 +368,109 @@ button,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ==================== 触摸目标最小尺寸 ==================== */
+@media (pointer: coarse) {
+  button,
+  a,
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="submit"],
+  select,
+  label {
+    min-height: 44px;
+  }
+
+  button:not(.ant-btn-lg),
+  a:not(.ant-btn) {
+    min-width: 44px;
+  }
+}
+
+/* ==================== 全局焦点可见性 ==================== */
+:focus-visible {
+  outline: 2px solid var(--color-primary, #fa8c16);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm, 4px);
+}
+
+/* 按钮类元素使用更粗的焦点环 */
+button:focus-visible,
+a[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline-width: 3px;
+}
+
+/* ==================== 骨架屏改进 ==================== */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-block,
+.skeleton-line {
+  background: linear-gradient(
+    90deg,
+    var(--color-border, #e8e8e8) 25%,
+    var(--color-background-secondary, #f5f5f5) 37%,
+    var(--color-border, #e8e8e8) 63%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+}
+
+/* ==================== 空状态优化 ==================== */
+.skill-state,
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background-secondary);
+}
+
+.skill-state h2,
+.empty-state h2 {
+  margin: 0 0 8px;
+  color: var(--color-text);
+  font-size: 18px;
+}
+
+.skill-state p,
+.empty-state p {
+  margin: 0 0 16px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.retry-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: white;
+  color: var(--color-text);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.retry-button:hover {
+  border-color: var(--color-primary);
+  background: var(--surface-brand-soft);
+}
+
+/* ==================== 流式内容稳定容器 ==================== */
+.stream-preview,
+.content-preview {
+  contain: layout style;
+  overflow-anchor: none;
+}

@@ -5,20 +5,13 @@
         <div>
           <p>AI 工具</p>
           <h1 id="skill-center-title">AI 技能中心</h1>
-          <span>选择一个明确任务，提交素材并带走结构化结果。</span>
+          <span>{{ skills.length }} 个技能，覆盖创作全流程</span>
         </div>
-        <fieldset class="category-filter">
-          <legend class="visually-hidden">筛选技能分类</legend>
-          <label v-for="option in categoryOptions" :key="option.value">
-            <input v-model="category" type="radio" name="skill-category" :value="option.value" />
-            <span>{{ option.label }}</span>
-          </label>
-        </fieldset>
       </header>
 
       <div v-if="loading" class="skill-list" aria-busy="true" aria-label="技能加载中">
         <span class="visually-hidden" role="status">正在加载技能列表…</span>
-        <div v-for="index in 3" :key="index" class="skill-skeleton" aria-hidden="true">
+        <div v-for="index in 4" :key="index" class="skill-skeleton" aria-hidden="true">
           <span class="skeleton-block skeleton-icon"></span>
           <span class="skeleton-lines">
             <span class="skeleton-line skeleton-line-title"></span>
@@ -34,39 +27,47 @@
         <button type="button" class="retry-button" @click="loadSkills">刷新</button>
       </div>
 
-      <div v-else-if="visibleSkills.length" class="skill-list">
-        <RouterLink
-          v-for="skill in visibleSkills"
-          :key="skill.name"
-          :to="`/skill/${skill.name}`"
-          class="skill-card"
-        >
-          <div class="skill-identity">
-            <div :class="['skill-icon', getSkillUiConfig(skill.name).accent]">
-              <component :is="iconFor(skill.name)" />
-            </div>
-            <span>{{ getSkillUiConfig(skill.name).categoryLabel }}</span>
+      <template v-else-if="skills.length">
+        <section v-for="group in skillGroups" :key="group.key" class="skill-group">
+          <div class="group-heading">
+            <h2>{{ group.label }}</h2>
+            <span class="group-count">{{ group.skills.length }} 个</span>
           </div>
-          <div class="skill-copy">
-            <h2>{{ getSkillUiConfig(skill.name).title }}</h2>
-            <p>{{ getSkillUiConfig(skill.name).description }}</p>
+          <div class="skill-list">
+            <RouterLink
+              v-for="skill in group.skills"
+              :key="skill.name"
+              :to="`/skill/${skill.name}`"
+              class="skill-card"
+            >
+              <div class="skill-identity">
+                <div :class="['skill-icon', getSkillUiConfig(skill.name).accent]">
+                  <component :is="iconFor(skill.name)" />
+                </div>
+                <span>{{ getSkillUiConfig(skill.name).categoryLabel }}</span>
+              </div>
+              <div class="skill-copy">
+                <h3>{{ getSkillUiConfig(skill.name).title }}</h3>
+                <p>{{ getSkillUiConfig(skill.name).description }}</p>
+              </div>
+              <dl class="skill-contract">
+                <div>
+                  <dt>你需要提供</dt>
+                  <dd>{{ getSkillUiConfig(skill.name).inputLabel }}</dd>
+                </div>
+                <div>
+                  <dt>你将得到</dt>
+                  <dd>{{ getSkillUiConfig(skill.name).outputLabel }}</dd>
+                </div>
+              </dl>
+              <div class="skill-open">
+                <span>{{ getSkillUiConfig(skill.name).actionLabel }}</span>
+                <ArrowRightOutlined aria-hidden="true" />
+              </div>
+            </RouterLink>
           </div>
-          <dl class="skill-contract">
-            <div>
-              <dt>你需要提供</dt>
-              <dd>{{ getSkillUiConfig(skill.name).inputLabel }}</dd>
-            </div>
-            <div>
-              <dt>你将得到</dt>
-              <dd>{{ getSkillUiConfig(skill.name).outputLabel }}</dd>
-            </div>
-          </dl>
-          <div class="skill-open">
-            <span>{{ getSkillUiConfig(skill.name).actionLabel }}</span>
-            <ArrowRightOutlined aria-hidden="true" />
-          </div>
-        </RouterLink>
-      </div>
+        </section>
+      </template>
 
       <div v-else class="skill-state" role="status">
         <h2>当前没有可用技能</h2>
@@ -105,21 +106,23 @@ import { getSkillUiConfig, PUBLIC_SKILL_ORDER } from '@/config/skill'
 const skills = ref<API.SkillSummary[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
-const category = ref('all')
-const categoryOptions = [
-  { label: '全部', value: 'all' },
-  { label: '写作', value: 'writing' },
-]
 
-const visibleSkills = computed(() => {
-  const ordered = [...skills.value].sort(
-    (left, right) =>
-      PUBLIC_SKILL_ORDER.indexOf(left.name as (typeof PUBLIC_SKILL_ORDER)[number]) -
-      PUBLIC_SKILL_ORDER.indexOf(right.name as (typeof PUBLIC_SKILL_ORDER)[number]),
-  )
-  return category.value === 'all'
-    ? ordered
-    : ordered.filter((skill) => skill.category === category.value)
+const SKILL_GROUPS: Record<string, { label: string; keys: string[] }> = {
+  create: { label: '内容创作', keys: ['topic-gen', 'outline-expander', 'article-to-x'] },
+  enhance: { label: '内容增强', keys: ['proofreading', 'ai-detox', 'rewrite-plagiarism', 'seo-optimizer'] },
+  distribute: { label: '内容分发', keys: ['seeding-copy', 'video-script', 'content-translator'] },
+  research: { label: '调研与分析', keys: ['research'] },
+}
+
+const skillGroups = computed(() => {
+  const skillMap = new Map(skills.value.map((s) => [s.name, s]))
+  return Object.entries(SKILL_GROUPS).map(([key, group]) => ({
+    key,
+    label: group.label,
+    skills: group.keys
+      .map((k) => skillMap.get(k))
+      .filter((s): s is API.SkillSummary => s !== undefined),
+  })).filter((g) => g.skills.length > 0)
 })
 
 const iconFor = (skillName: string): Component => {
@@ -348,6 +351,38 @@ onMounted(loadSkills)
   }
 }
 
+.skill-group {
+  display: grid;
+  gap: 12px;
+}
+
+.skill-group + .skill-group {
+  margin-top: 32px;
+}
+
+.group-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.group-heading h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 17px;
+}
+
+.group-count {
+  padding: 1px 10px;
+  border-radius: 20px;
+  background: var(--color-background-secondary);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
 .skill-card {
   display: grid;
   grid-template-columns: 112px minmax(180px, 0.8fr) minmax(320px, 1.25fr) 128px;
@@ -358,13 +393,23 @@ onMounted(loadSkills)
   text-decoration: none;
   transition:
     border-color var(--transition-fast),
-    background var(--transition-fast);
+    background var(--transition-fast),
+    transform var(--transition-fast);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  margin: 0 -8px;
 }
 
-.skill-card:hover,
+.skill-card:hover {
+  background: var(--surface-brand-soft);
+  transform: translateX(4px);
+  outline: none;
+}
+
 .skill-card:focus-visible {
   background: var(--surface-brand-soft);
-  outline: none;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .skill-identity {
@@ -403,7 +448,7 @@ onMounted(loadSkills)
   color: #b45309;
 }
 
-.skill-copy h2 {
+.skill-copy h3 {
   margin: 0 0 6px;
   color: var(--color-text);
   font-size: 19px;

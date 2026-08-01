@@ -157,6 +157,8 @@ const phaseStatus = (index: number) => {
 }
 
 .stream-preview {
+  contain: layout style;
+  overflow-anchor: none;
   margin: 0 24px 24px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
