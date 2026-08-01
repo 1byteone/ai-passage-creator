@@ -9,6 +9,7 @@ import com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
+import com.example.aipassagecreator.config.YamlResourceLoader;
 import com.example.aipassagecreator.mapper.SkillExecutionMapper;
 import com.example.aipassagecreator.skill.tool.WebSearchTool;
 import jakarta.annotation.PostConstruct;
@@ -17,11 +18,8 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.io.support.ResourcePatternUtils;
 import org.springframework.stereotype.Component;
-import org.yaml.snakeyaml.Yaml;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,6 +44,7 @@ public class SkillRegistry {
     private final OutputParserRegistry parserRegistry;
     private final SkillExecutionMapper skillExecutionMapper;
     private final WebSearchTool webSearchTool;
+    private final YamlResourceLoader yamlResourceLoader;
     private SkillExecutionService skillExecutionService;
 
     public SkillRegistry(ResourceLoader resourceLoader,
@@ -53,13 +52,15 @@ public class SkillRegistry {
                          ModelRouter modelRouter,
                          OutputParserRegistry parserRegistry,
                          SkillExecutionMapper skillExecutionMapper,
-                         WebSearchTool webSearchTool) {
+                         WebSearchTool webSearchTool,
+                         YamlResourceLoader yamlResourceLoader) {
         this.resourceLoader = resourceLoader;
         this.templateEngine = templateEngine;
         this.modelRouter = modelRouter;
         this.parserRegistry = parserRegistry;
         this.skillExecutionMapper = skillExecutionMapper;
         this.webSearchTool = webSearchTool;
+        this.yamlResourceLoader = yamlResourceLoader;
     }
 
     @Autowired
@@ -69,26 +70,20 @@ public class SkillRegistry {
 
     @PostConstruct
     public void init() {
-        try {
-            Resource[] resources = ResourcePatternUtils.getResourcePatternResolver(resourceLoader)
-                    .getResources("classpath*:skills/*/skill.yaml");
-            Yaml yaml = new Yaml();
-            for (Resource resource : resources) {
-                try {
-                    SkillDefinition def = yaml.loadAs(resource.getInputStream(), SkillDefinition.class);
-                    validateSkillDefinition(def);
-                    skillMap.put(def.getName(), def);
-                    CompiledGraph graph = buildGraph(def);
-                    graphCache.put(def.getName(), graph);
-                    log.info("Skill 已注册: {} ({} phases)", def.getName(), def.getPhases().size());
-                } catch (Exception e) {
-                    log.error("Skill 注册失败: {}", resource.getFilename(), e);
-                }
+        List<SkillDefinition> defs = yamlResourceLoader.loadAll(
+                "classpath*:skills/*/skill.yaml", SkillDefinition.class);
+        for (SkillDefinition def : defs) {
+            try {
+                validateSkillDefinition(def);
+                skillMap.put(def.getName(), def);
+                CompiledGraph graph = buildGraph(def);
+                graphCache.put(def.getName(), graph);
+                log.info("Skill 已注册: {} ({} phases)", def.getName(), def.getPhases().size());
+            } catch (Exception e) {
+                log.error("Skill 注册失败: {}", def.getName(), e);
             }
-            log.info("SkillRegistry 初始化完成，共注册 {} 个 Skill", skillMap.size());
-        } catch (Exception e) {
-            log.error("SkillRegistry 扫描失败", e);
         }
+        log.info("SkillRegistry 初始化完成，共注册 {} 个 Skill", skillMap.size());
     }
 
     public SkillDefinition getSkill(String name) {
