@@ -13,6 +13,7 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,14 +62,17 @@ public class YamlResourceLoader {
                     log.warn("YAML 文件超过大小限制 {}KB, 跳过: {}", MAX_FILE_SIZE / 1024, resource.getFilename());
                     continue;
                 }
-                try {
+                try (InputStream is = resource.getInputStream()) {
                     LoaderOptions options = new LoaderOptions();
                     options.setMaxAliasesForCollections(50);
                     options.setCodePointLimit(1024 * 1024);
                     options.setNestingDepthLimit(50);
                     Yaml yaml = new Yaml(new SafeConstructor(options));
-                    Object parsed = yaml.load(resource.getInputStream());
+                    Object parsed = yaml.load(is);
                     T def = convert(parsed, clazz);
+                    if (def == null) {
+                        log.debug("YAML 文件解析为空: {}", resource.getFilename());
+                    }
                     if (def != null) {
                         result.add(def);
                     }

@@ -132,6 +132,9 @@ create table if not exists article_quality (
     create_time datetime default CURRENT_TIMESTAMP
 );
 
+-- 唯一索引：同 taskId 同评测类型仅一行（配合 delete+insert 幂等 upsert，防并发双插）
+create unique index if not exists idx_aq_task_score_type on article_quality(task_id, score_type);
+
 create table if not exists workspace (
     id bigint auto_increment primary key,
     name varchar(128) not null,

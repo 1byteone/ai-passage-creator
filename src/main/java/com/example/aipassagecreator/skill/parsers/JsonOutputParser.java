@@ -4,12 +4,10 @@ import com.example.aipassagecreator.skill.PhaseDefinition;
 import com.example.aipassagecreator.skill.SkillOutputParser;
 import com.example.aipassagecreator.utils.GsonUtils;
 import com.google.gson.reflect.TypeToken;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-@Slf4j
 @Component
 public class JsonOutputParser implements SkillOutputParser<Map<String, Object>> {
 

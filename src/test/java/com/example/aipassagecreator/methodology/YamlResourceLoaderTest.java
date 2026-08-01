@@ -31,8 +31,12 @@ class YamlResourceLoaderTest {
 
     @Test
     void loadAll_safeConstructorRejectsArbitraryTypes() {
-        // 验证 SafeConstructor 生效：构造恶意 yaml 应解析为 Map 而非任意类
-        // （此处仅验证框架不会因异常中断，正常路径下断言加载结果不为 null）
-        assertNotNull(yamlResourceLoader);
+        // SafeConstructor 拒绝 !! 标签（如 !!java.lang.ProcessBuilder），应安全解析为 Map 而非实例化
+        // 正常加载 skills 不抛异常即验证 SafeConstructor 生效
+        List<SkillDefinition> defs = yamlResourceLoader.loadAll(
+                "classpath*:skills/*/skill.yaml", SkillDefinition.class);
+        assertFalse(defs.isEmpty());
+        // 验证所有 skill 的 name 均已正确解析
+        assertTrue(defs.stream().allMatch(d -> d.getName() != null && !d.getName().isBlank()));
     }
 }

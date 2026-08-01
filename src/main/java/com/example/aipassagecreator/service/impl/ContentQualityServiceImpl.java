@@ -152,6 +152,7 @@ public class ContentQualityServiceImpl implements ContentQualityService {
 
         ArticleQuality quality = ArticleQuality.builder()
                 .taskId(taskId)
+                .scoreType("GENERIC")
                 .articleContentSnapshot(snapshot)
                 .structureScore(asInt(parsed.get("structureScore")))
                 .logicScore(asInt(parsed.get("logicScore")))
@@ -178,7 +179,7 @@ public class ContentQualityServiceImpl implements ContentQualityService {
         return articleQualityMapper.selectOneByQuery(
                 QueryWrapper.create()
                         .eq("task_id", taskId)
-                        .orderBy("create_time", false)
+                        .eq("score_type", "GENERIC")
                         .orderBy("id", false)
                         .limit(1));
     }

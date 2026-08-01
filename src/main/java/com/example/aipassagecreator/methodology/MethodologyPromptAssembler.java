@@ -4,7 +4,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 方法论提示词装配器：将创作维度/标题策略组装为可追加到 Agent prompt 的提示段。
- * <p>注入位置必须在输出格式约束（"直接返回 JSON/Markdown"）之前，避免破坏结构化输出。</p>
+ * <p>注入位置在 getStylePrompt(style) 之后追加，遵循现有 prompt 组装模式。</p>
  */
 @Component
 public class MethodologyPromptAssembler {

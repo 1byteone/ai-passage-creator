@@ -25,6 +25,7 @@ import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 @Service
@@ -222,7 +223,8 @@ public class ArticleAgentService {
         String prompt = PromptConstant.AGENT1_TITLE_PROMPT
                 .replace("{topic}", state.getTopic())
                 + getStylePrompt(state.getStyle())
-                + methodologyPromptAssembler.buildTitleGuidance(state.getMethodology());
+                + methodologyPromptAssembler.buildTitleGuidance(
+                        Optional.ofNullable(state.getMethodology()).orElse("default"));
 
         String content = callLlm(prompt);
         List<ArticleState.TitleOption> titleOptions = parseJsonListResponse(
@@ -247,7 +249,8 @@ public class ArticleAgentService {
                 .replace("{mainTitle}", state.getTitle().getMainTitle())
                 .replace("{subTitle}", state.getTitle().getSubTitle())
                 +getStylePrompt(state.getStyle())  //添加风格Prompt
-                +methodologyPromptAssembler.buildContentGuidance(state.getMethodology());
+                +methodologyPromptAssembler.buildContentGuidance(
+                        Optional.ofNullable(state.getMethodology()).orElse("default"));
 
         String content = callLlmWithStreaming(prompt, streamHandler,SseMessageTypeEnum.AGENT2_STREAMING);
         ArticleState.OutlineResult outlineResult = parseJsonResponse(content, ArticleState.OutlineResult.class,"大纲");
@@ -271,7 +274,8 @@ public class ArticleAgentService {
                 .replace("{subTitle}", state.getTitle().getSubTitle())
                 .replace("{outline}", outlineText)
                 +getStylePrompt(state.getStyle())  //添加风格Prompt
-                +methodologyPromptAssembler.buildContentGuidance(state.getMethodology());
+                +methodologyPromptAssembler.buildContentGuidance(
+                        Optional.ofNullable(state.getMethodology()).orElse("default"));
 
 
         String content = callLlmWithStreaming(prompt, streamHandler,SseMessageTypeEnum.AGENT3_STREAMING);

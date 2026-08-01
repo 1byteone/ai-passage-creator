@@ -129,6 +129,23 @@ class MethodologyRefinerTest {
         verify(articleRewriteService, never()).rewriteSection(any(), any(), any(), any());
     }
 
+    /** viralScore ≥ 70 但仍有弱维 → 应继续执行反哺，而非跳过 */
+    @Test
+    void refine_doesNotSkipWhenWeakDimsExistDespiteHighViralScore() {
+        ArticleQuality quality = quality("{\"emotionalTrigger\":70,\"goldenSentence\":40,\"interactionHook\":85,\"persuasion\":80,\"titleStrategy\":75}");
+        quality.setViralScore(new BigDecimal("72.00"));
+        quality.setVersionNo(1);
+        when(contentQualityService.getLatestViral(TASK_ID)).thenReturn(quality);
+        // evaluateViral 返回不变（平局，触发回退终止而非跳过）
+        when(contentQualityService.evaluateViral(eq(TASK_ID), eq("default"), eq(1L))).thenReturn(quality);
+        when(articleRewriteService.rewriteSection(eq(TASK_ID), anyString(), isNull(), eq(1L)))
+                .thenReturn(ArticleVersion.builder().taskId(TASK_ID).versionNo(1).build());
+
+        MethodologyRefiner.RefineResult result = refiner.refine(TASK_ID, "default", 1L);
+        assertFalse(result.isSkipped(), "有弱维时应执行反哺而非跳过");
+        assertTrue(result.getRounds() > 0);
+    }
+
     /** 单轮改写后复评提升且无低分维度 → 1 轮收敛 */
     @Test
     void refine_improves_oneRound() {
