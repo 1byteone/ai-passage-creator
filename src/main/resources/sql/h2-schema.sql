@@ -125,3 +125,32 @@ create table if not exists article_quality (
 
 create index idx_aq_task_id on article_quality(task_id);
 create index idx_aq_overall_score on article_quality(overall_score);
+create table if not exists workspace (
+    id bigint auto_increment primary key,
+    name varchar(128) not null,
+    description varchar(512),
+    owner_id bigint not null,
+    member_count int default 1,
+    status varchar(20) default 'ACTIVE',
+    create_time datetime default CURRENT_TIMESTAMP,
+    update_time datetime default CURRENT_TIMESTAMP
+);
+
+create table if not exists workspace_member (
+    id bigint auto_increment primary key,
+    workspace_id bigint not null,
+    user_id bigint not null,
+    role varchar(20) default 'member',
+    joined_at datetime default CURRENT_TIMESTAMP,
+    constraint uq_ws_user unique (workspace_id, user_id)
+);
+
+create table if not exists workspace_resource (
+    id bigint auto_increment primary key,
+    workspace_id bigint not null,
+    resource_type varchar(30) not null,
+    resource_id varchar(64) not null,
+    created_by bigint not null,
+    create_time datetime default CURRENT_TIMESTAMP,
+    constraint uq_ws_res unique (workspace_id, resource_type, resource_id)
+);
