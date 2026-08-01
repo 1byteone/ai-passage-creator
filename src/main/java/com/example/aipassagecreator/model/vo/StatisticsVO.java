@@ -69,4 +69,19 @@ public class StatisticsVO implements Serializable {
      * 配额总使用量
      */
     private Long quotaUsed;
+
+    /**
+     * Skill 执行总次数
+     */
+    private Long skillTotalCount;
+
+    /**
+     * Skill 执行成功率（百分比）
+     */
+    private Double skillSuccessRate;
+
+    /**
+     * Skill Token 总消耗
+     */
+    private Long skillTokenUsage;
 }

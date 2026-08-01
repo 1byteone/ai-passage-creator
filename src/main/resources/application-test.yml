@@ -1,0 +1,37 @@
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:ai_passage_creator_test;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  session:
+    store-type: redis
+    timeout: 2592000
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      password: 123456
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:sql/h2-schema.sql
+  ai:
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY:test}
+    openai:
+      api-key: ${AGNES_AI_API_KEY:test}
+      base-url: https://api.agnes-ai.cn
+      chat:
+        options:
+          model: agnes-2.5-flash
+          temperature: 0.7
+
+model:
+  router:
+    default: agnes
+    skill-default: agnes
+    article-default: dashscope
+    fallback: dashscope
+    image-model: agnes-image-2.1-flash

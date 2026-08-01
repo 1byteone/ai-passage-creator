@@ -44,6 +44,16 @@ public class AgentExecutionStats implements Serializable {
     private Map<String, Integer> agentDurations;
 
     /**
+     * Token 消耗总量
+     */
+    private Integer totalTokenUsage;
+
+    /**
+     * 各智能体 Token 消耗明细（key: agentName, value: tokenUsage）
+     */
+    private Map<String, Integer> agentTokenUsage;
+
+    /**
      * 总体状态：SUCCESS（全部成功）、FAILED（存在失败）、RUNNING（执行中）
      */
     private String overallStatus;

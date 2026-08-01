@@ -44,4 +44,21 @@ public class AsyncConfig {
         
         return executor;
     }
+
+    /**
+     * Skill 引擎异步线程池（与文章写作线程池隔离）
+     */
+    @Bean(name = "skillExecutor")
+    public Executor skillExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(5);
+        executor.setMaxPoolSize(15);
+        executor.setQueueCapacity(200);
+        executor.setThreadNamePrefix("skill-async-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(60);
+        executor.initialize();
+        return executor;
+    }
 }

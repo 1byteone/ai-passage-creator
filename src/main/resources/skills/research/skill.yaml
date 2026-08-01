@@ -1,0 +1,39 @@
+name: research
+description: 结构化调研，多轮搜索+阶段摘要+最终简报
+category: research
+requiredRoles: [user]
+multiRound: true
+
+variables:
+  topic:
+    description: 调研主题
+    required: true
+    source: INPUT
+  questions:
+    description: 关键问题列表
+    required: false
+    source: INPUT
+
+phases:
+  - name: search
+    promptFile: skills/research/prompts/phase1_search.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: searchResults
+    tools: [webSearch]
+    variables:
+      - name: topic
+      - name: questions
+    requireConfirmation: false
+
+  - name: summary
+    promptFile: skills/research/prompts/phase2_summary.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: researchBrief
+    variables:
+      - name: searchResults
+        ref: search
+    requireConfirmation: true

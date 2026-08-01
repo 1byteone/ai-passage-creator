@@ -61,6 +61,12 @@ public class QuotaServiceImpl implements QuotaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void checkAndConsumeQuota(User user) {
+        checkAndConsumeQuota(user, "配额不足，无法创建文章");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void checkAndConsumeQuota(User user, String insufficientMessage) {
         // 管理员和VIP跳过检查
         if (isAdmin(user) || isVip(user)) {
             return;
@@ -72,10 +78,27 @@ public class QuotaServiceImpl implements QuotaService {
 
         if (affectedRows == 0) {
             // 影响行数为0，说明配额不足（已被其他请求消耗）
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "配额不足，无法创建文章");
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, insufficientMessage);
         }
 
         log.info("用户配额检查并消耗成功, userId={}", user.getId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void refundQuota(User user) {
+        // 管理员和VIP未扣减过配额，无需退还
+        if (isAdmin(user) || isVip(user)) {
+            return;
+        }
+
+        int affectedRows = userMapper.incrementQuota(user.getId());
+
+        if (affectedRows > 0) {
+            log.info("用户配额已退还, userId={}", user.getId());
+        } else {
+            log.warn("用户配额退还失败, userId={}", user.getId());
+        }
     }
 
     /**
