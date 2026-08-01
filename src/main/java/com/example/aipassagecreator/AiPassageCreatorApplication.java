@@ -9,7 +9,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAspectJAutoProxy(exposeProxy = true)
 @EnableScheduling
 @SpringBootApplication
-@MapperScan(basePackages = {"com.example.aipassagecreator.mapper"})
+@MapperScan(basePackages = {"com.example.aipassagecreator.mapper",
+        "com.example.aipassagecreator.card"})
 public class AiPassageCreatorApplication {
 
 	public static void main(String[] args) {

@@ -31,6 +31,8 @@ public class CardTemplateEngine {
 
     /**
      * 将分页方案渲染为 HTML 列表（每页独立 HTML）。
+     * <p>单页渲染：直接向模板上下文注入 {@code title}/{@code content}/{@code pageNo} 三个变量，
+     * 模板以顶层变量取用（模板不遍历 {@code pages} 列表）。</p>
      *
      * @param pages 分页方案
      * @param style 卡片风格（warm/minimal/free），未知或 null 回退 warm
@@ -40,7 +42,9 @@ public class CardTemplateEngine {
         String template = "cards/" + resolveStyle(style);
         return pages.stream().map(page -> {
             Context ctx = new Context();
-            ctx.setVariable("pages", List.of(page));
+            ctx.setVariable("title", page.getTitle());
+            ctx.setVariable("content", page.getContentMd());
+            ctx.setVariable("pageNo", page.getPageNo());
             return templateEngine.process(template, ctx);
         }).toList();
     }

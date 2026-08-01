@@ -17,10 +17,10 @@
 </style>
 </head>
 <body>
-<div class="card-page" th:each="page : ${pages}">
-  <div th:if="${page.title}" class="card-title" th:text="${page.title}">标题</div>
-  <div class="card-content" th:text="${page.content}">内容</div>
-  <div class="card-page-num" th:text="${page.pageNo}">1</div>
+<div class="card-page">
+  <div th:if="${title}" class="card-title" th:text="${title}">标题</div>
+  <div class="card-content" th:text="${content}">内容</div>
+  <div class="card-page-num" th:text="${pageNo}">1</div>
 </div>
 </body>
 </html>
