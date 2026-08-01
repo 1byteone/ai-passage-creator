@@ -6,8 +6,10 @@ services:
     container_name: apc-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?err: DB_ROOT_PASSWORD 必须设置}
       MYSQL_DATABASE: ai_passage_creator
+      MYSQL_USER: ${DB_USERNAME:-appuser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?err: DB_PASSWORD 必须设置}
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_unicode_ci
     ports:
@@ -28,7 +30,7 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?err: REDIS_PASSWORD 必须设置}
     volumes:
       - redis_data:/data
     healthcheck:
@@ -47,8 +49,8 @@ services:
       - "8567:8567"
     environment:
       - DB_URL=jdbc:mysql://mysql:3306/ai_passage_creator
-      - DB_USERNAME=root
-      - DB_PASSWORD=${DB_PASSWORD:-root}
+      - DB_USERNAME=${DB_USERNAME:-appuser}
+      - DB_PASSWORD=${DB_PASSWORD:?err: DB_PASSWORD 必须设置}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
