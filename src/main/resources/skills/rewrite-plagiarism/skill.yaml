@@ -1,0 +1,39 @@
+name: rewrite-plagiarism
+description: 对文章进行降重改写，通过句法重组、同义词替换、段落结构调整降低查重率，保留原意
+category: writing
+requiredRoles: [user]
+multiRound: false
+
+variables:
+  articleContent:
+    description: 待降重文章内容
+    required: true
+    source: INPUT
+    uiType: textarea
+    placeholder: 粘贴需要降重改写的文章
+    maxLength: 20000
+  intensity:
+    description: 降重强度
+    required: false
+    source: INPUT
+    uiType: select
+    defaultValue: medium
+    options:
+      - label: 轻度（同义词替换 + 语序调整）
+        value: light
+      - label: 中度（句法重组 + 段落重构）
+        value: medium
+      - label: 重度（深度重写，结构大幅变化）
+        value: heavy
+
+phases:
+  - name: rewrite_plagiarism
+    promptFile: skills/rewrite-plagiarism/prompts/phase1_rewrite.md
+    model: agnes
+    streaming: true
+    outputParser: markdown
+    outputKey: rewrittenContent
+    variables:
+      - name: articleContent
+      - name: intensity
+    requireConfirmation: false

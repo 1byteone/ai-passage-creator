@@ -1,0 +1,51 @@
+name: outline-expander
+description: 将简要大纲扩展为详细章节，补充研究要点、案例建议和数据来源，适合深度长文创作
+category: writing
+requiredRoles: [user]
+multiRound: false
+
+variables:
+  outline:
+    description: 简要大纲（每行一个要点）
+    required: true
+    source: INPUT
+    uiType: textarea
+    placeholder: |
+      1. 引言 - 问题的背景
+      2. 核心概念 - 是什么
+      3. 实践方法 - 怎么做
+      4. 案例 - 谁做成功了
+      5. 总结
+    maxLength: 5000
+  topic:
+    description: 文章主题
+    required: false
+    source: INPUT
+    uiType: input
+    placeholder: 例如：Spring Boot 微服务架构最佳实践
+  depth:
+    description: 扩展深度
+    required: false
+    source: INPUT
+    uiType: select
+    defaultValue: detailed
+    options:
+      - label: 标准（每章 200-300 字）
+        value: standard
+      - label: 详细（每章 500-800 字，含案例）
+        value: detailed
+      - label: 深度（每章 1000+ 字，含数据引用）
+        value: deep
+
+phases:
+  - name: expand_outline
+    promptFile: skills/outline-expander/prompts/phase1_expand.md
+    model: agnes
+    streaming: true
+    outputParser: markdown
+    outputKey: expandedOutline
+    variables:
+      - name: outline
+      - name: topic
+      - name: depth
+    requireConfirmation: false

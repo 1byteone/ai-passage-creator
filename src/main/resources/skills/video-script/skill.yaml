@@ -1,0 +1,72 @@
+name: video-script
+description: 生成抖音/快手/YouTube Shorts 风格的短视频脚本，含分镜、台词、时长和画面建议
+category: writing
+requiredRoles: [user]
+multiRound: false
+
+variables:
+  topic:
+    description: 视频主题
+    required: true
+    source: INPUT
+    uiType: input
+    placeholder: 例如：3 分钟学会 Spring Boot 项目部署
+  platform:
+    description: 目标平台
+    required: true
+    source: INPUT
+    uiType: select
+    defaultValue: douyin
+    options:
+      - label: 抖音
+        value: douyin
+      - label: 快手
+        value: kuaishou
+      - label: YouTube Shorts
+        value: youtube
+      - label: 视频号
+        value: wechat
+  duration:
+    description: 视频时长
+    required: false
+    source: INPUT
+    uiType: select
+    defaultValue: 60s
+    options:
+      - label: 30 秒
+        value: 30s
+      - label: 60 秒
+        value: 60s
+      - label: 90 秒
+        value: 90s
+      - label: 3 分钟
+        value: 3min
+  style:
+    description: 视频风格
+    required: false
+    source: INPUT
+    uiType: select
+    defaultValue: tutorial
+    options:
+      - label: 教程/干货
+        value: tutorial
+      - label: 故事/叙事
+        value: story
+      - label: 测评/开箱
+        value: review
+      - label: 搞笑/娱乐
+        value: humor
+
+phases:
+  - name: generate_script
+    promptFile: skills/video-script/prompts/phase1_generate_script.md
+    model: agnes
+    streaming: true
+    outputParser: markdown
+    outputKey: videoScript
+    variables:
+      - name: topic
+      - name: platform
+      - name: duration
+      - name: style
+    requireConfirmation: false

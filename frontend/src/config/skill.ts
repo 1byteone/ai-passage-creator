@@ -13,7 +13,7 @@ export interface SkillUiConfig {
   accent: 'blue' | 'green' | 'amber'
 }
 
-export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x', 'research', 'seo-optimizer', 'content-translator', 'ai-detox', 'seeding-copy'] as const
+export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x', 'research', 'seo-optimizer', 'content-translator', 'ai-detox', 'seeding-copy', 'rewrite-plagiarism', 'video-script', 'outline-expander'] as const
 
 export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
   'topic-gen': {
@@ -112,6 +112,42 @@ export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
     categoryLabel: '写作',
     accent: 'amber',
   },
+  'rewrite-plagiarism': {
+    name: 'rewrite-plagiarism',
+    title: '改写降重',
+    shortTitle: '降重',
+    description: '句法重组+同义词替换+段落重构，降低查重率并保留原意。',
+    inputLabel: '待降重文章与降重强度',
+    outputLabel: '降重改写后的文章',
+    actionLabel: '开始降重',
+    icon: 'proofreading',
+    categoryLabel: '写作',
+    accent: 'green',
+  },
+  'video-script': {
+    name: 'video-script',
+    title: '视频脚本生成',
+    shortTitle: '视频脚本',
+    description: '生成抖音/快手/YouTube Shorts 风格短视频脚本，含分镜、台词、时长。',
+    inputLabel: '视频主题、平台与风格',
+    outputLabel: '分镜脚本 + 台词 + 制作建议',
+    actionLabel: '生成脚本',
+    icon: 'social',
+    categoryLabel: '写作',
+    accent: 'blue',
+  },
+  'outline-expander': {
+    name: 'outline-expander',
+    title: '大纲扩展',
+    shortTitle: '扩展大纲',
+    description: '将简要大纲扩展为详细章节，补充研究要点、案例建议与数据来源。',
+    inputLabel: '简要大纲与文章主题',
+    outputLabel: '含研究要点与案例的详细提纲',
+    actionLabel: '扩展大纲',
+    icon: 'ideas',
+    categoryLabel: '写作',
+    accent: 'green',
+  },
 }
 
 export const PHASE_LABELS: Record<string, string> = {
@@ -128,6 +164,9 @@ export const PHASE_LABELS: Record<string, string> = {
   ai_audit: 'AI 痕迹审计',
   detox_rewrite: 'AI 痕迹优化改写',
   generate_copy: '生成种草文案',
+  rewrite_plagiarism: '降重改写',
+  generate_script: '生成视频脚本',
+  expand_outline: '扩展大纲',
 }
 
 const FALLBACK_FIELDS: Record<string, Record<string, API.SkillVariableDef>> = {
@@ -285,6 +324,90 @@ const FALLBACK_FIELDS: Record<string, Record<string, API.SkillVariableDef>> = {
         { label: '专业种草（数据支撑）', value: 'professional' },
         { label: '有趣种草（轻松幽默）', value: 'humorous' },
         { label: '紧迫营销（限时优惠）', value: 'urgent' },
+      ],
+    },
+  },
+  'rewrite-plagiarism': {
+    articleContent: {
+      description: '待降重文章',
+      required: true,
+      uiType: 'textarea',
+      placeholder: '粘贴需要降重改写的文章',
+      maxLength: 20000,
+    },
+    intensity: {
+      description: '降重强度',
+      uiType: 'select',
+      defaultValue: 'medium',
+      options: [
+        { label: '轻度（同义词+语序）', value: 'light' },
+        { label: '中度（句法+段落重构）', value: 'medium' },
+        { label: '重度（深度重写）', value: 'heavy' },
+      ],
+    },
+  },
+  'video-script': {
+    topic: {
+      description: '视频主题',
+      required: true,
+      uiType: 'input',
+      placeholder: '例如：3 分钟学会 Spring Boot 部署',
+    },
+    platform: {
+      description: '目标平台',
+      uiType: 'select',
+      defaultValue: 'douyin',
+      options: [
+        { label: '抖音', value: 'douyin' },
+        { label: '快手', value: 'kuaishou' },
+        { label: 'YouTube Shorts', value: 'youtube' },
+        { label: '视频号', value: 'wechat' },
+      ],
+    },
+    duration: {
+      description: '视频时长',
+      uiType: 'select',
+      defaultValue: '60s',
+      options: [
+        { label: '30 秒', value: '30s' },
+        { label: '60 秒', value: '60s' },
+        { label: '90 秒', value: '90s' },
+        { label: '3 分钟', value: '3min' },
+      ],
+    },
+    style: {
+      description: '视频风格',
+      uiType: 'select',
+      defaultValue: 'tutorial',
+      options: [
+        { label: '教程/干货', value: 'tutorial' },
+        { label: '故事/叙事', value: 'story' },
+        { label: '测评/开箱', value: 'review' },
+        { label: '搞笑/娱乐', value: 'humor' },
+      ],
+    },
+  },
+  'outline-expander': {
+    outline: {
+      description: '简要大纲',
+      required: true,
+      uiType: 'textarea',
+      placeholder: '每行一个要点，如：\n1. 引言\n2. 核心概念\n3. 实践方法',
+      maxLength: 5000,
+    },
+    topic: {
+      description: '文章主题（可选）',
+      uiType: 'input',
+      placeholder: '例如：Spring Boot 微服务架构',
+    },
+    depth: {
+      description: '扩展深度',
+      uiType: 'select',
+      defaultValue: 'detailed',
+      options: [
+        { label: '标准（200-300字/章）', value: 'standard' },
+        { label: '详细（500-800字/章）', value: 'detailed' },
+        { label: '深度（1000+字/章）', value: 'deep' },
       ],
     },
   },
