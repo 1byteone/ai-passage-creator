@@ -193,3 +193,85 @@ ai-passage-creator/
     *   后端维护一个 `ConcurrentHashMap<String, SseEmitter>`。
     *   在 Agent 执行的每一个关键节点（如标题生成完毕、流式文本产出）主动调用 `emitter.send()`。
     *   前端监听事件流，实现类似打字机的实时渲染效果。
+
+---
+
+## 6. Skill 引擎 — 配置驱动的通用 LLM 工作流（四轨开发扩展）
+
+> 本项目在原始文章链路之外，演进出一条**配置驱动**的第二主线：Skill 引擎。
+> 新增能力无需写 Java，仅声明 `skill.yaml` + `prompts/*.md` 即可注册新工作流。
+
+### 6.1 Skill 引擎架构
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ API 层: SkillController (/skill/*)                            │
+│  execute / progress(SSE) / confirm / result / list / definition│
+├──────────────────────────────────────────────────────────────┤
+│ 编排调度层                                                      │
+│  SkillExecutionService (@Async skillExecutor)                  │
+│  SkillExecution (生命周期 + 检查点续跑)                          │
+│  SkillExecutionRegistry (存活实例注册表)                        │
+│  SkillConfirmationReaper (超时收割 + 退配额)                    │
+├──────────────────────────────────────────────────────────────┤
+│ 定义层: SkillRegistry 扫描 YAML → 构建 StateGraph              │
+│  SkillDefinition / PhaseDefinition / VariableDef               │
+├──────────────────────────────────────────────────────────────┤
+│ 执行层: SkillNodeAction (通用节点) → ModelRouter → LLM          │
+│  PromptTemplateEngine / OutputParserRegistry / WebSearchTool   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 6.2 已注册 Skill（6 个）
+
+| Skill | 阶段数 | 输出 | 特性 |
+|-------|--------|------|------|
+| `topic-gen` | 1 | 选题方案 | topic-options 解析 |
+| `proofreading` | 3 | 审校报告+终稿 | 流式 + JSON 修复 |
+| `article-to-x` | 1 | 社交文案 | 多平台 |
+| `research` | 2 | 调研简报 | **HITL 多轮确认** + webSearch |
+| `seo-optimizer` | 2 | SEO 报告+优化稿 | 评分 + 改写 |
+| `content-translator` | 1 | 译文 | 6 语言 |
+
+### 6.3 多轮确认 (Human-in-the-Loop)
+
+- 阶段声明 `requireConfirmation: true` → StateGraph `interruptsBefore`
+- 执行暂停 → SSE `skill.awaiting_confirmation` → 线程释放
+- `confirm` 支持 **approve / modify / retry** 三种动作：
+  - approve：直接续跑
+  - modify：写入修改数据后续跑
+  - retry：清除当前阶段输出，重新生成（上游结果保留）
+- 超时未确认 → Reaper 置 FAILED 并退配额
+- **续跑必须用带 checkPointId 的 config**，否则从 START 重跑白烧 token
+
+### 6.4 链式编排
+
+- `POST /skill/chain/execute`：串行执行多个 skill
+- 前一个 skill 的最终输出（`getPersistedOutput`）透传为后一个的输入
+- 按 skill 数量消耗配额，失败全额退还
+- 前端 `SkillChainPage.vue` 提供可视化编排
+
+### 6.5 四轨开发成果
+
+| 轨道 | 交付 |
+|------|------|
+| **A. Skill 引擎** | 34 Java + 4 YAML + 7 prompts + HITL + ModelRouter |
+| **B. 文章增强** | 五维质量评分 + 多轮改写/版本历史 + PDF/DOCX/PPTX 导出 + 模板 |
+| **C. 平台化** | 协作空间(角色权限) + 审批流 + 定时发布 + 分析仪表盘 + Webhook + i18n |
+| **D. 基础设施** | Docker + compose + Redis缓存/限流 + Prometheus + 熔断 + CI/CD |
+
+### 6.6 工程规范
+
+- **提交规范**：Conventional Commits（CONTRIBUTING.md），50/72 规则 + commit-msg 钩子强制
+- **安全**：密钥 `${VAR:}` 外部化、IDOR/SSRF/Prompt 注入防护、fail-closed 设计
+- **测试**：H2 profile + 确定性 stub，103 tests 全绿
+
+### 6.7 关键设计决策
+
+| 决策 | 理由 |
+|------|------|
+| SkillContext 替代 ThreadLocal | 跨线程共享，支持并行/续跑 |
+| SkillSseEmitterManager 事件缓冲重放 | 解决订阅竞态 |
+| getPersistedOutput 透传 | 终态后 SkillContext 清理，从 DB 读回 |
+| SystemMessage 角色隔离 | 防 Prompt 注入（改写指令不可覆盖系统约束） |
+| RateLimit Redis→内存降级 | 故障时仍有限流语义（非 fail-open） |
