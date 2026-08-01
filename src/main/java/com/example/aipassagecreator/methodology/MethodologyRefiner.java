@@ -88,7 +88,7 @@ public class MethodologyRefiner {
             log.info("反哺第 {} 轮完成: viralScore {} -> {}", rounds + 1, before, after);
             rounds++;
 
-            if (after.compareTo(before) < 0) {
+            if (after.compareTo(before) <= 0) {
                 // 无提升：回退到本轮改写前的版本（newVersion.versionNo - 1），终止
                 // 版本语义：每个 rewriteSection 创建一个新版本；revertTo 会把回退记录作为下一版本追加。
                 // 注意不能取 reEval.getVersionNo() —— 那是 VIRAL 评测自身的版本计数器，与文章版本号不同空间。
@@ -111,7 +111,7 @@ public class MethodologyRefiner {
                 .weakDimensions(weakDims)
                 .reverted(reverted)
                 .beforeScore(initial.getViralScore())
-                .afterScore(after)
+                .afterScore(reverted ? before : after)
                 .skipped(false)
                 .build();
     }

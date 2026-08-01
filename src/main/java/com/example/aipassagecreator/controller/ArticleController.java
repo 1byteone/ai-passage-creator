@@ -366,9 +366,13 @@ public class ArticleController {
                     ErrorCode.NO_AUTH_ERROR, "无权操作此文章");
         }
 
-        var result = methodologyRefiner.refine(
-                request.getTaskId(), request.getMethodologyName(), loginUser.getId());
-        return ResultUtils.success(result);
+        try {
+            var result = methodologyRefiner.refine(
+                    request.getTaskId(), request.getMethodologyName(), loginUser.getId());
+            return ResultUtils.success(result);
+        } catch (IllegalArgumentException e) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR, e.getMessage());
+        }
     }
 
     /**

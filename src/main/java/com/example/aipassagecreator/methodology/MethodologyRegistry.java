@@ -120,10 +120,40 @@ public class MethodologyRegistry {
                 ? raw.getCreationDimensions() : parent.getCreationDimensions());
         merged.setTitleStrategies(raw.getTitleStrategies() != null
                 ? raw.getTitleStrategies() : parent.getTitleStrategies());
-        merged.setEvaluationDimensions(raw.getEvaluationDimensions() != null
-                ? raw.getEvaluationDimensions() : parent.getEvaluationDimensions());
         merged.setPlatform(mergePlatform(raw.getPlatform(), parent.getPlatform()));
+        // 平台 evaluationWeights 物化到评测维度权重：key 命中则覆盖 dim.weight（先深拷贝，避免污染继承链上父方法的共享维度对象）
+        merged.setEvaluationDimensions(applyPlatformWeights(
+                raw.getEvaluationDimensions() != null
+                        ? raw.getEvaluationDimensions() : parent.getEvaluationDimensions(),
+                merged.getPlatform()));
         return merged;
+    }
+
+    /**
+     * 将 {@code platform.evaluationWeights} 应用到评测维度列表。
+     * <p>返回全新的列表与维度对象（深拷贝），仅对 key 命中 map 的维度覆盖 weight；
+     * 未命中的维度保留继承权重。深拷贝防止就地修改污染父方法论的共享维度实例。</p>
+     */
+    private List<MethodologyDefinition.EvaluationDimension> applyPlatformWeights(
+            List<MethodologyDefinition.EvaluationDimension> dims,
+            MethodologyDefinition.PlatformConfig platform) {
+        if (dims == null) {
+            return null;
+        }
+        Map<String, Integer> weights = platform != null ? platform.getEvaluationWeights() : null;
+        List<MethodologyDefinition.EvaluationDimension> result = new ArrayList<>(dims.size());
+        for (MethodologyDefinition.EvaluationDimension d : dims) {
+            MethodologyDefinition.EvaluationDimension copy = new MethodologyDefinition.EvaluationDimension();
+            copy.setKey(d.getKey());
+            copy.setName(d.getName());
+            copy.setWeight(d.getWeight());
+            copy.setRubric(d.getRubric());
+            if (weights != null && weights.containsKey(copy.getKey()) && weights.get(copy.getKey()) != null) {
+                copy.setWeight(weights.get(copy.getKey()));
+            }
+            result.add(copy);
+        }
+        return result;
     }
 
     private MethodologyDefinition.PlatformConfig mergePlatform(

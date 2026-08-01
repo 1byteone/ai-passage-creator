@@ -14,12 +14,13 @@ echo "→ 推送 $REMOTE/$BRANCH (最多重试 $MAX_RETRY 次)..."
 for attempt in $(seq 1 "$MAX_RETRY"); do
     echo ""
     echo "--- 尝试 $attempt/$MAX_RETRY ---"
-    if git push "$REMOTE" "$BRANCH" 2>&1; then
+    git push "$REMOTE" "$BRANCH"
+    status=$?
+    if [ "$status" -eq 0 ]; then
         echo ""
         echo "✅ 推送成功: $REMOTE/$BRANCH"
         exit 0
     fi
-    status=$?
     echo "⚠️  推送失败 (exit $status)"
 
     if [ "$attempt" -lt "$MAX_RETRY" ]; then

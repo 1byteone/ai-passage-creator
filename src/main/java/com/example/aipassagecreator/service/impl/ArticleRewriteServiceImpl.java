@@ -153,6 +153,10 @@ public class ArticleRewriteServiceImpl implements ArticleRewriteService {
         String snapshot = currentContent.length() > MAX_CONTENT_LENGTH
                 ? currentContent.substring(0, MAX_CONTENT_LENGTH) : currentContent;
 
+        // 指令兜底：与 rewrite() 一致，空指令回退到通用优化指令
+        String rewriteInstruction = (instruction != null && !instruction.isBlank())
+                ? instruction : AUTO_IMPROVE_INSTRUCTION;
+
         ChatModel model = modelRouter.resolveWithFallback(null, null);
         String modelName = modelRouter.resolveModelName(null, null);
         long start = System.currentTimeMillis();
@@ -160,7 +164,7 @@ public class ArticleRewriteServiceImpl implements ArticleRewriteService {
         // 与 rewrite() 一致的注入防护：系统指令与用户内容分离为不同角色消息。
         // 用户提供的改写指令放入 UserMessage 模板，不拼接进 SystemMessage。
         String prompt = REWRITE_PROMPT
-                .replace("{instruction}", instruction)
+                .replace("{instruction}", rewriteInstruction)
                 .replace("{content}", snapshot);
         ChatResponse response = model.call(new Prompt(
                 List.of(new SystemMessage(REWRITE_SYSTEM_PROMPT),
@@ -173,7 +177,7 @@ public class ArticleRewriteServiceImpl implements ArticleRewriteService {
                 .taskId(taskId).versionNo(nextVersion).round(1)
                 .content(rewritten)
                 .changeSummary("方法论定向改写 (第 " + nextVersion + " 版)")
-                .promptUsed(promptSummary(instruction))
+                .promptUsed(promptSummary(rewriteInstruction))
                 .diffBaseVersion(nextVersion - 1 == 0 ? null : nextVersion - 1)
                 .modelUsed(modelName).tokenUsage(tokenUsage).durationMs((int) duration)
                 .createdBy(userId)

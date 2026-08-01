@@ -209,8 +209,13 @@ public class ContentQualityServiceImpl implements ContentQualityService {
             }
         }
 
+        // 内容非空校验（与 evaluate() 一致的守卫，LLM 调用前 fail-fast）
+        String content = article.getContent();
+        if (content == null || content.isBlank()) {
+            throw new IllegalArgumentException("文章内容为空: " + taskId);
+        }
+
         // 快照：head-tail 策略（前 4000 + 后 4000）
-        String content = article.getContent() == null ? "" : article.getContent();
         String snapshot = buildHeadTailSnapshot(content, 4000);
 
         // 合并单次调用
@@ -265,7 +270,12 @@ public class ContentQualityServiceImpl implements ContentQualityService {
                 .durationMs((int) duration)
                 .build();
         if (existing != null) {
-            articleQualityMapper.update(quality);
+            // 幂等重评：delete + insert 保证每个字段都反映最新评测。
+            // 直接 update 因无全局 ignore-strategy 会跳过 null 列，导致 LLM 未返回的
+            // titleStrategyHit/viral/suggestions/strengths 残留陈旧值（viral_score 却会被 0 覆盖）。
+            articleQualityMapper.deleteById(existing.getId());
+            quality.setId(null); // 重新生成主键，避免 insert 复用已删除行 id
+            articleQualityMapper.insert(quality);
         } else {
             articleQualityMapper.insert(quality);
         }

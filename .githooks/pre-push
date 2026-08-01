@@ -38,7 +38,12 @@ if [ -n "$LARGE" ]; then
 fi
 
 # ─── 检查 2: 硬编码密钥新增 ──────────────────────────
-SECRETS=$(git diff "$RANGE" 2>/dev/null | grep -E "^\+" | grep -iE "sk-live|sk_test_[A-Za-z0-9]{20}|whsec_[A-Za-z0-9]{20}|AKID[A-Za-z0-9]{15}" | head -3)
+# 只匹配「赋值给配置/变量的真实密钥值」，排除脚本自身的正则模式行
+# （脚本行含 grep -iE "..."，其引号内的模式会被误判）
+SECRETS=$(git diff "$RANGE" 2>/dev/null \
+    | grep -E "^\+" \
+    | grep -vE 'grep -iE|SECRETS=|^\+\s*(#|//|/\\*|\*)' \
+    | grep -iE "sk[-_]live[=:][A-Za-z0-9]{16}|sk[-_]test_[A-Za-z0-9]{16}|whsec_[A-Za-z0-9]{16}|AKID[A-Za-z0-9]{15}" | head -3)
 if [ -n "$SECRETS" ]; then
     echo ""
     echo "⚠️  检测到疑似生产密钥，已阻止推送:"

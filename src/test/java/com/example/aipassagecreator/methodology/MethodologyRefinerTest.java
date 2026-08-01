@@ -169,7 +169,8 @@ class MethodologyRefinerTest {
         assertEquals(1, result.getRounds());
         assertTrue(result.isReverted());
         assertFalse(result.isSkipped());
-        assertEquals(0, new BigDecimal("40.00").compareTo(result.getAfterScore()));
+        // #41: 回退后内容回到改写前的更优分数，afterScore 报 before（50.00）而非中间坏分（40.00）
+        assertEquals(0, new BigDecimal("50.00").compareTo(result.getAfterScore()));
         verify(articleRewriteService).revertTo(TASK_ID, 2, 1L);
     }
 
