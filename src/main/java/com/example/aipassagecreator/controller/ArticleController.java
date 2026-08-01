@@ -175,9 +175,24 @@ public class ArticleController {
      */
     @GetMapping("/execution-logs/{taskId}")
     @Operation(summary = "获取任务执行日志")
-    public BaseResponse<AgentExecutionStats> getExecutionLogs(@PathVariable String taskId) {
+    @AuthCheck(mustRole = "user")
+    public BaseResponse<AgentExecutionStats> getExecutionLogs(@PathVariable String taskId,
+                                                              HttpServletRequest httpServletRequest) {
         ThrowUtils.throwIf(taskId == null || taskId.trim().isEmpty(),
                 ErrorCode.PARAMS_ERROR, "任务ID不能为空");
+
+        // 归属校验：防止 IDOR，仅文章作者或管理员可查看执行日志
+        var article = articleService.getByTaskId(taskId);
+        if (article == null) {
+            throw new com.example.aipassagecreator.exception.BusinessException(
+                    ErrorCode.NOT_FOUND_ERROR, "文章不存在");
+        }
+        User loginUser = userService.getLoginUser(httpServletRequest);
+        if (!article.getUserId().equals(loginUser.getId())
+                && !com.example.aipassagecreator.constant.UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole())) {
+            throw new com.example.aipassagecreator.exception.BusinessException(
+                    ErrorCode.NO_AUTH_ERROR, "无权操作此文章");
+        }
 
         AgentExecutionStats stats = agentLogService.getExecutionStats(taskId);
         return ResultUtils.success(stats);
