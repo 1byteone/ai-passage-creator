@@ -117,8 +117,12 @@ public class SkillRegistry {
         return new SkillExecution(executionId, def, inputs, graphCache.get(skillName), modelRouter, skillExecutionMapper);
     }
 
+    public SkillExecutionChain createChain(String chainExecutionId, String... skillNames) {
+        return new SkillExecutionChain(skillNames, this, skillExecutionService, chainExecutionId);
+    }
+
     public SkillExecutionChain createChain(String... skillNames) {
-        return new SkillExecutionChain(skillNames, this, skillExecutionService);
+        return createChain(UUID.randomUUID().toString(), skillNames);
     }
 
     private CompiledGraph buildGraph(SkillDefinition def) {

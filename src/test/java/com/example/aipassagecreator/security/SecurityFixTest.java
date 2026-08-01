@@ -1,13 +1,19 @@
 package com.example.aipassagecreator.security;
 
+import com.example.aipassagecreator.aop.AuthCheck;
+import com.example.aipassagecreator.controller.ArticleController;
 import com.example.aipassagecreator.service.ArticleRewriteService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -43,5 +49,18 @@ class SecurityFixTest {
         assertTrue(userPrompt.contains("{content}"), "用户消息模板必须保留文章内容占位符");
         assertFalse(userPrompt.contains("%s"),
                 "用户消息模板不得使用 sprintf %s 拼接，须用命名占位符以便语义隔离");
+    }
+
+    /**
+     * 修复 IDOR：execution-logs 端点必须携带 @AuthCheck 鉴权注解。
+     * 修复前该方法无任何鉴权，任何未登录用户可读取任意任务执行日志（AgentLog 泄漏 prompt/输入/输出）。
+     */
+    @Test
+    void executionLogsEndpoint_isProtectedByAuthCheck() throws Exception {
+        Method method = ArticleController.class.getDeclaredMethod(
+                "getExecutionLogs", String.class, HttpServletRequest.class);
+        AuthCheck authCheck = method.getAnnotation(AuthCheck.class);
+        assertNotNull(authCheck, "execution-logs 端点必须携带 @AuthCheck 注解（防止 IDOR）");
+        assertEquals("user", authCheck.mustRole(), "必须要求登录角色 user 才可访问执行日志");
     }
 }

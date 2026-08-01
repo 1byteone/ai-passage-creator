@@ -6,6 +6,7 @@ import com.example.aipassagecreator.common.ResultUtils;
 import com.example.aipassagecreator.exception.BusinessException;
 import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.mapper.SkillExecutionMapper;
+import com.example.aipassagecreator.model.dto.skill.SkillChainExecuteRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillConfirmRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillExecuteRequest;
 import com.example.aipassagecreator.model.dto.skill.SkillExecuteResponse;
@@ -23,6 +24,7 @@ import com.example.aipassagecreator.utils.GsonUtils;
 import com.google.gson.reflect.TypeToken;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -114,6 +117,60 @@ public class SkillController {
                 .build();
 
         return ResultUtils.success(response);
+    }
+
+    /**
+     * 链式执行多个 Skill — 前一个输出作为后一个输入
+     * <p>
+     * 注意：链式编排为同步执行，HTTP 请求会阻塞至全部完成。
+     * 每次链式执行消耗 N 个配额（N = skill 数量）。
+     */
+    @PostMapping("/chain/execute")
+    @Operation(summary = "链式执行多个 Skill")
+    @RateLimit(limit = 5, window = 60, unit = TimeUnit.SECONDS, key = "skill_chain")
+    public BaseResponse<?> executeChain(@RequestBody SkillChainExecuteRequest request,
+                                        HttpServletRequest servletRequest) {
+        if (request == null || request.getSkillNames() == null || request.getSkillNames().size() < 2) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR, "链式编排至少需要 2 个 skill");
+        }
+
+        // 校验所有 skill 均已公开
+        for (String skillName : request.getSkillNames()) {
+            if (!PUBLIC_SKILLS.contains(skillName)) {
+                return ResultUtils.error(ErrorCode.NOT_FOUND_ERROR, "Skill 暂未公开: " + skillName);
+            }
+        }
+
+        // 权限 + 配额（每个 skill 消耗 1 配额）
+        User loginUser = userService.getLoginUser(servletRequest);
+        int requiredQuota = request.getSkillNames().size();
+        for (int i = 0; i < requiredQuota; i++) {
+            quotaService.checkAndConsumeQuota(loginUser, "配额不足，链式编排需 " + requiredQuota + " 配额");
+        }
+
+        Map<String, Object> inputs = request.getInputs() == null ? Map.of() : request.getInputs();
+        String chainId = "chain-" + UUID.randomUUID().toString().substring(0, 8);
+
+        try {
+            SkillExecutionChain chain = skillRegistry.createChain(
+                    chainId, request.getSkillNames().toArray(new String[0]));
+            Map<String, Object> outputs = chain.executeSync(
+                    msg -> sseEmitterManager.publish(chainId, msg),
+                    inputs,
+                    loginUser.getId());
+
+            return ResultUtils.success(Map.of(
+                    "chainId", chainId,
+                    "skills", request.getSkillNames(),
+                    "outputs", outputs));
+        } catch (Exception e) {
+            log.error("链式编排失败: skills={}", request.getSkillNames(), e);
+            // 失败退还配额（未全部完成）
+            for (int i = 0; i < requiredQuota; i++) {
+                quotaService.refundQuota(loginUser);
+            }
+            throw e;
+        }
     }
 
     /**

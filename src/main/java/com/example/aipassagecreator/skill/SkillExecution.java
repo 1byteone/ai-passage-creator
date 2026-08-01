@@ -295,6 +295,25 @@ public class SkillExecution {
     }
 
     /**
+     * 获取持久化的终态输出（链式编排透传用）
+     * <p>
+     * SkillContext 在终态会被清理，但 outputData 已持久化到 DB 记录中。
+     * 返回解析后的 Map，无输出时返回空 Map。
+     */
+    public Map<String, Object> getPersistedOutput() {
+        if (persistedExecution == null || persistedExecution.getOutputData() == null
+                || persistedExecution.getOutputData().isBlank()) {
+            return Map.of();
+        }
+        try {
+            return gson.fromJson(persistedExecution.getOutputData(),
+                    new com.google.gson.reflect.TypeToken<Map<String, Object>>() {});
+        } catch (Exception e) {
+            return Map.of();
+        }
+    }
+
+    /**
      * 是否已到终态（SUCCESS / FAILED）
      */
     public boolean isTerminal() {
