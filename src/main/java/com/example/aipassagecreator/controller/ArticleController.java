@@ -52,6 +52,9 @@ public class ArticleController {
     @Resource
     private ArticleRewriteService articleRewriteService;
 
+    @Resource
+    private com.example.aipassagecreator.service.ExportService exportService;
+
     /**
      * 创建文章任务
      * @param request
@@ -350,17 +353,69 @@ public class ArticleController {
     @PostMapping("/revert")
     @Operation(summary = "回退文章到指定版本")
     @AuthCheck(mustRole = "user")
-    public BaseResponse<?> revertArticle(@RequestBody DeleteRequest request,
+    public BaseResponse<?> revertArticle(@RequestBody ArticleRevertRequest request,
                                           HttpServletRequest httpServletRequest) {
-        ThrowUtils.throwIf(request == null || request.getId() == null,
+        ThrowUtils.throwIf(request == null || request.getTaskId() == null || request.getVersionNo() == null,
                 ErrorCode.PARAMS_ERROR);
-        User loginUser = userService.getLoginUser(httpServletRequest);
-        // DeleteRequest.getId() 在这里复用为版本号
-        int versionNo = request.getId().intValue();
 
-        // 从请求体获取 taskId（复用 DeleteRequest 的多态性）
-        // 简化: 直接在 ArticleController 使用 request 参数
-        return ResultUtils.error(ErrorCode.PARAMS_ERROR, "请使用 /article/versions/{taskId}/revert/{versionNo}");
+        User loginUser = userService.getLoginUser(httpServletRequest);
+        String taskId = request.getTaskId();
+
+        // 归属校验：防止 IDOR
+        var article = articleService.getByTaskId(taskId);
+        if (article == null || !article.getUserId().equals(loginUser.getId())) {
+            throw new com.example.aipassagecreator.exception.BusinessException(
+                    ErrorCode.NO_AUTH_ERROR, "无权操作此文章");
+        }
+
+        try {
+            var version = articleRewriteService.revertTo(taskId, request.getVersionNo(), loginUser.getId());
+            return ResultUtils.success(version);
+        } catch (IllegalArgumentException e) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR, e.getMessage());
+        }
+    }
+
+    /**
+     * 导出文章为 PDF/DOCX/PPTX 文件下载
+     */
+    @GetMapping("/export/{taskId}")
+    @Operation(summary = "导出文章为 PDF/DOCX/PPTX")
+    @AuthCheck(mustRole = "user")
+    public org.springframework.http.ResponseEntity<byte[]> exportArticle(
+            @PathVariable String taskId,
+            @RequestParam(defaultValue = "pdf") String format,
+            HttpServletRequest httpServletRequest) {
+        User loginUser = userService.getLoginUser(httpServletRequest);
+
+        // 归属校验：防止 IDOR
+        var article = articleService.getByTaskId(taskId);
+        if (article == null || !article.getUserId().equals(loginUser.getId())) {
+            throw new com.example.aipassagecreator.exception.BusinessException(
+                    ErrorCode.NO_AUTH_ERROR, "无权操作此文章");
+        }
+
+        com.example.aipassagecreator.service.ExportService.Format exportFormat;
+        try {
+            exportFormat = com.example.aipassagecreator.service.ExportService.Format.valueOf(
+                    format.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new com.example.aipassagecreator.exception.BusinessException(
+                    ErrorCode.PARAMS_ERROR, "不支持的导出格式: " + format + "，支持 PDF/DOCX/PPTX");
+        }
+
+        byte[] content = exportService.exportArticle(taskId, exportFormat);
+        String filename = article.getMainTitle() != null ? article.getMainTitle() : article.getTopic();
+        String ext = exportFormat.name().toLowerCase();
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentDisposition(org.springframework.http.ContentDisposition.attachment()
+                .filename(filename + "." + ext).build());
+        headers.setContentType(
+                org.springframework.http.MediaType.APPLICATION_OCTET_STREAM);
+
+        return new org.springframework.http.ResponseEntity<>(content, headers,
+                org.springframework.http.HttpStatus.OK);
     }
 
 }

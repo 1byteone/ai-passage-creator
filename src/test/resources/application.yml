@@ -11,7 +11,8 @@ spring:
       initialize-schema: never
   sql:
     init:
-      mode: never
+      mode: always
+      schema-locations: classpath:sql/h2-schema.sql
   ai:
     dashscope:
       api-key: test-dashscope-key
