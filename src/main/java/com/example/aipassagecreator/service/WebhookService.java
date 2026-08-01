@@ -7,15 +7,12 @@ import java.util.Map;
  */
 public interface WebhookService {
 
-    /** 签名用的共享密钥（生产从环境变量注入） */
-    String SHARED_SECRET = System.getenv().getOrDefault("WEBHOOK_SHARED_SECRET", "dev-webhook-secret");
-
     /**
      * 发布事件到目标 URL
      *
      * @param eventType 事件类型（如 article.published / article.approved）
      * @param payload   事件负载
-     * @param targetUrl 目标 URL
+     * @param targetUrl 目标 URL（需通过 SSRF 校验，仅 https）
      */
     void publish(String eventType, Map<String, Object> payload, String targetUrl);
 

@@ -68,7 +68,9 @@ public class PublishController {
     @GetMapping("/article/{taskId}")
     @Operation(summary = "文章排期列表")
     @AuthCheck(mustRole = "user")
-    public BaseResponse<?> listByArticle(@PathVariable String taskId) {
-        return ResultUtils.success(publishService.listByArticle(taskId));
+    public BaseResponse<?> listByArticle(@PathVariable String taskId,
+                                         HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        return ResultUtils.success(publishService.listByArticle(taskId, loginUser.getId()));
     }
 }

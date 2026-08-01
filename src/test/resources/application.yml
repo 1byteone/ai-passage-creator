@@ -18,6 +18,9 @@ spring:
     openai:
       api-key: test-openai-key
 
+webhook:
+  shared-secret: test-webhook-secret
+
 tencent:
   cos:
     secret-id: test-cos-secret-id

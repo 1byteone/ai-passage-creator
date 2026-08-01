@@ -9,12 +9,12 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -22,10 +22,11 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class RateLimitInterceptor {
 
+    /** Redis 可选：不可用时限流降级为放行（测试环境/Redis 故障） */
     private final RedisTemplate<String, Object> redisTemplate;
 
-    public RateLimitInterceptor(RedisTemplate<String, Object> redisTemplate) {
-        this.redisTemplate = redisTemplate;
+    public RateLimitInterceptor(ObjectProvider<RedisTemplate<String, Object>> provider) {
+        this.redisTemplate = provider.getIfAvailable();
     }
 
     @Around("@annotation(rateLimit)")
@@ -39,6 +40,11 @@ public class RateLimitInterceptor {
         String userId = request.getSession().getId();
         String method = ((MethodSignature) joinPoint.getSignature()).getMethod().getName();
         String key = rateLimit.key() + ":" + method + ":" + userId;
+
+        // Redis 不可用时跳过限流（放行），避免限流依赖拖垮主流程
+        if (redisTemplate == null || redisTemplate.getConnectionFactory() == null) {
+            return joinPoint.proceed();
+        }
 
         Long count = redisTemplate.opsForValue().increment(key);
         if (count != null && count == 1) {

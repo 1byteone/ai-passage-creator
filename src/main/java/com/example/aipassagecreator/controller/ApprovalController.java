@@ -47,11 +47,11 @@ public class ApprovalController {
     }
 
     /**
-     * 审批通过（admin/vip）
+     * 审批通过（仅 admin）
      */
     @PostMapping("/approve")
     @Operation(summary = "审批通过")
-    @AuthCheck(mustRole = "user")
+    @AuthCheck(mustRole = "admin")
     public BaseResponse<?> approve(@RequestBody Map<String, String> body,
                                    HttpServletRequest request) {
         ThrowUtils.throwIf(body == null || body.get("taskId") == null,
@@ -62,11 +62,11 @@ public class ApprovalController {
     }
 
     /**
-     * 审批驳回
+     * 审批驳回（仅 admin）
      */
     @PostMapping("/reject")
     @Operation(summary = "审批驳回")
-    @AuthCheck(mustRole = "user")
+    @AuthCheck(mustRole = "admin")
     public BaseResponse<?> reject(@RequestBody Map<String, String> body,
                                   HttpServletRequest request) {
         ThrowUtils.throwIf(body == null || body.get("taskId") == null,
@@ -77,12 +77,14 @@ public class ApprovalController {
     }
 
     /**
-     * 审批历史
+     * 审批历史（作者或 admin）
      */
     @GetMapping("/history/{taskId}")
     @Operation(summary = "审批历史")
     @AuthCheck(mustRole = "user")
-    public BaseResponse<?> history(@PathVariable String taskId) {
-        return ResultUtils.success(approvalService.getHistory(taskId));
+    public BaseResponse<?> history(@PathVariable String taskId,
+                                   HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        return ResultUtils.success(approvalService.getHistory(taskId, loginUser.getId()));
     }
 }
