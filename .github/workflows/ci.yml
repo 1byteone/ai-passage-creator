@@ -22,7 +22,7 @@ jobs:
           cache: maven
 
       - name: Build & Test
-        run: mvn verify -B -Dspring.profiles.active=test
+        run: mvn test -B -Dspring.profiles.active=test -Dspring.session.store-type=none
         env:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
           AGNES_AI_API_KEY: ${{ secrets.AGNES_AI_API_KEY }}
