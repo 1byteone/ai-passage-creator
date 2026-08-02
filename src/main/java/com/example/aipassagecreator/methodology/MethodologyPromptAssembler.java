@@ -31,6 +31,8 @@ public class MethodologyPromptAssembler {
         for (MethodologyDefinition.TitleStrategy s : def.getTitleStrategies()) {
             sb.append("- ").append(s.getKey()).append("：").append(s.getName()).append("\n");
         }
+        // 追加去AI味引导
+        sb.append("\n").append(com.example.aipassagecreator.methodology.antiai.AntiAiFlavorRules.TITLE_GUIDANCE);
         return sb.toString();
     }
 
@@ -50,6 +52,8 @@ public class MethodologyPromptAssembler {
         for (MethodologyDefinition.CreationDimension d : def.getCreationDimensions()) {
             sb.append("- ").append(d.getName()).append("：").append(d.getGuidance()).append("\n");
         }
+        // 追加去AI味引导
+        sb.append("\n").append(com.example.aipassagecreator.methodology.antiai.AntiAiFlavorRules.CONTENT_GUIDANCE);
         return sb.toString();
     }
 }

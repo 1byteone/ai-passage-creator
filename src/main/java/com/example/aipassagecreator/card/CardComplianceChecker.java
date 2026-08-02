@@ -84,6 +84,16 @@ public class CardComplianceChecker {
             }
         }
 
+        // 规则 4: AI味检测（warning 级，仅全文检测一次）
+        var aiReport = com.example.aipassagecreator.methodology.antiai.AntiAiFlavorChecker.check(
+                mainTitle + " " + pages.stream().map(PagePlan::getContentMd).reduce("", (a, b) -> a + " " + b));
+        if (aiReport.hasViolations()) {
+            for (String v : aiReport.violations().subList(0, Math.min(3, aiReport.violations().size()))) {
+                results.add(new ComplianceReport.RuleResult("AiFlavorRule",
+                        "WARNING", false, v, null));
+            }
+        }
+
         boolean passed = results.stream()
                 .filter(r -> "ERROR".equals(r.getLevel()))
                 .allMatch(r -> r.isPassed());

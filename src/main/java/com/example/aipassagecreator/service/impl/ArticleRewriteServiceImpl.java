@@ -48,7 +48,11 @@ public class ArticleRewriteServiceImpl implements ArticleRewriteService {
             2. 优化段落结构，确保逻辑递进
             3. 丰富论据和案例，增强说服力
             4. 改善开头和结尾，提升吸引力
-            5. 控制句子长度节奏，提高可读性""";
+            5. 控制句子长度节奏，提高可读性
+            6. 去除AI味：用口语化表达替换书面语，加入个人视角""";
+
+    private static final String ANTI_AI_REWRITE_INSTRUCTION =
+            com.example.aipassagecreator.methodology.antiai.AntiAiFlavorRules.REWRITE_INSTRUCTION;
 
     private static final int MAX_CONTENT_LENGTH = 10000;
 
@@ -256,7 +260,9 @@ public class ArticleRewriteServiceImpl implements ArticleRewriteService {
                     && response.getMetadata().getUsage().getTotalTokens() != null) {
                 return response.getMetadata().getUsage().getTotalTokens();
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("获取 token 消耗量失败: {}", e.getMessage());
+        }
         return 0;
     }
 }
