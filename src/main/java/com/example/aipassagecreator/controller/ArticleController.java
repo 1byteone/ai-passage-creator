@@ -18,6 +18,7 @@ import com.example.aipassagecreator.service.AgentLogService;
 import com.example.aipassagecreator.service.ArticleAsyncService;
 import com.example.aipassagecreator.service.ArticleService;
 import com.example.aipassagecreator.service.ArticleRewriteService;
+import jakarta.validation.Valid;
 import com.example.aipassagecreator.service.ContentQualityService;
 import com.example.aipassagecreator.service.UserService;
 import com.mybatisflex.core.paginate.Page;
@@ -71,7 +72,7 @@ public class ArticleController {
      */
     @PostMapping("/create")
     @Operation(summary = "创建文章任务")
-    public BaseResponse<String> createArticle(@RequestBody ArticleCreateRequest request, HttpServletRequest httpServletRequest){
+    public BaseResponse<String> createArticle(@Valid @RequestBody ArticleCreateRequest request, HttpServletRequest httpServletRequest){
         ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
         ThrowUtils.throwIf(request.getTopic() == null || request.getTopic().trim().isEmpty()
                 , ErrorCode.PARAMS_ERROR, "选题不能为空");
@@ -105,7 +106,7 @@ public class ArticleController {
      */
     @PostMapping("/confirm-title")
     @Operation(summary = "确认标题并输入补充描述")
-    public BaseResponse<Void> confirmTitle(@RequestBody ArticleConfirmTitleRequest request, HttpServletRequest httpServletRequest) {
+    public BaseResponse<Void> confirmTitle(@Valid @RequestBody ArticleConfirmTitleRequest request, HttpServletRequest httpServletRequest) {
         ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
         ThrowUtils.throwIf(request.getTaskId() == null || request.getTaskId().trim().isEmpty(),
                 ErrorCode.PARAMS_ERROR, "任务ID不能为空");
@@ -136,7 +137,7 @@ public class ArticleController {
      */
     @PostMapping("/confirm-outline")
     @Operation(summary = "确认大纲")
-    public BaseResponse<Void> confirmOutline(@RequestBody ArticleConfirmOutlineRequest request,
+    public BaseResponse<Void> confirmOutline(@Valid @RequestBody ArticleConfirmOutlineRequest request,
                                              HttpServletRequest httpServletRequest) {
         ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
         ThrowUtils.throwIf(request.getTaskId() == null || request.getTaskId().trim().isEmpty(),
@@ -165,7 +166,7 @@ public class ArticleController {
     @PostMapping("/ai-modify-outline")
     @Operation(summary = "AI 修改大纲")
     public BaseResponse<List<ArticleState.OutlineSection>> aiModifyOutline(
-            @RequestBody ArticleAiModifyOutlineRequest request,
+            @Valid @RequestBody ArticleAiModifyOutlineRequest request,
             HttpServletRequest httpServletRequest) {
         ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
         ThrowUtils.throwIf(request.getTaskId() == null || request.getTaskId().trim().isEmpty(),
@@ -261,7 +262,7 @@ public class ArticleController {
     @PostMapping("/list")
     @Operation(summary = "分页查询文章列表")
     @AuthCheck(mustRole = "user")
-    public BaseResponse<Page<ArticleVO>> listArticle(@RequestBody ArticleQueryRequest request,
+    public BaseResponse<Page<ArticleVO>> listArticle(@Valid @RequestBody ArticleQueryRequest request,
                                                      HttpServletRequest httpServletRequest) {
         User loginUser = userService.getLoginUser(httpServletRequest);
         Page<ArticleVO> articleVOPage = articleService.listArticleByPage(request, loginUser);
@@ -275,7 +276,7 @@ public class ArticleController {
     @PostMapping("/delete")
     @Operation(summary = "删除文章")
     @AuthCheck(mustRole = "user")
-    public BaseResponse<Boolean> deleteArticle(@RequestBody DeleteRequest deleteRequest,
+    public BaseResponse<Boolean> deleteArticle(@Valid @RequestBody DeleteRequest deleteRequest,
                                                HttpServletRequest httpServletRequest) {
         ThrowUtils.throwIf(deleteRequest == null || deleteRequest.getId() == null,
                 ErrorCode.PARAMS_ERROR);
@@ -321,7 +322,7 @@ public class ArticleController {
     @Operation(summary = "爆款维度评测")
     @AuthCheck(mustRole = "user")
     @RateLimit(limit = 5, window = 60, key = "viral_evaluate")
-    public BaseResponse<?> evaluateViral(@RequestBody ArticleEvaluateViralRequest request,
+    public BaseResponse<?> evaluateViral(@Valid @RequestBody ArticleEvaluateViralRequest request,
                                          HttpServletRequest httpServletRequest) {
         ThrowUtils.throwIf(request == null || request.getTaskId() == null
                 || request.getTaskId().trim().isEmpty(), ErrorCode.PARAMS_ERROR, "任务ID不能为空");
@@ -351,7 +352,7 @@ public class ArticleController {
     @Operation(summary = "爆款反哺（低分维度定向改写）")
     @AuthCheck(mustRole = "user")
     @RateLimit(limit = 3, window = 60, key = "viral_refine")
-    public BaseResponse<?> refine(@RequestBody ArticleEvaluateViralRequest request,
+    public BaseResponse<?> refine(@Valid @RequestBody ArticleEvaluateViralRequest request,
                                   HttpServletRequest httpServletRequest) {
         ThrowUtils.throwIf(request == null || request.getTaskId() == null
                 || request.getTaskId().trim().isEmpty(), ErrorCode.PARAMS_ERROR, "任务ID不能为空");
@@ -381,7 +382,7 @@ public class ArticleController {
     @Operation(summary = "AI 改写文章")
     @AuthCheck(mustRole = "user")
     @RateLimit(limit = 3, window = 60, key = "article_rewrite")
-    public BaseResponse<?> rewriteArticle(@RequestBody ArticleAiModifyOutlineRequest request,
+    public BaseResponse<?> rewriteArticle(@Valid @RequestBody ArticleAiModifyOutlineRequest request,
                                            HttpServletRequest httpServletRequest) {
         ThrowUtils.throwIf(request == null || request.getTaskId() == null,
                 ErrorCode.PARAMS_ERROR);
@@ -428,7 +429,7 @@ public class ArticleController {
     @PostMapping("/revert")
     @Operation(summary = "回退文章到指定版本")
     @AuthCheck(mustRole = "user")
-    public BaseResponse<?> revertArticle(@RequestBody ArticleRevertRequest request,
+    public BaseResponse<?> revertArticle(@Valid @RequestBody ArticleRevertRequest request,
                                           HttpServletRequest httpServletRequest) {
         ThrowUtils.throwIf(request == null || request.getTaskId() == null || request.getVersionNo() == null,
                 ErrorCode.PARAMS_ERROR);

@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.model.dto.article;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -12,19 +13,13 @@ import java.io.Serializable;
 @Data
 public class ArticleConfirmTitleRequest implements Serializable {
 
-    /**
-     * 任务ID
-     */
+    @NotBlank(message = "任务ID不能为空")
     private String taskId;
 
-    /**
-     * 选中的主标题
-     */
+    @NotBlank(message = "主标题不能为空")
     private String selectedMainTitle;
 
-    /**
-     * 选中的副标题
-     */
+    @NotBlank(message = "副标题不能为空")
     private String selectedSubTitle;
 
     /**

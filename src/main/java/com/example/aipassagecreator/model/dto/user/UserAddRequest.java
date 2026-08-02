@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.model.dto.user;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -15,9 +16,7 @@ public class UserAddRequest implements Serializable {
      */
     private String userName;
 
-    /**
-     * 账号
-     */
+    @NotBlank(message = "账号不能为空")
     private String userAccount;
 
     /**

@@ -19,6 +19,7 @@ import com.example.aipassagecreator.service.UserService;
 import com.mybatisflex.core.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -65,7 +66,7 @@ public class CardController {
     @Operation(summary = "卡片预览（前 2 页）")
     @AuthCheck(mustRole = "user")
     @RateLimit(limit = 5, window = 60, key = "card_preview")
-    public BaseResponse<?> preview(@RequestBody CardGenerateRequest request,
+    public BaseResponse<?> preview(@Valid @RequestBody CardGenerateRequest request,
                                               HttpServletRequest httpServletRequest) {
         ThrowUtils.throwIf(request == null || request.getTaskId() == null
                 || request.getTaskId().trim().isEmpty(), ErrorCode.PARAMS_ERROR);
@@ -97,7 +98,7 @@ public class CardController {
     @Operation(summary = "卡片生成（异步）")
     @AuthCheck(mustRole = "user")
     @RateLimit(limit = 3, window = 60, key = "card_generate")
-    public BaseResponse<?> generate(@RequestBody CardGenerateRequest request,
+    public BaseResponse<?> generate(@Valid @RequestBody CardGenerateRequest request,
                                                       HttpServletRequest httpServletRequest) {
         ThrowUtils.throwIf(request == null || request.getTaskId() == null
                 || request.getTaskId().trim().isEmpty(), ErrorCode.PARAMS_ERROR);
@@ -142,7 +143,8 @@ public class CardController {
 
     /**
      * 查询已生成卡片列表（按页码升序）。
-     * 未生成卡片时返回空列表而非报错。
+     * 返回前对 COMPLETED 卡片用 imageKey 实时生成短时效预签名 URL（10min），
+     * 避免存储的 1h 签名过期后图片破裂。
      */
     @GetMapping("/{taskId}")
     @Operation(summary = "查询已生成卡片列表")
@@ -155,6 +157,14 @@ public class CardController {
 
         List<CardPage> pages = cardPageMapper.selectListByQuery(
                 QueryWrapper.create().eq("task_id", taskId).orderBy("page_no", true));
+        // 实时刷新预签名 URL（10min 短时效）
+        pages.forEach(cp -> {
+            if ("COMPLETED".equals(cp.getStatus()) && cp.getImageKey() != null) {
+                String freshUrl = com.example.aipassagecreator.service.CosService.INSTANCE
+                        .generatePresignedUrl(cp.getImageKey(), java.time.Duration.ofMinutes(10));
+                if (freshUrl != null) cp.setImageUrl(freshUrl);
+            }
+        });
         return ResultUtils.success(pages);
     }
 

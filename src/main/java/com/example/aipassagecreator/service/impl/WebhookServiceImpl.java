@@ -21,6 +21,8 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Slf4j
 @Service
 public class WebhookServiceImpl implements WebhookService {
@@ -43,6 +45,7 @@ public class WebhookServiceImpl implements WebhookService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void publish(String eventType, Map<String, Object> payload, String targetUrl) {
         // 密钥未配置时功能禁用
         if (sharedSecret == null || sharedSecret.isBlank()) {

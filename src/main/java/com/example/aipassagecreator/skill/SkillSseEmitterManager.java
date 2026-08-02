@@ -119,7 +119,8 @@ public class SkillSseEmitterManager {
         }
         try {
             emitter.complete();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("SSE complete 失败: {}", e.getMessage());
         }
     }
 
@@ -129,7 +130,8 @@ public class SkillSseEmitterManager {
         }
         try {
             emitter.completeWithError(error);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("SSE completeWithError 失败: {}", e.getMessage());
         }
     }
 

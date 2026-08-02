@@ -66,7 +66,9 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                                 imageMethodDistribution.merge(m, 1L, Long::sum);
                             }
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) {
+                        log.warn("解析图片方法分布失败: {}", e.getMessage());
+                    }
                 });
 
         // 质量评分趋势

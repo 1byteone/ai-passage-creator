@@ -16,6 +16,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,6 +45,7 @@ public class PublishServiceImpl implements PublishService {
     private ContentPublisher contentPublisher;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public PublishSchedule schedule(String taskId, LocalDateTime publishAt, String platform,
                                     String methodologyName, Long userId) {
         if (publishAt == null || publishAt.isBefore(LocalDateTime.now())) {

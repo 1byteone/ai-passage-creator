@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.model.dto.article;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -16,6 +17,7 @@ public class ArticleCreateRequest implements Serializable {
     /**
      * 选题
      */
+    @NotBlank(message = "选题不能为空")
     private String topic;
 
     /**

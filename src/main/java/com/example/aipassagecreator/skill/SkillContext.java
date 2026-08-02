@@ -78,7 +78,9 @@ public class SkillContext {
                     emitter.send(SseEmitter.event().data(msg).reconnectTime(3000L));
                 } catch (IOException e) {
                     log.warn("SSE 推送失败 (executionId={}): {}", executionId, e.getMessage());
-                    try { emitter.completeWithError(e); } catch (Exception ignored) {}
+                    try { emitter.completeWithError(e); } catch (Exception ex) {
+                        log.warn("SSE completeWithError 失败 (executionId={}): {}", executionId, ex.getMessage());
+                    }
                 }
             }
         });

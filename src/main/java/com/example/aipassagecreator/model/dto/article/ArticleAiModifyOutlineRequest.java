@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.model.dto.article;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -12,14 +13,10 @@ import java.io.Serializable;
 @Data
 public class ArticleAiModifyOutlineRequest implements Serializable {
 
-    /**
-     * 任务ID
-     */
+    @NotBlank(message = "任务ID不能为空")
     private String taskId;
 
-    /**
-     * 用户的修改建议
-     */
+    @NotBlank(message = "修改建议不能为空")
     private String modifySuggestion;
 
     private static final long serialVersionUID = 1L;

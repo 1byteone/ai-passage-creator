@@ -36,7 +36,7 @@ public class SseEmitterManager {
             try {
                 old.complete();
             } catch (Exception ignored) {
-                // 旧连接可能已断开
+                log.warn("关闭旧 SSE 连接失败 (taskId={}): {}", taskId, ignored.getMessage());
             }
         }
 

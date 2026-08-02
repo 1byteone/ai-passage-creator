@@ -15,6 +15,7 @@ import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,6 +38,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     private UserMapper userMapper;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public ApprovalRecord submit(String taskId, Long submittedBy) {
         Article article = articleMapper.selectOneByQuery(
                 QueryWrapper.create().eq("taskId", taskId));
@@ -64,11 +66,13 @@ public class ApprovalServiceImpl implements ApprovalService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public ApprovalRecord approve(String taskId, Long reviewerId, String comment) {
         return review(taskId, reviewerId, comment, STATUS_APPROVED);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public ApprovalRecord reject(String taskId, Long reviewerId, String comment) {
         return review(taskId, reviewerId, comment, STATUS_REJECTED);
     }

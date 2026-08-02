@@ -18,6 +18,7 @@ import com.example.aipassagecreator.model.po.SkillExecutionPo;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.model.vo.LoginUserVO;
 import com.example.aipassagecreator.model.vo.SkillExecutionVO;
+import jakarta.validation.Valid;
 import com.example.aipassagecreator.service.QuotaService;
 import com.example.aipassagecreator.service.UserService;
 import com.example.aipassagecreator.utils.GsonUtils;

@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.card.model;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -17,7 +18,7 @@ public class CardGenerateRequest implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /** 文章任务 ID */
+    @NotBlank(message = "任务ID不能为空")
     private String taskId;
 
     /** 卡片风格（warm/minimal/free），为空则从 methodology 读取 */

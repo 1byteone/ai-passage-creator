@@ -14,6 +14,7 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
@@ -31,6 +32,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * @return 新用户id
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
         //1。校验参数
         if(StrUtil.hasBlank(userAccount,userPassword,checkPassword)){

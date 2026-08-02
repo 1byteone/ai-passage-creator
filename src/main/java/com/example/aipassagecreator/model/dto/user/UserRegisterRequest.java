@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.model.dto.user;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -12,18 +13,12 @@ public class UserRegisterRequest implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 账号
-     */
+    @NotBlank(message = "账号不能为空")
     private String userAccount;
 
-    /**
-     * 密码
-     */
+    @NotBlank(message = "密码不能为空")
     private String userPassword;
 
-    /**
-     * 确认密码
-     */
+    @NotBlank(message = "确认密码不能为空")
     private String checkPassword;
 }

@@ -1,5 +1,7 @@
 package com.example.aipassagecreator.model.dto.article;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -13,14 +15,10 @@ import java.util.List;
 @Data
 public class ArticleConfirmOutlineRequest implements Serializable {
 
-    /**
-     * 任务ID
-     */
+    @NotBlank(message = "任务ID不能为空")
     private String taskId;
 
-    /**
-     * 用户编辑后的大纲
-     */
+    @NotEmpty(message = "大纲不能为空")
     private List<ArticleState.OutlineSection> outline;
 
     private static final long serialVersionUID = 1L;
