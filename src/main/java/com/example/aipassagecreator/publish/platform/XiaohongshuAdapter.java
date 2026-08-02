@@ -85,12 +85,12 @@ public class XiaohongshuAdapter implements PlatformAdapter {
 
     private List<String> extractTopics(String markdown, MethodologyDefinition def) {
         List<String> topics = new ArrayList<>();
-        // 从 ## 标题提取话题
+        // 从 ## 标题提取话题（去重，防止重复章节标题产出重复话题）
         String[] lines = markdown.split("\n");
         for (String line : lines) {
             if (line.startsWith("## ") && line.length() > 3) {
                 String topic = line.substring(3).trim();
-                if (!topic.isEmpty() && topics.size() < 5) {
+                if (!topic.isEmpty() && !topics.contains(topic) && topics.size() < 5) {
                     topics.add(topic);
                 }
             }
