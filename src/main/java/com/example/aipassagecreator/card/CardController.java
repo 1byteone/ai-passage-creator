@@ -57,6 +57,8 @@ public class CardController {
     private MethodologyRegistry methodologyRegistry;
     @Resource
     private CardPageMapper cardPageMapper;
+    @Resource
+    private com.example.aipassagecreator.service.CosService cosService;
 
     /**
      * 卡片预览（同步渲染前 2 页并上传）。
@@ -160,8 +162,7 @@ public class CardController {
         // 实时刷新预签名 URL（10min 短时效）
         pages.forEach(cp -> {
             if ("COMPLETED".equals(cp.getStatus()) && cp.getImageKey() != null) {
-                String freshUrl = com.example.aipassagecreator.service.CosService.INSTANCE
-                        .generatePresignedUrl(cp.getImageKey(), java.time.Duration.ofMinutes(10));
+                String freshUrl = cosService.generatePresignedUrl(cp.getImageKey(), java.time.Duration.ofMinutes(10));
                 if (freshUrl != null) cp.setImageUrl(freshUrl);
             }
         });

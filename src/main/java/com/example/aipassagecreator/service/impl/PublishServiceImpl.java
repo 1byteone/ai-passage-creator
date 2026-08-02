@@ -123,6 +123,7 @@ public class PublishServiceImpl implements PublishService {
                 QueryWrapper.create()
                         .eq("status", STATUS_SCHEDULED)
                         .le("publish_at", LocalDateTime.now())
+                        .orderBy("publish_at", true)
                         .limit(10));
         int count = 0;
         for (PublishSchedule schedule : due) {
