@@ -5,6 +5,37 @@ AI 驱动的全栈文章创作平台：选题→标题→大纲→内容生成�
 
 ---
 
+## 核心工程原则 (Core Principles)
+
+> 基于 [vibe-hub.org/anti-ai-flavor](https://vibe-hub.org/anti-ai-flavor) + [vibe-coding-ai-rules](https://github.com/obviousworks/vibe-coding-ai-rules)
+
+| 原则 | 含义 | AI 行为要求 |
+|------|------|-----------|
+| **Clarify Before Coding** | 先理解需求再写代码 | 意图不清时主动提问，禁止盲目实施 |
+| **Simplicity First** | 选最简单可行的方案 | 复杂模式需明确理由。可读 > 精巧 |
+| **Security By Default** | 默认安全 | 校验所有输入。无硬编码密钥。纵深防御 |
+| **Test-Driven Thinking** | 从测试角度思考设计 | 代码必须可测试。写代码同时写测试 |
+
+### Trust Spectrum — 根据代码关键性决定 AI 自主程度
+
+| 代码类型 | AI 自主度 | 审查强度 |
+|---------|----------|---------|
+| 🔴 安全关键 (认证/授权/XSS/加密) | 仅建议 | 手动审查 + SAST |
+| 🟠 算法核心 (计费/排序/匹配) | 可实施，必带测试 | 测试 + 同行审查 |
+| 🟡 业务逻辑 (状态机/校验) | 可实施，需测试覆盖 | 集成测试 |
+| 🟢 样板代码 (CRUD/配置) | 高自主 | 自动测试 + 10% 人工抽查 |
+
+### AI 代码提交前必查
+
+- [ ] 我读过并理解了 diff 的每一处变更
+- [ ] 没有不必要的抽象 (1 个实现的 Interface 不抽)
+- [ ] 注释解释 "为什么" 而非 "做了什么"
+- [ ] 用户可见的错误消息用中文，简洁直接
+- [ ] 变量名 ≤3 个单词
+- [ ] 没有冗余的空 try-catch (log+rethrow)
+
+---
+
 ## 技术栈
 
 | 层 | 技术 | 版本 |
@@ -225,6 +256,9 @@ User Input → Vue → POST /api/article/create → SSE taskId → EventSource �
 - [ ] git status 只包含预期文件
 - [ ] commit message 符合 Conventional Commits
 - [ ] Co-Authored-By: Claude <noreply@anthropic.com>
+- [ ] 已通过 AI 代码气味检查 (见 anti-ai-flavor 检查清单)
+- [ ] 无 Accept-Without-Read — 理解 diff 中每一处变更
+- [ ] 无 Copy-Paste Sprawl — 搜索确认无重复实现
 ```
 
 ---
@@ -262,3 +296,4 @@ User Input → Vue → POST /api/article/create → SSE taskId → EventSource �
 @.claude/rules/security.md
 @.claude/rules/java-backend.md
 @.claude/rules/vue-frontend.md
+@.claude/rules/anti-ai-flavor.md
