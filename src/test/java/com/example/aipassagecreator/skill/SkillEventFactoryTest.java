@@ -133,6 +133,33 @@ class SkillEventFactoryTest {
         assertNull(payload.get("pendingOutput"));
     }
 
+    // ──────────────────────────── chain.complete / chain.error ────────────────────────────
+
+    @Test
+    void chainCompleteEventHasTypeAndOutputs() {
+        Map<String, Object> outputs = Map.of("topic-gen", "选题A");
+        String json = SkillEventFactory.chainComplete("chain-1", outputs);
+        Map<String, Object> payload = parse(json);
+
+        assertEquals("chain.complete", payload.get("type"));
+        assertEquals("chain", payload.get("skillName"));
+        assertEquals("SUCCESS", payload.get("status"));
+        assertNotNull(payload.get("outputData"));
+    }
+
+    @Test
+    void chainErrorEventIncludesFailedSkill() {
+        Map<String, Object> outputs = Map.of("topic-gen", "选题A");
+        String json = SkillEventFactory.chainError("chain-1", outputs, "proofreading");
+        Map<String, Object> payload = parse(json);
+
+        assertEquals("chain.error", payload.get("type"));
+        assertEquals("chain", payload.get("skillName"));
+        assertEquals("PARTIAL", payload.get("status"));
+        assertEquals("proofreading", payload.get("failedSkill"));
+        assertNotNull(payload.get("outputData"));
+    }
+
     // ──────────────────────────── error ────────────────────────────
 
     @Test

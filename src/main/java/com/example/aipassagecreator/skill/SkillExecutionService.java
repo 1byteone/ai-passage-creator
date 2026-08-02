@@ -52,6 +52,31 @@ public class SkillExecutionService {
     }
 
     /**
+     * 异步执行整条链 — HTTP 请求立即返回 chainId，进度经 SSE 推送。
+     * <p>
+     * 链上某个 skill 失败已在 executeSync 内退还失败及后续 skill 的配额；
+     * 此处仅在整条链抛出异常（派发/图编译等灾难性错误）时退还全部配额。
+     */
+    @Async("skillExecutor")
+    public void executeChainAsync(SkillExecutionChain chain, Map<String, Object> inputs,
+                                  Long userId, int quotaCount) {
+        String chainId = chain.getChainExecutionId();
+        try {
+            chain.executeSync(
+                    event -> sseEmitterManager.publish(chainId, event),
+                    inputs, userId);
+        } catch (Exception e) {
+            log.error("链式编排异常终止，退还配额: chainId={}", chainId, e);
+            for (int i = 0; i < quotaCount; i++) {
+                refundQuietly(userId, chainId + "-" + i);
+            }
+        } finally {
+            sseEmitterManager.complete(chainId);
+            executionRegistry.unregisterChain(chainId);
+        }
+    }
+
+    /**
      * 一次执行片段结束后的收尾
      * <p>
      * 暂停等待确认时 <b>不能</b> 关闭 SSE —— 前端需保持连接以接收续跑后的事件。

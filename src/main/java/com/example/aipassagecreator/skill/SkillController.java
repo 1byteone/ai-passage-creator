@@ -126,8 +126,8 @@ public class SkillController {
     /**
      * 链式执行多个 Skill — 前一个输出作为后一个输入
      * <p>
-     * 注意：链式编排为同步执行，HTTP 请求会阻塞至全部完成。
-     * 每次链式执行消耗 N 个配额（N = skill 数量）。
+     * 异步执行：扣 N 个配额后立即返回 chainId，进度经 SSE 推送
+     * （GET /skill/chain/{chainId}/progress），不再阻塞请求线程。
      */
     @PostMapping("/chain/execute")
     @Operation(summary = "链式执行多个 Skill")
@@ -158,34 +158,40 @@ public class SkillController {
         try {
             SkillExecutionChain chain = skillRegistry.createChain(
                     chainId, request.getSkillNames().toArray(new String[0]));
-            SkillExecutionChain.ChainResult result = chain.executeSync(
-                    msg -> sseEmitterManager.publish(chainId, msg),
-                    inputs,
-                    loginUser.getId());
-
-            if (!result.isSuccess()) {
-                // 链式执行中途失败 — 已执行成功的 skill 配额不退，失败及后续 skill 已在 executeSync 内退还
-                return ResultUtils.success(Map.of(
-                        "chainId", chainId,
-                        "skills", request.getSkillNames(),
-                        "outputs", result.outputs(),
-                        "failedSkill", result.failedSkill(),
-                        "status", "PARTIAL"));
-            }
-
-            return ResultUtils.success(Map.of(
-                    "chainId", chainId,
-                    "skills", request.getSkillNames(),
-                    "outputs", result.outputs(),
-                    "status", "SUCCESS"));
+            // 登记链归属供 progress 端点校验；异步执行，HTTP 立即返回
+            executionRegistry.registerChain(chainId, loginUser.getId());
+            skillExecutionService.executeChainAsync(chain, inputs, loginUser.getId(), requiredQuota);
         } catch (Exception e) {
-            log.error("链式编排失败: skills={}", request.getSkillNames(), e);
-            // 失败退还配额（未全部完成）
+            // 派发失败说明未真正消耗算力，退还配额避免白扣
+            log.error("链式编排派发失败，退还配额: skills={}", request.getSkillNames(), e);
             for (int i = 0; i < requiredQuota; i++) {
                 quotaService.refundQuota(loginUser);
             }
             throw e;
         }
+
+        return ResultUtils.success(Map.of(
+                "chainId", chainId,
+                "skills", request.getSkillNames(),
+                "status", "RUNNING",
+                "progressUrl", "/skill/chain/" + chainId + "/progress"));
+    }
+
+    /**
+     * 链式执行进度推送（SSE）
+     * <p>
+     * 链无 DB 行、为一次性管道，仅内存登记；归属校验不通过即视为不存在。
+     */
+    @GetMapping("/chain/{chainId}/progress")
+    public SseEmitter chainProgress(@PathVariable String chainId, HttpServletRequest servletRequest) {
+        LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        if (!executionRegistry.isChainOwner(chainId, loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "链式执行不存在");
+        }
+        return sseEmitterManager.subscribe(chainId);
     }
 
     /**

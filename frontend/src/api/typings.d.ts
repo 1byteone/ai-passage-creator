@@ -342,6 +342,8 @@ declare namespace API {
       | 'skill.awaiting_confirmation'
       | 'skill.complete'
       | 'skill.error'
+      | 'chain.complete'
+      | 'chain.error'
     skillExecutionId: string
     skillName: string
     timestamp?: number
@@ -352,6 +354,8 @@ declare namespace API {
     data?: string
     outputData?: unknown
     errorMessage?: string
+    /** 仅 chain.error：失败的 skill 名（前端定位失败环节） */
+    failedSkill?: string
     /** 仅 skill.awaiting_confirmation：后端支持的确认动作 */
     supportedActions?: SkillConfirmAction[]
     /** 仅 skill.awaiting_confirmation：待用户审阅的上一阶段产出 */

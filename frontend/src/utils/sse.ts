@@ -120,6 +120,36 @@ export const connectSkillSSE = (
   executionId: string,
   options: SkillSSEOptions,
 ): SkillSSEConnection => {
+  return connectSkillLikeSSE(
+    `/api/skill/${encodeURIComponent(executionId)}/progress`,
+    (message) => message.type === 'skill.complete' || message.type === 'skill.error',
+    options,
+  )
+}
+
+/**
+ * 链式编排 SSE — 与单 skill 完全一致的重连/关闭语义，仅 URL 与终态事件不同
+ */
+export const connectChainSSE = (
+  chainId: string,
+  options: SkillSSEOptions,
+): SkillSSEConnection => {
+  return connectSkillLikeSSE(
+    `/api/skill/chain/${encodeURIComponent(chainId)}/progress`,
+    (message) => message.type === 'chain.complete' || message.type === 'chain.error',
+    options,
+  )
+}
+
+/**
+ * skill/chain SSE 通用连接（带一次重连）。
+ * 单 skill 与链式复用同一套连接语义，仅 URL 与终态判定不同。
+ */
+const connectSkillLikeSSE = (
+  url: string,
+  isTerminal: (message: API.SkillProgressEvent) => boolean,
+  options: SkillSSEOptions,
+): SkillSSEConnection => {
   let source: EventSource | null = null
   let reconnectTimer: number | null = null
   let reconnectCount = 0
@@ -138,7 +168,7 @@ export const connectSkillSSE = (
 
   const connect = () => {
     if (closed) return
-    source = new EventSource(`/api/skill/${encodeURIComponent(executionId)}/progress`, { withCredentials: true })
+    source = new EventSource(url, { withCredentials: true })
 
     source.onmessage = (event) => {
       // 连接成功收到消息后重置重连计数，为下一次断连做准备
@@ -146,7 +176,7 @@ export const connectSkillSSE = (
       try {
         const message = JSON.parse(event.data) as API.SkillProgressEvent
         options.onMessage(message)
-        if (message.type === 'skill.complete' || message.type === 'skill.error') {
+        if (isTerminal(message)) {
           terminal = true
           close()
         }

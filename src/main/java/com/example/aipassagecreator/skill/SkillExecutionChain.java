@@ -32,6 +32,14 @@ public class SkillExecutionChain {
         this.chainExecutionId = chainExecutionId;
     }
 
+    public String getChainExecutionId() {
+        return chainExecutionId;
+    }
+
+    public List<String> getSkillNames() {
+        return skillNames;
+    }
+
     /**
      * 同步链式执行
      *
@@ -109,9 +117,12 @@ public class SkillExecutionChain {
             executionRegistry.remove(execution.getExecutionId());
         }
 
-        String eventType = failedSkill != null ? "error" : "complete";
-        streamHandler.accept(SkillEventFactory.progress(chainExecutionId, "chain", eventType,
-                skillNames.size(), skillNames.size(), null));
+        // 终态事件携带完整输出与失败环节，前端据此渲染结果/定位失败点
+        if (failedSkill != null) {
+            streamHandler.accept(SkillEventFactory.chainError(chainExecutionId, chainOutputs, failedSkill));
+        } else {
+            streamHandler.accept(SkillEventFactory.chainComplete(chainExecutionId, chainOutputs));
+        }
         return new ChainResult(chainOutputs, failedSkill);
     }
 

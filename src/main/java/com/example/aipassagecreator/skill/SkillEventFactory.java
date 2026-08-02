@@ -40,6 +40,30 @@ public final class SkillEventFactory {
     }
 
     /**
+     * 链式执行完成（全部 skill 成功）— type=chain.complete，outputData 为各 skill 输出
+     */
+    public static String chainComplete(String chainId, Map<String, Object> outputs) {
+        Map<String, Object> payload = base("chain.complete", chainId, "chain");
+        payload.put("status", "SUCCESS");
+        payload.put("outputData", outputs);
+        return GsonUtils.toJson(payload);
+    }
+
+    /**
+     * 链式执行部分失败 — type=chain.error
+     *
+     * @param outputs     已成功 skill 的输出
+     * @param failedSkill 失败的 skill 名（前端定位失败环节）
+     */
+    public static String chainError(String chainId, Map<String, Object> outputs, String failedSkill) {
+        Map<String, Object> payload = base("chain.error", chainId, "chain");
+        payload.put("status", "PARTIAL");
+        payload.put("outputData", outputs);
+        payload.put("failedSkill", failedSkill);
+        return GsonUtils.toJson(payload);
+    }
+
+    /**
      * 执行已暂停，等待用户确认
      *
      * @param phase          即将执行、需要确认的阶段

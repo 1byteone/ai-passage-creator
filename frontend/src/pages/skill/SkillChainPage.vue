@@ -99,10 +99,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeftOutlined, PlayCircleOutlined } from '@ant-design/icons-vue'
 import { getSkillUiConfig } from '@/config/skill'
+import { connectChainSSE, type SkillSSEConnection } from '@/utils/sse'
 
 const router = useRouter()
 const skills = ref<API.SkillSummary[]>([])
@@ -114,6 +115,9 @@ const completed = ref(false)
 const error = ref('')
 const currentStepIndex = ref(0)
 const chainOutputs = ref<Record<string, unknown>>({})
+
+let sseConnection: SkillSSEConnection | null = null
+let unmounted = false
 
 const availableSkills = computed(() => skills.value)
 
@@ -162,17 +166,72 @@ const startChain = async () => {
     if (payload.code !== 0) {
       throw new Error(payload.message || '链式执行失败')
     }
-    chainOutputs.value = payload.data?.outputs || {}
-    currentStepIndex.value = selected.value.length
-    completed.value = true
+    const chainId = payload.data?.chainId as string | undefined
+    if (!chainId) throw new Error('未能获取链式执行 ID')
+    if (unmounted) return
+    openChainSSE(chainId)
   } catch (e) {
+    if (unmounted) return
     error.value = e instanceof Error ? e.message : '链式执行失败'
-  } finally {
     running.value = false
   }
 }
 
+const openChainSSE = (chainId: string) => {
+  sseConnection?.close()
+  sseConnection = connectChainSSE(chainId, {
+    onMessage: handleChainEvent,
+    onFallback: () => {
+      error.value = '链式执行进度连接中断，请重新发起'
+      running.value = false
+    },
+    onParseError: () => {
+      error.value = '收到无法识别的链式进度消息'
+      running.value = false
+    },
+  })
+}
+
+const handleChainEvent = (event: API.SkillProgressEvent) => {
+  if (event.type === 'chain.complete') {
+    chainOutputs.value = (event.outputData as Record<string, unknown>) || {}
+    currentStepIndex.value = selected.value.length
+    running.value = false
+    completed.value = true
+    closeConnection()
+    return
+  }
+  if (event.type === 'chain.error') {
+    const failed = event.failedSkill
+    error.value = failed
+      ? `链式执行失败，失败环节：${getSkillUiConfig(failed).title}`
+      : '链式执行失败'
+    currentStepIndex.value = failed ? Math.max(0, selected.value.indexOf(failed)) : 0
+    running.value = false
+    closeConnection()
+    return
+  }
+  if (event.skillName !== 'chain') {
+    // 各 skill 自身终态：推进到已完成步骤
+    if (event.type === 'skill.complete') {
+      const idx = selected.value.indexOf(event.skillName)
+      if (idx >= 0) currentStepIndex.value = Math.max(currentStepIndex.value, idx + 1)
+    }
+    return
+  }
+  // chain 级进度：phase=当前执行技能名，phaseIndex=1-based
+  if (event.phase && selected.value.includes(event.phase)) {
+    currentStepIndex.value = (event.phaseIndex ?? 1) - 1
+  }
+}
+
+const closeConnection = () => {
+  sseConnection?.close()
+  sseConnection = null
+}
+
 const reset = () => {
+  closeConnection()
   completed.value = false
   running.value = false
   error.value = ''
@@ -187,6 +246,10 @@ const formatOutput = (value: unknown): string => {
 }
 
 onMounted(loadSkills)
+onBeforeUnmount(() => {
+  unmounted = true
+  closeConnection()
+})
 </script>
 
 <style scoped>

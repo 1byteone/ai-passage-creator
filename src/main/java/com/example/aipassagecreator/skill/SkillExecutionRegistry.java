@@ -26,9 +26,18 @@ public class SkillExecutionRegistry {
     /** 等待确认的最长时长，超时由 SkillConfirmationReaper 收割 */
     public static final Duration CONFIRMATION_TTL = Duration.ofMinutes(10);
 
+    /** 链式执行是短命一次性管道（无 DB 行），TTL 后懒清理防泄漏 */
+    private static final Duration CHAIN_TTL = Duration.ofMinutes(30);
+
     private final Map<String, Entry> registry = new ConcurrentHashMap<>();
 
+    /** chainId → 归属用户 + 登记时间（progress 端点校验所有权） */
+    private final Map<String, ChainOwner> chainOwners = new ConcurrentHashMap<>();
+
     private record Entry(SkillExecution execution, Long userId, Instant registeredAt) {
+    }
+
+    private record ChainOwner(Long userId, Instant registeredAt) {
     }
 
     /**
@@ -77,5 +86,33 @@ public class SkillExecutionRegistry {
     }
 
     public record Expired(String executionId, SkillExecution execution, Long userId) {
+    }
+
+    // ---------- 链式执行归属 ----------
+
+    public void registerChain(String chainId, Long userId) {
+        purgeExpiredChains();
+        chainOwners.put(chainId, new ChainOwner(userId, Instant.now()));
+    }
+
+    public boolean isChainOwner(String chainId, Long userId) {
+        ChainOwner owner = chainOwners.get(chainId);
+        if (owner == null) {
+            return false;
+        }
+        if (owner.registeredAt().isBefore(Instant.now().minus(CHAIN_TTL))) {
+            chainOwners.remove(chainId, owner);
+            return false;
+        }
+        return owner.userId().equals(userId);
+    }
+
+    public void unregisterChain(String chainId) {
+        chainOwners.remove(chainId);
+    }
+
+    private void purgeExpiredChains() {
+        Instant deadline = Instant.now().minus(CHAIN_TTL);
+        chainOwners.entrySet().removeIf(e -> e.getValue().registeredAt().isBefore(deadline));
     }
 }
