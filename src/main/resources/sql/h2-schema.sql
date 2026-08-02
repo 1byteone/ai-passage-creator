@@ -239,3 +239,16 @@ create table if not exists api_key (
     constraint uq_apiKeyHash unique (apiKeyHash),
     index idx_apiKey_user (userId)
 );
+
+-- HITL 检查点持久化（与 V2__add_skill_checkpoint.sql 同步维护）
+create table if not exists skill_checkpoint (
+    id bigint auto_increment primary key,
+    thread_id varchar(64) not null,
+    checkpoint_id varchar(64) not null,
+    node_id varchar(255) null,
+    next_node_id varchar(255) null,
+    state_data blob null,
+    released tinyint default 0 not null,
+    create_time datetime default CURRENT_TIMESTAMP not null,
+    update_time datetime default CURRENT_TIMESTAMP not null
+);

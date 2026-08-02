@@ -240,10 +240,13 @@ public class SkillController {
                     "暂不支持的确认动作: " + action + "，当前支持 approve / modify / retry");
         }
 
-        // 检查点存于进程内，应用重启后执行实例会丢失
+        // 检查点已落库：注册表未命中（应用重启/本地实例已回收）时从 DB 重建续跑
         SkillExecution execution = executionRegistry.get(executionId);
         if (execution == null) {
-            return ResultUtils.error(ErrorCode.OPERATION_ERROR, "执行已过期，请重新发起");
+            execution = tryRebuildExecution(executionId);
+            if (execution == null) {
+                return ResultUtils.error(ErrorCode.OPERATION_ERROR, "执行已过期，请重新发起");
+            }
         }
 
         Map<String, Object> modifiedData = null;
@@ -274,6 +277,35 @@ public class SkillController {
                 "skillExecutionId", executionId,
                 "action", action,
                 "status", SkillExecutionStatusEnum.RUNNING.getValue()));
+    }
+
+    /**
+     * 注册表未命中时从 DB 重建执行实例（应用重启后待确认的 Skill 可续跑）。
+     * <p>
+     * 仅当记录仍为 AWAITING_CONFIRMATION 时重建，避免把已被超时收割的执行复活。
+     *
+     * @return 重建的执行实例；记录不存在或状态不符时返回 null
+     */
+    private SkillExecution tryRebuildExecution(String executionId) {
+        try {
+            SkillExecutionPo po = skillExecutionMapper.selectOneByQuery(
+                    QueryWrapper.create()
+                            .eq("skill_execution_id", executionId)
+                            .eq("status", SkillExecutionStatusEnum.AWAITING_CONFIRMATION.getValue()));
+            if (po == null) {
+                return null;
+            }
+            Map<String, Object> inputs = po.getInputData() == null || po.getInputData().isBlank()
+                    ? Map.of()
+                    : GsonUtils.fromJson(po.getInputData(), new TypeToken<Map<String, Object>>() {
+                    });
+            SkillExecution rebuilt = skillRegistry.createExecution(
+                    po.getSkillName(), inputs, executionId);
+            return rebuilt.restoreFrom(po);
+        } catch (Exception e) {
+            log.error("重建 Skill 执行实例失败: executionId={}", executionId, e);
+            return null;
+        }
     }
 
     /**

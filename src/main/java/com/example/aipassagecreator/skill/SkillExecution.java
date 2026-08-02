@@ -72,6 +72,37 @@ public class SkillExecution {
     }
 
     /**
+     * 应用重启后从持久化记录重建执行实例（状态置为 AWAITING_CONFIRMATION）。
+     * <p>
+     * 不恢复 sharedData：续跑所需的阶段输出都在 DB 检查点里，由 {@link #resume} 从图中读取；
+     * 仅种子化 token 消耗与模型列表，保证成本核算连续。resume() 本身无需改动。
+     */
+    public SkillExecution restoreFrom(SkillExecutionPo po) {
+        this.persistedExecution = po;
+        this.status = SkillExecutionStatusEnum.AWAITING_CONFIRMATION.getValue();
+        this.pendingPhase = po.getPhase();
+
+        SkillContext.RuntimeContext ctx = SkillContext.create(executionId, null);
+        ctx.setCurrentPhase(po.getPhase());
+        ctx.setTotalPhases(definition.getPhases().size());
+        ctx.setPhaseHandler(phase -> {
+            persistedExecution.setPhase(phase);
+            mapper.update(persistedExecution);
+        });
+        if (po.getTokenUsage() != null && po.getTokenUsage() > 0) {
+            ctx.addTokenUsage(po.getTokenUsage());
+        }
+        if (po.getModelUsed() != null && !po.getModelUsed().isBlank()) {
+            for (String modelName : po.getModelUsed().split(",")) {
+                ctx.recordModelUsed(modelName.trim());
+            }
+        }
+        this.context = ctx;
+        log.info("Skill 执行已从持久化记录重建: executionId={}, pendingPhase={}", executionId, po.getPhase());
+        return this;
+    }
+
+    /**
      * 同步执行 — 由 SkillExecutionService 异步调度
      * <p>
      * 遇到需要确认的阶段时会停在该阶段之前，状态置为 AWAITING_CONFIRMATION 并返回。
@@ -215,6 +246,9 @@ public class SkillExecution {
         po.setPhase(next);
         po.setTokenUsage(context.getTokenUsage());
         po.setModelUsed(context.getModelUsedSummary());
+        // update_time 不被 MyBatis-Flex 自动回填，需显式写入，
+        // 否则 SkillConfirmationReaper 无法按超时时间扫到该行
+        po.setUpdateTime(LocalDateTime.now());
         mapper.update(po);
 
         // 待审阅的产出来自上一阶段

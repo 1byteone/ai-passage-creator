@@ -6,7 +6,6 @@ import com.alibaba.cloud.ai.graph.KeyStrategy;
 import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
 import com.alibaba.cloud.ai.graph.StateGraph;
 import com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig;
-import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.example.aipassagecreator.config.CircuitBreakerConfig;
@@ -48,6 +47,7 @@ public class SkillRegistry {
     private final YamlResourceLoader yamlResourceLoader;
     private final SkillExecutionRegistry executionRegistry;
     private final CircuitBreakerConfig breaker;
+    private final PortableCheckpointSaver checkpointSaver;
     private SkillExecutionService skillExecutionService;
 
     public SkillRegistry(ResourceLoader resourceLoader,
@@ -58,7 +58,8 @@ public class SkillRegistry {
                          WebSearchTool webSearchTool,
                          YamlResourceLoader yamlResourceLoader,
                          SkillExecutionRegistry executionRegistry,
-                         CircuitBreakerConfig breaker) {
+                         CircuitBreakerConfig breaker,
+                         PortableCheckpointSaver checkpointSaver) {
         this.resourceLoader = resourceLoader;
         this.templateEngine = templateEngine;
         this.modelRouter = modelRouter;
@@ -68,6 +69,7 @@ public class SkillRegistry {
         this.yamlResourceLoader = yamlResourceLoader;
         this.executionRegistry = executionRegistry;
         this.breaker = breaker;
+        this.checkpointSaver = checkpointSaver;
     }
 
     @Autowired
@@ -114,8 +116,15 @@ public class SkillRegistry {
     }
 
     public SkillExecution createExecution(String skillName, Map<String, Object> inputs) {
+        return createExecution(skillName, inputs, UUID.randomUUID().toString());
+    }
+
+    /**
+     * 创建 Skill 执行（可指定 executionId）。
+     * 重启重建路径需沿用原 executionId，使续跑能读取同一 threadId 的 DB 检查点。
+     */
+    public SkillExecution createExecution(String skillName, Map<String, Object> inputs, String executionId) {
         SkillDefinition def = getSkill(skillName);
-        String executionId = UUID.randomUUID().toString();
         return new SkillExecution(executionId, def, inputs, graphCache.get(skillName), modelRouter, skillExecutionMapper);
     }
 
@@ -174,10 +183,11 @@ public class SkillRegistry {
                 return graph.compile();
             }
 
-            // 含确认节点：启用中断 + 检查点，使执行可在中断处暂停并稍后续跑
+            // 含确认节点：启用中断 + 检查点，使执行可在中断处暂停并稍后续跑。
+            // 检查点由 PortableCheckpointSaver 落库，应用重启后仍可续跑。
             log.info("Skill {} 启用多轮确认, 中断节点: {}", def.getName(), confirmationNodes);
             CompileConfig compileConfig = CompileConfig.builder()
-                    .saverConfig(SaverConfig.builder().register(new MemorySaver()).build())
+                    .saverConfig(SaverConfig.builder().register(checkpointSaver).build())
                     .interruptsBefore(confirmationNodes)
                     .build();
             return graph.compile(compileConfig);

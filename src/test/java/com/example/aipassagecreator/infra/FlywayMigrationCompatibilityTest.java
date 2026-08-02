@@ -16,7 +16,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -56,7 +55,7 @@ class FlywayMigrationCompatibilityTest {
                 .map(v -> v == null ? "" : v.getVersion())
                 .toList();
         assertTrue(appliedVersions.contains("1"), "V1 基线应成功应用: " + appliedVersions);
-        assertFalse(appliedVersions.contains("2"), "当前提交尚未含 V2");
+        assertTrue(appliedVersions.contains("2"), "V2 检查点表应成功应用: " + appliedVersions);
 
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
@@ -64,7 +63,8 @@ class FlywayMigrationCompatibilityTest {
             // 关键表已创建
             List<String> tables = listTables(stmt);
             for (String table : List.of("user", "article", "skill_execution", "article_quality",
-                    "workspace", "approval_record", "publish_schedule", "article_card", "api_key")) {
+                    "workspace", "approval_record", "publish_schedule", "article_card", "api_key",
+                    "skill_checkpoint")) {
                 assertTrue(tables.contains(table), "迁移后应存在表 " + table);
             }
 
