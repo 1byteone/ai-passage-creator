@@ -201,8 +201,8 @@ public class CardController {
             if (def.getPlatform() != null && def.getPlatform().getCardStyle() != null) {
                 return def.getPlatform().getCardStyle();
             }
-        } catch (Exception e) {
-            log.warn("读取方法论 cardStyle 失败，使用默认 warm", e);
+        } catch (IllegalArgumentException e) {
+            log.warn("方法论不存在，卡片风格回退默认 warm: {}", e.getMessage());
         }
         return "warm";
     }

@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 /**
@@ -69,7 +70,7 @@ public class PublishController {
         LocalDateTime publishAt;
         try {
             publishAt = LocalDateTime.parse((String) body.get("publishAt"));
-        } catch (Exception e) {
+        } catch (DateTimeParseException e) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR, "发布时间格式错误，请使用 ISO 格式如 2026-12-31T10:00:00");
         }
         return ResultUtils.success(publishService.schedule(taskId, publishAt, platform, methodologyName, loginUser.getId()));

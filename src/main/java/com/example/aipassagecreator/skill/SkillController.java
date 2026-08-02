@@ -22,6 +22,7 @@ import jakarta.validation.Valid;
 import com.example.aipassagecreator.service.QuotaService;
 import com.example.aipassagecreator.service.UserService;
 import com.example.aipassagecreator.utils.GsonUtils;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -287,7 +288,7 @@ public class SkillController {
         try {
             return GsonUtils.fromJson(raw, new TypeToken<Map<String, Object>>() {
             });
-        } catch (Exception e) {
+        } catch (JsonSyntaxException e) {
             log.warn("modifiedData 解析失败: {}", e.getMessage());
             return null;
         }
