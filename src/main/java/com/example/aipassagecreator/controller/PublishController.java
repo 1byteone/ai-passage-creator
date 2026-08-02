@@ -33,6 +33,12 @@ public class PublishController {
     @Resource
     private UserService userService;
 
+    @Resource
+    private com.example.aipassagecreator.publish.platform.PlatformAdapterRegistry adapterRegistry;
+
+    @Resource
+    private com.example.aipassagecreator.methodology.MethodologyRegistry methodologyRegistry;
+
     /**
      * 创建发布排期
      */
@@ -47,6 +53,18 @@ public class PublishController {
         String taskId = (String) body.get("taskId");
         String platform = body.get("platform") instanceof String s ? s : "wechat";
         String methodologyName = body.get("methodologyName") instanceof String s ? s : null;
+
+        // 白名单校验：非法平台/方法论直接拒绝，避免后台期后执行失败
+        if (!adapterRegistry.exists(platform)) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR,
+                    "不支持的发布平台: " + platform + "，可用: " + adapterRegistry.platforms());
+        }
+        if (methodologyName != null && !methodologyName.isBlank()
+                && !methodologyRegistry.exists(methodologyName)) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR,
+                    "未知方法论: " + methodologyName);
+        }
+
         LocalDateTime publishAt;
         try {
             publishAt = LocalDateTime.parse((String) body.get("publishAt"));

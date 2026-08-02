@@ -72,7 +72,12 @@ public class CardController {
         User loginUser = userService.getLoginUser(httpServletRequest);
         Article article = validateAndGetArticle(request.getTaskId(), loginUser);
 
-        String cardStyle = resolveCardStyle(request.getCardStyle(), request.getMethodologyName());
+        String effectiveMethodology = Optional.ofNullable(request.getMethodologyName())
+                .filter(s -> !s.isBlank())
+                .orElse(Optional.ofNullable(article.getMethodology())
+                        .filter(s -> !s.isBlank())
+                        .orElse("default"));
+        String cardStyle = resolveCardStyle(request.getCardStyle(), effectiveMethodology);
         try {
             List<String> urls = cardService.preview(
                     article.getFullContent() != null ? article.getFullContent() : article.getContent(),
@@ -105,6 +110,13 @@ public class CardController {
             throw new IllegalArgumentException("未知方法论: " + request.getMethodologyName());
         }
 
+        // 方法论追溯：优先请求值 → 文章创建时方法论(article.methodology) → 默认 "default"
+        String effectiveMethodology = Optional.ofNullable(request.getMethodologyName())
+                .filter(s -> !s.isBlank())
+                .orElse(Optional.ofNullable(article.getMethodology())
+                        .filter(s -> !s.isBlank())
+                        .orElse("default"));
+
         // 配额扣减（原子）：不足则抛 BusinessException，直接返回不派发
         try {
             quotaService.checkAndConsumeQuota(loginUser, "卡片生成配额不足，请升级会员");
@@ -112,10 +124,10 @@ public class CardController {
             return ResultUtils.error(ErrorCode.OPERATION_ERROR, e.getMessage());
         }
 
-        String cardStyle = resolveCardStyle(request.getCardStyle(), request.getMethodologyName());
+        String cardStyle = resolveCardStyle(request.getCardStyle(), effectiveMethodology);
         try {
             cardAsyncService.generateCards(request.getTaskId(), cardStyle,
-                    Optional.ofNullable(request.getMethodologyName()).orElse("default"),
+                    effectiveMethodology,
                     loginUser.getId());
         } catch (Exception e) {
             // 异步派发失败（如线程池拒绝）→ 退还配额，避免扣了配额但任务从未执行

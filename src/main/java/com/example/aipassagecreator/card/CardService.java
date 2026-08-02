@@ -107,7 +107,16 @@ public class CardService {
                 cardPages.add(failed);
                 continue;
             }
-            cosService.uploadToKey(r.getPngBytes(), "image/png", key);
+            String uploadResult = cosService.uploadToKey(r.getPngBytes(), "image/png", key);
+            if (uploadResult == null) {
+                // COS 上传失败 → 标记 FAILED，不生成 URL
+                CardPage failed = buildCardPage(taskId, i + 1, cardStyle, null, key,
+                        r.getPngBytes() != null ? r.getPngBytes().length : 0,
+                        r.getRenderMs(), "FAILED", "COS 上传失败");
+                cardPageMapper.insert(failed);
+                cardPages.add(failed);
+                continue;
+            }
             String presignedUrl = cosService.generatePresignedUrl(key);
             CardPage cp = buildCardPage(taskId, i + 1, cardStyle,
                     presignedUrl, key,

@@ -292,6 +292,7 @@ public class ArticleController {
     @PostMapping("/evaluate-quality")
     @Operation(summary = "对文章进行多维质量评分")
     @AuthCheck(mustRole = "user")
+    @RateLimit(limit = 5, window = 60, key = "quality_evaluate")
     public BaseResponse<?> evaluateQuality(@RequestBody DeleteRequest request,
                                            HttpServletRequest httpServletRequest) {
         ThrowUtils.throwIf(request == null || request.getId() == null,
@@ -379,6 +380,7 @@ public class ArticleController {
     @PostMapping("/rewrite")
     @Operation(summary = "AI 改写文章")
     @AuthCheck(mustRole = "user")
+    @RateLimit(limit = 3, window = 60, key = "article_rewrite")
     public BaseResponse<?> rewriteArticle(@RequestBody ArticleAiModifyOutlineRequest request,
                                            HttpServletRequest httpServletRequest) {
         ThrowUtils.throwIf(request == null || request.getTaskId() == null,

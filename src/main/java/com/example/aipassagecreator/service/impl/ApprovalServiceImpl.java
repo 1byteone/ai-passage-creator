@@ -100,11 +100,9 @@ public class ApprovalServiceImpl implements ApprovalService {
         pending.setReviewTime(LocalDateTime.now());
         approvalMapper.update(pending);
 
-        // 同步文章状态（状态机：REJECTED 与 APPROVED 互斥）
-        if (article != null) {
-            article.setStatus(STATUS_APPROVED.equals(status) ? "APPROVED" : "REJECTED");
-            articleMapper.update(article);
-        }
+        // 审批状态独立存于 approval_record，不污染 article.status
+        // article.status 保留创作管线状态 (PENDING/PROCESSING/COMPLETED/FAILED)
+        // 卡片生成/评测门禁改为: status in (COMPLETED) 且 approval_status = APPROVED
 
         log.info("审批 {}: taskId={}, reviewer={}, status={}", status, taskId, reviewerId, status);
         return pending;

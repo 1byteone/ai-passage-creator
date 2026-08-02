@@ -65,11 +65,17 @@ public class PublishServiceImpl implements PublishService {
                     "仅已审批通过的文章可排期发布，当前审批状态: " + approvalStatus);
         }
 
+        // 方法论追溯：请求值 → 文章创建时方法论 → 平台对应方法论 → 默认 "default"
+        String effectiveMethodology = methodologyName != null && !methodologyName.isBlank()
+                ? methodologyName
+                : (article.getMethodology() != null && !article.getMethodology().isBlank()
+                        ? article.getMethodology() : platform);
+
         PublishSchedule schedule = PublishSchedule.builder()
                 .articleTaskId(taskId)
                 .publishAt(publishAt)
                 .platform(platform != null ? platform : "wechat")
-                .methodologyName(methodologyName != null ? methodologyName : platform)
+                .methodologyName(effectiveMethodology)
                 .status(STATUS_SCHEDULED)
                 .createdBy(userId)
                 .build();
@@ -152,6 +158,8 @@ public class PublishServiceImpl implements PublishService {
                 scheduleMapper.update(schedule);
             } catch (Exception e) {
                 log.error("定时发布失败: scheduleId={}, error={}", schedule.getId(), e.getMessage(), e);
+                schedule.setStatus("FAILED");
+                scheduleMapper.update(schedule);
             }
         }
         return count;

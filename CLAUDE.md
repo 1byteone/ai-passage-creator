@@ -1,0 +1,264 @@
+# ai-passage-creator — AI 智能文章生成平台
+
+AI 驱动的全栈文章创作平台：选题→标题→大纲→内容生成→卡片渲染→多平台发布。
+详见 [README.md](README.md)。
+
+---
+
+## 技术栈
+
+| 层 | 技术 | 版本 |
+|---|---|---|
+| **后端** | Spring Boot + Java | 3.5.13 / 21 |
+| **ORM** | MyBatis-Flex (NOT MyBatis-Plus) | 1.11.1 |
+| **数据库** | MySQL (生产) / H2 (测试 MODE=MySQL) | — |
+| **缓存/Session** | Redis + Spring Session | — |
+| **AI** | Spring AI Alibaba (DashScope/Qwen) + OpenAI Starter | 1.1.0 |
+| **存储** | 腾讯云 COS | 5.6.228 |
+| **支付** | Stripe | 31.2.0 |
+| **文档** | Knife4j (OpenAPI 3) | 4.4.0 |
+| **渲染** | Playwright (Java) → HTML→PNG | 1.61.0 |
+| **前端** | Vue 3 + TypeScript + Vite | 3.5 / 5.8 / 7 |
+| **UI** | Ant Design Vue 4 + ECharts 6 | — |
+| **状态管理** | Pinia 3 | — |
+| **Markdown/XSS** | marked 17 + DOMPurify 3.4 | — |
+| **测试** | JUnit 5 + Mockito (后端) / Playwright + Node test (前端) | — |
+
+---
+
+## 关键命令
+
+### 后端（项目根目录）
+
+```bash
+mvn spring-boot:run                    # 启动 (端口 8567, context-path /api)
+mvn test -Dspring.profiles.active=test # 运行后端测试 (H2, session=none)
+mvn clean package -DskipTests          # 仅打包
+```
+
+### 前端（`frontend/` 目录）
+
+```bash
+npm run dev                # 开发服务器 (Vite HMR)
+npm run type-check         # TypeScript 类型检查 (vue-tsc --build)
+npm run build              # 完整构建: type-check → vite build → 包体积检查
+npm run test               # 全部测试: skill 单元测试 + Playwright E2E
+npm run test:skill         # Node 内置 test runner 单元测试
+npm run test:ui            # Playwright E2E
+npm run check              # 完整质量闸门: lint → build → test → 性能
+npm run lint:check         # ESLint 检查
+npm run format             # Prettier 格式化
+```
+
+### 质量闸门（CI 等价）
+
+```bash
+# 在提交前运行 ← CI 的等价本地检查
+cd frontend && npm run check
+cd .. && mvn test
+```
+
+---
+
+## 项目结构
+
+```
+ai-passage-creator/
+├── src/main/java/com/example/aipassagecreator/
+│   ├── controller/       # REST 控制器
+│   ├── service/          # 业务逻辑层
+│   ├── mapper/           # MyBatis-Flex Mapper
+│   ├── model/            # DTO/VO/Entity
+│   ├── config/           # Spring 配置
+│   ├── skill/            # AI Skill 定义与执行
+│   ├── card/             # 卡片渲染 (Playwright HTML→PNG)
+│   ├── publish/          # 内容多平台发布
+│   ├── agent/            # AI Agent 编排
+│   ├── manager/          # 第三方服务管理 (COS/AI)
+│   ├── aop/              # 切面 (日志/鉴权)
+│   ├── exception/        # 全局异常处理
+│   ├── constant/         # 常量定义
+│   ├── enums/            # 枚举
+│   └── utils/            # 工具类
+├── src/main/resources/
+│   ├── application.yml   # 主配置
+│   ├── sql/              # 数据库迁移 SQL (无 Flyway!)
+│   └── db/migration/     # (预留，当前未使用)
+├── src/test/             # JUnit 5 + Mockito 测试
+├── frontend/src/
+│   ├── api/              # API 调用 + OpenAPI 类型定义
+│   ├── components/       # 全局共享组件
+│   ├── pages/            # 页面组件 (按模块分目录)
+│   ├── stores/           # Pinia 状态管理
+│   ├── router/           # Vue Router 配置
+│   ├── utils/            # 工具函数 (sse / markdown / article / date)
+│   ├── constants/        # 前端常量
+│   ├── styles/           # 全局样式
+│   ├── access.ts         # 路由守卫 (权限校验)
+│   ├── request.ts        # Axios 封装 (60s超时, 拦截器)
+│   └── main.ts           # 入口
+├── frontend/tests/       # Playwright E2E + 技能状态单元测试
+├── .github/workflows/ci.yml  # CI: mvn test + Docker 构建
+└── scripts/git-push.sh   # 双远程推送 (github + gitee)
+```
+
+---
+
+## 架构约定
+
+### 后端分层 (自上而下)
+
+```
+Controller → Service → Mapper → DB
+     ↓           ↓
+   DTO/VO       Entity
+```
+
+- **Controller**: 仅参数校验 + 调用 Service + 返回结果。禁止业务逻辑。
+- **Service**: 业务逻辑 + 事务管理 (`@Transactional`)。
+- **Mapper**: MyBatis-Flex BaseMapper。复杂查询写在 XML 或注解 SQL。
+- **DTO/VO**: Controller 入参用 DTO，响应用 VO。不要直接暴露 Entity。
+- **全局异常处理**: `GlobalExceptionHandler` (`@RestControllerAdvice`) 统一处理。
+
+### 前端组件树 (创作页)
+
+```
+ArticleCreatePage
+├── InputStage          # 选题输入
+├── TitleSelectingStage # 标题选择 (空状态保护!)
+├── OutlineEditingStage # 大纲编辑 (Sortable 拖拽)
+├── ContentGeneratingStage  # 内容生成 (SSE 流式)
+└── CompletedState      # 完成态 (下载/发布)
+```
+
+### 跨层数据流
+
+```
+User Input → Vue → POST /api/article/create → SSE taskId → EventSource → 流式渲染
+```
+
+---
+
+## 领域术语
+
+| 术语 | 含义 | 对应代码 |
+|------|------|---------|
+| **Task** | 文章生成任务 (从选题到完稿) | `ArticleController.createTask` |
+| **Phase/Stage** | 文章创作阶段 | `INPUT → TITLE_SELECTING → OUTLINE_EDITING → CONTENT_GENERATING → COMPLETED` |
+| **Title Option** | AI 生成的标题候选方案 (含主副标题) | `TitleOption { mainTitle, subTitle }` |
+| **Outline Section** | 大纲章节 (含要点列表 points[]) | `OutlineSection { section, title, points }` |
+| **Skill** | 可复用的 AI 技能定义 (JSON schema) | `SkillController / SkillExecutePage` |
+| **Card Render** | Playwright 渲染 HTML→PNG 卡片图 | `card/` 包 + `CardController` |
+| **Viral Quality** | 爆款质量评分 | `viral_quality` 相关表 |
+| **Approval** | 内容审批工作流 | `ApprovalController` |
+
+---
+
+## 代码规范
+
+> 后端和前端详细规范分别在 `.claude/rules/java-backend.md` 和 `.claude/rules/vue-frontend.md` 中，按需加载。
+> 安全红线在 `.claude/rules/security.md` 中。
+
+### 后端摘要
+
+- 分层：Controller(薄) → Service(重) → Mapper(MyBatis-Flex)
+- 命名：Java 标准 (PascalCase 类 / camelCase 方法变量)
+- API：RESTful + Knife4j OpenAPI 文档
+- 测试：`ClassNameTest`，`methodName_scenario_expectedResult()` 模式
+- 依赖注入：构造器注入 (Lombok `@RequiredArgsConstructor`)
+
+### 前端摘要
+
+- 组件：Vue 3 Composition API `<script setup lang="ts">`
+- 类型：TypeScript strict，API 类型由 `npm run openapi2ts` 自动生成
+- 状态：跨组件用 Pinia store，局部状态用 `ref` / `computed`
+- 样式：SCSS scoped，Ant Design Vue 组件优先
+
+### Git
+
+- **Conventional Commits**: `type(scope): description`
+- **类型**: `feat` / `fix` / `docs` / `refactor` / `test` / `chore` / `style` / `perf`
+- **Scope**: `frontend` / `backend` / `card` / `skill` / `infra` / `db`
+- **分支**: `dev` (开发) / `master` (生产) / `track/*` (特性分支)
+- **推送**: `bash scripts/git-push.sh github dev` 同时推到 GitHub + Gitee
+
+---
+
+## 开发工作流
+
+### Bug 修复流程 (严格执行)
+
+```
+1. 审计 → 用 Grep/Grep 扫描相关代码区
+2. 创建 Task → TaskCreate 记录修复项，标注严重度 (HIGH/MEDIUM/LOW)
+3. 逐项修复 → 先读后改 (Read → Edit)，每次只改一个关注点
+4. type-check → cd frontend && npm run type-check (零容忍 TS 错误)
+5. test → cd .. && mvn test (零容忍测试失败)
+6. commit → Conventional Commits 格式 + Co-Authored-By: Claude
+7. push → bash scripts/git-push.sh github dev (双远程)
+```
+
+### Plan-before-code (禁止盲目实施)
+
+```
+当任务涉及 >3 文件或架构决策时：
+1. EnterPlanMode 编写方案
+2. 用户审批后 ExitPlanMode
+3. 按计划逐步实施
+```
+
+### Post-implement 验证
+
+```
+每次实施后自动触发:
+1. npm run type-check (前端)
+2. mvn test (后端)
+3. 验证无新增 ESLint 告警
+```
+
+### Commit 质量门禁
+
+```
+提交前确认:
+- [ ] type-check 零错误
+- [ ] test 全绿
+- [ ] git status 只包含预期文件
+- [ ] commit message 符合 Conventional Commits
+- [ ] Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+---
+
+## 已知暗坑 (三轮审计沉淀)
+
+> **每次修改相关代码前先读此清单，避免重蹈覆辙。**
+
+| # | 坑 | 部位 | 正确做法 |
+|---|-----|------|---------|
+| 1 | **XSS** — raw `marked` 绕过 DOMPurify | 任何 v-html | 必须用 `@/utils/markdown` 包装，永不直接 import `marked` |
+| 2 | **SSE EventSource 泄漏** — 未关闭旧连接就建新连接 | ArticleCreatePage | `closeSSE()` 后再 `connectSSE()` |
+| 3 | **SSE 生命周期** — async await 后打开 SSE，组件已卸载 | SkillExecuteSurface | await 后检查 `unmounted` 标记 |
+| 4 | **SSE 瞬断永久关闭** — `onerror` 直接 close 无重连 | sse.ts connectSSE | 1 次重连后降级到 onError |
+| 5 | **Polling 循环泄漏** — `setTimeout` 前 set null，await 后未检查卸载 | SkillExecuteSurface | `if (unmounted) return` 守卫 |
+| 6 | **loginUser 过期残留** — code≠0 不重置用户状态 | loginUser store | code≠0 / fetch 异常时 `createDefaultUser()` |
+| 7 | **loginUser 无超时** — fetch 阻塞路由守卫 | loginUser store | AbortController + 10s 超时 |
+| 8 | **Props 浅拷贝** — `points: item.points ?? []` 共享引用 | OutlineEditingStage | `points: item.points ? [...item.points] : []` |
+| 9 | **分页乱序响应** — 快速切换分页无请求排序 | UserManagePage / ArticleListPage | `fetchSeq` 递增 + 响应后校验 |
+| 10 | **下载竞态** — `revokeObjectURL` 在 `click()` 后立即调用 | article.ts / resultActions.ts | append 到 body + `setTimeout(revoke, 100)` |
+| 11 | **空列表死端** — `titleOptions=[]` 时 `selectedIndex=0` 导致按钮永久禁用 | TitleSelectingStage | 空时显示 empty state + `canConfirm` 提前 return false |
+| 12 | **Sortable 未销毁** — 组件卸载时拖拽实例未 `destroy()` | OutlineEditingStage | `onBeforeUnmount` 中 `sortableInstance.destroy()` |
+| 13 | **双重提交** — `startExecution` 无 `submitting` 守卫 | SkillExecuteSurface | `if (submitting.value) return` |
+
+---
+
+## CI/CD
+
+- **触发**: push `master`/`dev`/`track/*`, PR → `master`/`dev`
+- **流程**: JDK 21 → `mvn test` (H2, session=none) → Docker build (仅 master)
+- **环境变量**: CI 中 `spring.session.store-type=none` (无 Redis 可用)
+
+---
+
+@.claude/rules/security.md
+@.claude/rules/java-backend.md
+@.claude/rules/vue-frontend.md
