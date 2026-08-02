@@ -508,9 +508,12 @@ const formatTime = (value?: string) => {
   return dayjs(value).format('YYYY-MM-DD HH:mm')
 }
 
+let fetchSeq = 0
+
 const fetchData = async () => {
   loading.value = true
   loadError.value = ''
+  const seq = ++fetchSeq
 
   try {
     const response = await listUserVoByPage({
@@ -519,6 +522,9 @@ const fetchData = async () => {
       userName: searchParams.userName?.trim() || undefined,
     })
 
+    // 不是最新的请求，忽略响应
+    if (seq !== fetchSeq) return
+
     if (response.data.code !== 0 || !response.data.data) {
       throw new Error(response.data.message || '用户数据返回异常')
     }
@@ -526,6 +532,7 @@ const fetchData = async () => {
     data.value = response.data.data.records ?? []
     total.value = response.data.data.totalRow ?? 0
   } catch (error) {
+    if (seq !== fetchSeq) return
     console.error('获取用户数据失败:', error)
     loadError.value = error instanceof Error ? error.message : '网络或服务暂时不可用，请稍后重试。'
   } finally {

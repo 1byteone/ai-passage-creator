@@ -632,9 +632,9 @@ import {
   FileTextOutlined
 } from '@ant-design/icons-vue'
 import { createArticle, confirmTitle, confirmOutline } from '@/api/articleController'
-import { connectSSE, closeSSE, type SSEMessage } from '@/utils/sse'
+import { connectSSE, closeSSE, type SSEMessage, type SSEConnection } from '@/utils/sse'
 import { isAdmin as checkIsAdmin, isVip as checkIsVip, hasQuota as checkHasQuota } from '@/utils/permission'
-import { marked } from 'marked'
+import { markdownToHtml as safeMarkdownToHtml } from '@/utils/markdown'
 import TitleSelectingStage from './components/TitleSelectingStage.vue'
 import OutlineEditingStage from './components/OutlineEditingStage.vue'
 import CompletedState from './components/CompletedState.vue'
@@ -798,11 +798,11 @@ const article = ref<Partial<API.ArticleVO>>({
   images: [],
 })
 
-let eventSource: EventSource | null = null
+let eventSource: SSEConnection | null = null
 
-// Markdown 转 HTML
+// Markdown 转 HTML（经 DOMPurify 清洗，防 XSS）
 const markdownToHtml = (markdown: string | undefined) => {
-  return marked(markdown || '')
+  return safeMarkdownToHtml(markdown || '')
 }
 
 // 自动滚动到底部
@@ -858,6 +858,7 @@ const startCreate = async () => {
 
     // 建立 SSE 连接
     addLog('已建立实时连接，开始生成...', 'info')
+    closeSSE(eventSource) // 关闭旧连接，防止残留消息污染新任务
     eventSource = connectSSE(taskId.value, {
       onMessage: handleSSEMessage,
       onError: handleSSEError,
@@ -1068,6 +1069,8 @@ const viewArticle = () => {
 
 // 重新创作
 const resetCreate = () => {
+  closeSSE(eventSource)
+  eventSource = null
   currentPhase.value = 'INPUT'
   topic.value = ''
   selectedStyle.value = ''

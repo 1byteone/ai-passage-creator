@@ -33,48 +33,86 @@ export interface SkillSSEOptions {
   onParseError?: (error: unknown) => void
 }
 
+export interface SSEConnection {
+  close: () => void
+}
+
 export interface SkillSSEConnection {
   close: () => void
 }
 
 /**
- * 建立 SSE 连接
+ * 建立 SSE 连接（带一次重连）
  */
-export const connectSSE = (taskId: string, options: SSEOptions): EventSource => {
+export const connectSSE = (taskId: string, options: SSEOptions): SSEConnection => {
   const { onMessage, onError, onComplete } = options
+  let source: EventSource | null = null
+  let reconnectCount = 0
+  let closed = false
+  let terminal = false
 
-  const eventSource = new EventSource(`/api/article/progress/${taskId}`, { withCredentials: true })
+  const build = () => {
+    if (closed) return
+    source = new EventSource(`/api/article/progress/${taskId}`, { withCredentials: true })
 
-  eventSource.onmessage = (event) => {
-    try {
-      const message: SSEMessage = JSON.parse(event.data)
-      onMessage(message)
-      
+    source.onmessage = (event) => {
+      let message: SSEMessage
+      try {
+        message = JSON.parse(event.data) as SSEMessage
+      } catch (error) {
+        console.error('SSE 消息解析失败:', error)
+        return
+      }
+
+      try {
+        onMessage(message)
+      } catch (error) {
+        console.error('SSE 消息处理失败:', error)
+      }
+
       // 检查是否完成
       if (message.type === 'ALL_COMPLETE' || message.type === 'ERROR') {
-        eventSource.close()
+        terminal = true
+        source?.close()
+        source = null
         onComplete?.()
       }
-    } catch (error) {
-      console.error('SSE 消息解析失败:', error)
+    }
+
+    source.onerror = (error) => {
+      source?.close()
+      source = null
+      if (closed || terminal) return
+
+      if (reconnectCount < 1) {
+        reconnectCount += 1
+        console.warn('SSE 连接中断，正在重连...')
+        build()
+      } else {
+        console.error('SSE 重连失败，连接关闭:', error)
+        closed = true
+        onError?.(error)
+      }
     }
   }
 
-  eventSource.onerror = (error) => {
-    console.error('SSE 连接错误:', error)
-    onError?.(error)
-    eventSource.close()
-  }
+  build()
 
-  return eventSource
+  return {
+    close: () => {
+      closed = true
+      source?.close()
+      source = null
+    },
+  }
 }
 
 /**
  * 关闭 SSE 连接
  */
-export const closeSSE = (eventSource: EventSource | null) => {
-  if (eventSource) {
-    eventSource.close()
+export const closeSSE = (connection: SSEConnection | SkillSSEConnection | null) => {
+  if (connection) {
+    connection.close()
   }
 }
 

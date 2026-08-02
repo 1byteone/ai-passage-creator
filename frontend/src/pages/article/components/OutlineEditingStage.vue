@@ -175,7 +175,7 @@ const outlineSections = ref<OutlineSection[]>(
   props.outline.map((item, index) => ({
     section: item.section ?? index + 1,
     title: item.title ?? '',
-    points: item.points ?? []
+    points: item.points ? [...item.points] : [], // 浅拷贝，避免修改父 prop
   }))
 )
 const outlineListRef = ref<HTMLElement | null>(null)

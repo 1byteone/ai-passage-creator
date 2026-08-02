@@ -213,6 +213,7 @@ const confirming = ref(false)
 
 let sseConnection: SkillSSEConnection | null = null
 let pollTimer: number | null = null
+let unmounted = false
 
 const uiConfig = computed(() => getSkillUiConfig(props.skillName))
 const draftKey = computed(() => `skill:draft:${props.skillName}`)
@@ -405,7 +406,7 @@ const resumeExecution = async (id: string) => {
   setState('EXECUTING')
   stopConnections()
   const terminal = await refreshResult()
-  if (!terminal) {
+  if (!terminal && !unmounted) {
     openSSE()
   }
 }
@@ -460,7 +461,7 @@ const startPolling = () => {
   const poll = async () => {
     pollTimer = null
     const terminal = await refreshResult()
-    if (terminal || state.value !== 'EXECUTING') return
+    if (unmounted || terminal || state.value !== 'EXECUTING') return
     const elapsed = Date.now() - pollingStartedAt.value
     pollTimer = window.setTimeout(poll, elapsed > 10 * 60 * 1000 ? 5000 : 2000)
   }
@@ -553,6 +554,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  unmounted = true
   window.removeEventListener('beforeunload', beforeUnload)
   stopConnections()
 })

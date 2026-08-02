@@ -11,7 +11,7 @@ export async function getSkillDefinition(
   skillName: string,
   options?: { [key: string]: unknown },
 ) {
-  return request<API.BaseResponseSkillDefinition>(`/skill/${skillName}/definition`, {
+  return request<API.BaseResponseSkillDefinition>(`/skill/${encodeURIComponent(skillName)}/definition`, {
     method: 'GET',
     ...(options || {}),
   })
@@ -22,7 +22,7 @@ export async function executeSkill(
   body: API.SkillExecuteRequest,
   options?: { [key: string]: unknown },
 ) {
-  return request<API.BaseResponseSkillExecuteResponse>(`/skill/${skillName}/execute`, {
+  return request<API.BaseResponseSkillExecuteResponse>(`/skill/${encodeURIComponent(skillName)}/execute`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -245,6 +245,10 @@ const renderCharts = () => {
 
 const renderTrendChart = () => {
   if (!trendChartRef.value || !stats.value || totalCount.value === 0) return
+  // 若缓存实例已被销毁（条件渲染导致 DOM 重建），重新初始化
+  if (trendChart?.isDisposed()) {
+    trendChart = null
+  }
   trendChart ||= init(trendChartRef.value)
   const option: StatisticsChartOption = {
     tooltip: { trigger: 'axis' },
@@ -276,6 +280,9 @@ const renderTrendChart = () => {
 
 const renderUserChart = () => {
   if (!userChartRef.value || !stats.value || totalUserCount.value === 0) return
+  if (userChart?.isDisposed()) {
+    userChart = null
+  }
   userChart ||= init(userChartRef.value)
   const option: StatisticsChartOption = {
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },

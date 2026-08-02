@@ -78,8 +78,16 @@ export const exportAsMarkdown = (options: ExportArticleOptions): void => {
   const blob = new Blob([markdown], { type: 'text/markdown' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
+  a.style.display = 'none'
   a.href = url
-  a.download = `${title || '文章'}.md`
+  // 清理文件名中的非法字符
+  const safeTitle = (title || '文章').replace(/[\\/:*?"<>|]/g, '_')
+  a.download = `${safeTitle}.md`
+  document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(url)
+  // 延迟释放，防止浏览器在下载启动前撤销 blob URL
+  setTimeout(() => {
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, 100)
 }

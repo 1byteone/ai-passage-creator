@@ -239,15 +239,19 @@ const applyLocalFilters = () => {
   visibleRecords.value = result
 }
 
+let loadSeq = 0
+
 const loadData = async () => {
   loading.value = true
   errorMessage.value = ''
+  const seq = ++loadSeq
   try {
     const response = await listArticle({
       pageNum: pagination.value.current,
       pageSize: pagination.value.pageSize,
       status: statusFilter.value || undefined,
     })
+    if (seq !== loadSeq) return
     if (response.data.code !== 0 || !response.data.data) {
       throw new Error(response.data.message || '服务未返回文章列表')
     }
@@ -255,6 +259,7 @@ const loadData = async () => {
     pagination.value.total = response.data.data.totalRow || 0
     applyLocalFilters()
   } catch (error) {
+    if (seq !== loadSeq) return
     errorMessage.value = error instanceof Error ? error.message : '请稍后重试'
   } finally {
     loading.value = false

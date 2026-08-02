@@ -81,6 +81,11 @@ const router = createRouter({
         requiresAuth: true,
       },
     },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      redirect: '/',
+    },
   ],
 })
 
