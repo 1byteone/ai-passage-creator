@@ -23,10 +23,6 @@ jobs:
 
       - name: Build & Test
         run: mvn test -B -Dspring.profiles.active=test -Dspring.session.store-type=none
-        env:
-          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
-          AGNES_AI_API_KEY: ${{ secrets.AGNES_AI_API_KEY }}
-          WEBHOOK_SHARED_SECRET: ci-test-secret
 
       - name: Build Docker Image
         if: github.ref == 'refs/heads/master'
