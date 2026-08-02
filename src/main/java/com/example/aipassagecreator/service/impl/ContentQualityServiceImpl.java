@@ -167,6 +167,11 @@ public class ContentQualityServiceImpl implements ContentQualityService {
                 .durationMs((int) duration)
                 .build();
 
+        // 幂等 upsert: 先删旧评分再插入，避免唯一索引 (task_id, score_type) 冲突
+        articleQualityMapper.deleteByQuery(
+                QueryWrapper.create()
+                        .eq("task_id", taskId)
+                        .eq("score_type", "GENERIC"));
         articleQualityMapper.insert(quality);
         log.info("文章质量评分完成: taskId={}, overallScore={}, model={}, duration={}ms",
                 taskId, quality.getOverallScore(), modelName, duration);

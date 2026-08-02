@@ -829,6 +829,14 @@ const startCreate = async () => {
   isCreating.value = true
   currentStep.value = 0
   realtimeLogs.value = []
+  // 重置上次运行状态，防止 dirty state 复用
+  article.value.content = ''
+  article.value.fullContent = ''
+  outlineRaw.value = ''
+  titleOptions.value = []
+  imageProgress.value = 0
+  isStreaming.value = false
+  isOutlineStreaming.value = false
   addLog('开始创建文章任务...', 'info')
 
   try {

@@ -42,6 +42,7 @@ public class AgentLog implements Serializable {
     /**
      * 关联 Skill 执行 ID
      */
+    @com.mybatisflex.annotation.Column("skill_execution_id")
     private String skillExecutionId;
 
     /**

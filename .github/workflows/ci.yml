@@ -1,4 +1,4 @@
-name: CI — Build & Test & Docker
+name: CI — Build & Test
 
 on:
   push:
@@ -10,12 +10,6 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
-    services:
-      redis:
-        image: redis:7-alpine
-        ports: ["6379:6379"]
-        options: --requirepass testpass
 
     steps:
       - uses: actions/checkout@v4
@@ -30,15 +24,10 @@ jobs:
       - name: Build & Test
         run: mvn verify -B -Dspring.profiles.active=test
         env:
-          REDIS_PASSWORD: testpass
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
           AGNES_AI_API_KEY: ${{ secrets.AGNES_AI_API_KEY }}
+          WEBHOOK_SHARED_SECRET: ci-test-secret
 
       - name: Build Docker Image
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev'
-        run: docker build -t ai-passage-creator:${{ github.sha }} .
-
-      - name: Push Docker Image
         if: github.ref == 'refs/heads/master'
-        run: |
-          echo "Docker push would go here (configure DOCKER_REGISTRY secret)"
+        run: docker build -t ai-passage-creator:${{ github.sha }} .
