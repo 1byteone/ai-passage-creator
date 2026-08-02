@@ -103,6 +103,8 @@ export const connectSkillSSE = (
     source = new EventSource(`/api/skill/${encodeURIComponent(executionId)}/progress`, { withCredentials: true })
 
     source.onmessage = (event) => {
+      // 连接成功收到消息后重置重连计数，为下一次断连做准备
+      reconnectCount = 0
       try {
         const message = JSON.parse(event.data) as API.SkillProgressEvent
         options.onMessage(message)

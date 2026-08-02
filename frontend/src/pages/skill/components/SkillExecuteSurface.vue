@@ -326,6 +326,7 @@ const formatPendingOutput = (data: unknown): string => {
 }
 
 const startExecution = async () => {
+  if (submitting.value) return // 防双重提交
   submitting.value = true
   errorMessage.value = ''
   outputData.value = {}

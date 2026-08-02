@@ -172,18 +172,27 @@ const isActive = (path: string) => {
 
 // 退出登录
 const doLogout = async () => {
-  const [{ default: message }, { userLogout }] = await Promise.all([
-    import('ant-design-vue/es/message'),
-    import('@/api/userController.ts'),
-  ])
-  const res = await userLogout()
-  if (res.data.code === 0) {
-    // 完全重置用户状态，清除所有字段（id、userRole、quota 等），避免旧数据残留
+  try {
+    const [{ default: message }, { userLogout }] = await Promise.all([
+      import('ant-design-vue/es/message'),
+      import('@/api/userController.ts'),
+    ])
+    const res = await userLogout()
+    if (res.data.code === 0) {
+      loginUserStore.resetLoginUser()
+      message.success('退出登录成功')
+      await router.push('/user/login')
+    } else {
+      message.error('退出登录失败，' + res.data.message)
+    }
+  } catch (e) {
+    // 网络错误或 API 不可达时仍清除本地状态并跳转
     loginUserStore.resetLoginUser()
-    message.success('退出登录成功')
+    try {
+      const [{ default: message }] = await Promise.all([import('ant-design-vue/es/message')])
+      message.warning('网络异常，已清除本地登录状态')
+    } catch {}
     await router.push('/user/login')
-  } else {
-    message.error('退出登录失败，' + res.data.message)
   }
 }
 </script>

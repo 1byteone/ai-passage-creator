@@ -133,10 +133,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { CheckOutlined, DeleteOutlined, PlusOutlined, RobotOutlined, CrownOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import Sortable from 'sortablejs'
+
+let sortableInstance: Sortable | null = null
 import { aiModifyOutline } from '@/api/articleController'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { isVip as checkIsVip } from '@/utils/permission'
@@ -192,7 +194,7 @@ const canConfirm = computed(() => {
 onMounted(() => {
   nextTick(() => {
     if (outlineListRef.value) {
-      Sortable.create(outlineListRef.value, {
+      sortableInstance = Sortable.create(outlineListRef.value, {
         animation: 150,
         handle: '.drag-handle',
         onEnd: (evt) => {
@@ -206,10 +208,17 @@ onMounted(() => {
             })
           }
         }
-      })
+})
     }
   })
 })
+onBeforeUnmount(() => {
+  if (sortableInstance) {
+    sortableInstance.destroy()
+    sortableInstance = null
+  }
+})
+
 
 const addSection = () => {
   const newSection: OutlineSection = {
