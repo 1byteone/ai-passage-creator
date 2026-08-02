@@ -2,6 +2,7 @@ package com.example.aipassagecreator.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
+import com.example.aipassagecreator.constant.ApiKeyConstant;
 import com.example.aipassagecreator.constant.UserConstant;
 import com.example.aipassagecreator.enums.UserRoleEnum;
 import com.example.aipassagecreator.model.po.User;
@@ -13,6 +14,7 @@ import com.example.aipassagecreator.service.UserService;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
@@ -117,8 +119,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public LoginUserVO getLoginUserVO(HttpServletRequest request) {
-        //先判断用户是否登录
-        Object userIdObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        // API Key 认证优先：拦截器已把完整用户放入 request attribute
+        User apiKeyUser = (User) request.getAttribute(ApiKeyConstant.REQUEST_USER_ATTR);
+        if (apiKeyUser != null) {
+            return BeanUtil.copyProperties(apiKeyUser, LoginUserVO.class);
+        }
+        // 会话认证兜底（getSession(false) 不创建新会话）
+        HttpSession session = request.getSession(false);
+        Object userIdObj = session == null ? null : session.getAttribute(USER_LOGIN_STATE);
         if(userIdObj == null){
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
@@ -142,8 +150,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public User getLoginUser(HttpServletRequest request) {
-        // 先判断用户是否登录
-        Object userIdObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        // API Key 认证优先：拦截器已把完整用户放入 request attribute
+        User apiKeyUser = (User) request.getAttribute(ApiKeyConstant.REQUEST_USER_ATTR);
+        if (apiKeyUser != null) {
+            return apiKeyUser;
+        }
+        // 会话认证兜底（getSession(false) 不创建新会话）
+        HttpSession session = request.getSession(false);
+        Object userIdObj = session == null ? null : session.getAttribute(USER_LOGIN_STATE);
         if (userIdObj == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }

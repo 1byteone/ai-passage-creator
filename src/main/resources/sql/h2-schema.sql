@@ -224,3 +224,18 @@ create table if not exists article_card (
     update_time datetime default CURRENT_TIMESTAMP,
     unique key uk_task_page (task_id, page_no)
 );
+
+create table if not exists api_key (
+    id bigint auto_increment primary key,
+    userId bigint not null,
+    name varchar(64) not null,
+    apiKeyHash varchar(64) not null,
+    apiKeyPrefix varchar(16) not null,
+    lastUsedAt datetime null,
+    expiresAt datetime null,
+    createTime datetime default CURRENT_TIMESTAMP not null,
+    updateTime datetime default CURRENT_TIMESTAMP not null,
+    isDelete tinyint default 0 not null,
+    constraint uq_apiKeyHash unique (apiKeyHash),
+    index idx_apiKey_user (userId)
+);

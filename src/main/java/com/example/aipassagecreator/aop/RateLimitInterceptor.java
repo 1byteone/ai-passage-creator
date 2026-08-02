@@ -1,8 +1,10 @@
 package com.example.aipassagecreator.aop;
 
 import com.example.aipassagecreator.annotation.RateLimit;
+import com.example.aipassagecreator.constant.ApiKeyConstant;
 import com.example.aipassagecreator.exception.BusinessException;
 import com.example.aipassagecreator.exception.ErrorCode;
+import com.example.aipassagecreator.model.po.User;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -44,7 +46,7 @@ public class RateLimitInterceptor {
         }
 
         HttpServletRequest request = attrs.getRequest();
-        String userId = request.getSession().getId();
+        String userId = resolveActorKey(request);
         String method = ((MethodSignature) joinPoint.getSignature()).getMethod().getName();
         String key = rateLimit.key() + ":" + method + ":" + userId;
 
@@ -69,6 +71,18 @@ public class RateLimitInterceptor {
         }
 
         return joinPoint.proceed();
+    }
+
+    /**
+     * 限流主体：API Key 请求按用户隔离，会话请求按 sessionId 隔离。
+     * 无会话的 API Key 请求若用 getSession() 会每次新建 session，限流失效。
+     */
+    private String resolveActorKey(HttpServletRequest request) {
+        User apiKeyUser = (User) request.getAttribute(ApiKeyConstant.REQUEST_USER_ATTR);
+        if (apiKeyUser != null) {
+            return "apikey:" + apiKeyUser.getId();
+        }
+        return request.getSession().getId();
     }
 
     /**

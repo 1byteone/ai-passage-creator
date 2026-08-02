@@ -1,8 +1,10 @@
 package com.example.aipassagecreator.service.impl;
 
+import com.example.aipassagecreator.constant.ApiKeyConstant;
 import com.example.aipassagecreator.exception.BusinessException;
 import com.example.aipassagecreator.mapper.UserMapper;
 import com.example.aipassagecreator.model.po.User;
+import com.example.aipassagecreator.model.vo.LoginUserVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -114,5 +116,31 @@ class UserServiceImplTest {
         // 不 stub selectOneByQuery，默认返回 null → 视为无匹配用户
         assertThrows(BusinessException.class,
                 () -> userService.userLogin("testuser", "wrongpassword", new MockHttpServletRequest()));
+    }
+
+    @Test
+    @DisplayName("获取登录用户VO — API Key 认证优先读 request attribute，无需 session")
+    void getLoginUserVO_apiKeyAttribute_returnsUser() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute(ApiKeyConstant.REQUEST_USER_ATTR, mockUser);
+
+        LoginUserVO result = userService.getLoginUserVO(request);
+
+        assertNotNull(result);
+        assertEquals("测试用户", result.getUserName());
+        // 不依赖 session / 数据库
+        verify(userMapper, never()).selectOneById(any());
+    }
+
+    @Test
+    @DisplayName("获取登录用户实体 — API Key request attribute 优先")
+    void getLoginUser_apiKeyAttribute_returnsUser() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute(ApiKeyConstant.REQUEST_USER_ATTR, mockUser);
+
+        User result = userService.getLoginUser(request);
+
+        assertEquals(1L, result.getId());
+        verify(userMapper, never()).selectOneById(any());
     }
 }
