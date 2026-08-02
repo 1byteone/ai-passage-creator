@@ -9,6 +9,7 @@ import com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
+import com.example.aipassagecreator.config.CircuitBreakerConfig;
 import com.example.aipassagecreator.config.YamlResourceLoader;
 import com.example.aipassagecreator.mapper.SkillExecutionMapper;
 import com.example.aipassagecreator.skill.tool.WebSearchTool;
@@ -46,6 +47,7 @@ public class SkillRegistry {
     private final WebSearchTool webSearchTool;
     private final YamlResourceLoader yamlResourceLoader;
     private final SkillExecutionRegistry executionRegistry;
+    private final CircuitBreakerConfig breaker;
     private SkillExecutionService skillExecutionService;
 
     public SkillRegistry(ResourceLoader resourceLoader,
@@ -55,7 +57,8 @@ public class SkillRegistry {
                          SkillExecutionMapper skillExecutionMapper,
                          WebSearchTool webSearchTool,
                          YamlResourceLoader yamlResourceLoader,
-                         SkillExecutionRegistry executionRegistry) {
+                         SkillExecutionRegistry executionRegistry,
+                         CircuitBreakerConfig breaker) {
         this.resourceLoader = resourceLoader;
         this.templateEngine = templateEngine;
         this.modelRouter = modelRouter;
@@ -64,6 +67,7 @@ public class SkillRegistry {
         this.webSearchTool = webSearchTool;
         this.yamlResourceLoader = yamlResourceLoader;
         this.executionRegistry = executionRegistry;
+        this.breaker = breaker;
     }
 
     @Autowired
@@ -156,7 +160,8 @@ public class SkillRegistry {
                         modelRouter,
                         parserRegistry,
                         phaseOutputKeyMap,
-                        phaseTools
+                        phaseTools,
+                        breaker
                 );
                 graph.addNode(nodeName, node_async(action));
                 graph.addEdge(previousNode, nodeName);

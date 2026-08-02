@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.service;
 
+import com.example.aipassagecreator.config.CircuitBreakerConfig;
 import com.example.aipassagecreator.enums.ImageMethodEnum;
 import com.example.aipassagecreator.model.dto.image.ImageData;
 import com.example.aipassagecreator.model.dto.image.ImageRequest;
@@ -34,6 +35,9 @@ public class ImageServiceStrategy {
     @Resource
     private CosService cosService;
 
+    @Resource
+    private CircuitBreakerConfig breaker;
+
     /**
      * 图片服务映射：ImageMethodEnum -> ImageSearchService
      */
@@ -64,36 +68,42 @@ public class ImageServiceStrategy {
     public ImageResult getImageAndUpload(String imageSource, ImageRequest request) {
         ImageMethodEnum method = resolveMethod(imageSource);
         ImageSearchService service = serviceMap.get(method);
-        
+
         if (service == null || !service.isAvailable()) {
             log.warn("图片服务不可用: {}, 尝试降级", method);
             return handleFallbackWithUpload(request.getPosition());
         }
 
-        try {
-            // 1. 获取图片数据
-            ImageData imageData = service.getImageData(request);
-            
-            if (imageData == null || !imageData.isValid()) {
-                log.warn("图片数据获取失败, 使用降级方案, method={}", method);
-                return handleFallbackWithUpload(request.getPosition());
-            }
-            
-            // 2. 上传到 COS
-            String folder = getFolderForMethod(method);
-            String cosUrl = cosService.uploadImageData(imageData, folder);
-            
-            if (cosUrl != null && !cosUrl.isEmpty()) {
-                log.info("图片获取并上传成功, method={}, cosUrl={}", method, cosUrl);
-                return new ImageResult(cosUrl, method);
-            } else {
-                log.warn("图片上传 COS 失败, 使用降级方案, method={}", method);
-                return handleFallbackWithUpload(request.getPosition());
-            }
-        } catch (Exception e) {
-            log.error("获取图片并上传异常, method={}", method, e);
-            return handleFallbackWithUpload(request.getPosition());
+        // 图片熔断：获取/上传任一环节失败则计数，连续失败后 fail-fast 直走降级
+        return breaker.execute("image",
+                () -> doFetch(service, method, request),
+                () -> handleFallbackWithUpload(request.getPosition()));
+    }
+
+    /**
+     * 获取图片数据并上传 COS。任一步骤失败均抛异常，
+     * 由熔断器统一计数并触发降级。
+     */
+    private ImageResult doFetch(ImageSearchService service, ImageMethodEnum method, ImageRequest request) throws Exception {
+        // 1. 获取图片数据
+        ImageData imageData = service.getImageData(request);
+
+        if (imageData == null || !imageData.isValid()) {
+            log.warn("图片数据获取失败, 使用降级方案, method={}", method);
+            throw new IllegalStateException("图片数据获取失败: " + method);
         }
+
+        // 2. 上传到 COS
+        String folder = getFolderForMethod(method);
+        String cosUrl = cosService.uploadImageData(imageData, folder);
+
+        if (cosUrl == null || cosUrl.isEmpty()) {
+            log.warn("图片上传 COS 失败, 使用降级方案, method={}", method);
+            throw new IllegalStateException("图片上传 COS 失败: " + method);
+        }
+
+        log.info("图片获取并上传成功, method={}, cosUrl={}", method, cosUrl);
+        return new ImageResult(cosUrl, method);
     }
 
     /**

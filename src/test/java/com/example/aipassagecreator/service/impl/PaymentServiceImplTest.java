@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.service.impl;
 
+import com.example.aipassagecreator.config.CircuitBreakerConfig;
 import com.example.aipassagecreator.config.StripeConfig;
 import com.example.aipassagecreator.constant.UserConstant;
 import com.example.aipassagecreator.enums.PaymentStatusEnum;
@@ -31,6 +32,8 @@ import static org.mockito.Mockito.*;
 
 import java.util.Map;
 
+import org.springframework.test.util.ReflectionTestUtils;
+
 /**
  * 支付服务单元测试 — 支付会话创建和 Webhook 处理
  */
@@ -57,6 +60,8 @@ class PaymentServiceImplTest {
         mockUser.setId(1L);
         mockUser.setUserRole("user");
         mockUser.setQuota(0);
+        // 注入真实熔断器：初始 CLOSED，不干预支付测试的正常路径
+        ReflectionTestUtils.setField(paymentService, "breaker", new CircuitBreakerConfig());
     }
 
     @Test

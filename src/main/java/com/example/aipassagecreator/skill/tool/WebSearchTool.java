@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.skill.tool;
 
+import com.example.aipassagecreator.config.CircuitBreakerConfig;
 import com.example.aipassagecreator.utils.GsonUtils;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -30,9 +31,11 @@ public class WebSearchTool {
 
     private final HttpClient httpClient;
     private final String apiKey;
+    private final CircuitBreakerConfig breaker;
 
-    public WebSearchTool(@Value("${langsearch.api-key:}") String apiKey) {
+    public WebSearchTool(@Value("${langsearch.api-key:}") String apiKey, CircuitBreakerConfig breaker) {
         this.apiKey = apiKey;
+        this.breaker = breaker;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -53,38 +56,42 @@ public class WebSearchTool {
             log.warn("WebSearchTool 未配置 api-key，返回模拟结果");
             return "{\"error\": \"搜索服务未配置，请配置 langsearch.api-key\"}";
         }
+        // 搜索熔断：服务连续失败后 fail-fast 返回错误 JSON，不再打已故障的搜索 API
+        return breaker.execute("websearch",
+                () -> doSearch(request),
+                () -> "{\"error\": \"搜索服务暂时不可用\"}");
+    }
 
-        try {
-            Map<String, Object> requestBody = Map.of(
-                    "query", request.getQuery(),
-                    "freshness", request.getFreshness() != null ? request.getFreshness() : "noLimit",
-                    "summary", true,
-                    "count", request.getCount() != null && request.getCount() > 0 && request.getCount() <= 20
-                            ? request.getCount() : 10
-            );
+    /**
+     * 实际调用搜索 API。非 200 或 IO 异常归一为异常抛出，
+     * 由熔断器统一计数并触发降级。
+     */
+    private String doSearch(WebSearchRequest request) throws Exception {
+        Map<String, Object> requestBody = Map.of(
+                "query", request.getQuery(),
+                "freshness", request.getFreshness() != null ? request.getFreshness() : "noLimit",
+                "summary", true,
+                "count", request.getCount() != null && request.getCount() > 0 && request.getCount() <= 20
+                        ? request.getCount() : 10
+        );
 
-            HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(SEARCH_API_URL))
-                    .header("Authorization", "Bearer " + apiKey)
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(GsonUtils.toJson(requestBody)))
-                    .timeout(Duration.ofSeconds(15))
-                    .build();
+        HttpRequest httpRequest = HttpRequest.newBuilder()
+                .uri(URI.create(SEARCH_API_URL))
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(GsonUtils.toJson(requestBody)))
+                .timeout(Duration.ofSeconds(15))
+                .build();
 
-            HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() != 200) {
-                log.error("搜索 API 返回非 200: status={}, body={}", response.statusCode(), response.body());
-                return "{\"error\": \"搜索服务暂时不可用 (HTTP " + response.statusCode() + ")\"}";
-            }
-
-            log.info("搜索成功: query={}, responseLength={}", request.getQuery(), response.body().length());
-            return response.body();
-
-        } catch (Exception e) {
-            log.error("搜索请求异常: query={}", request.getQuery(), e);
-            return "{\"error\": \"搜索请求异常: " + e.getMessage() + "\"}";
+        if (response.statusCode() != 200) {
+            log.error("搜索 API 返回非 200: status={}, body={}", response.statusCode(), response.body());
+            throw new IllegalStateException("搜索 API 返回 " + response.statusCode());
         }
+
+        log.info("搜索成功: query={}, responseLength={}", request.getQuery(), response.body().length());
+        return response.body();
     }
 
     /**

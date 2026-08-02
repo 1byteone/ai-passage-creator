@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.service;
 
+import com.example.aipassagecreator.config.CircuitBreakerConfig;
 import com.example.aipassagecreator.config.CosConfig;
 import com.example.aipassagecreator.model.dto.image.ImageData;
 import com.qcloud.cos.COSClient;
@@ -40,6 +41,9 @@ public class CosService {
     @Resource
     private CosConfig cosConfig;
 
+    @Resource
+    private CircuitBreakerConfig breaker;
+
     private COSClient cosClient;
 
     private final OkHttpClient httpClient = new OkHttpClient();
@@ -66,17 +70,26 @@ public class CosService {
             log.warn("ImageData 无效，无法上传");
             return null;
         }
+        // COS 熔断：连续上传失败后 fail-fast 返回 null，由调用方走各自降级链
+        return breaker.execute("cos",
+                () -> doUpload(imageData, folder),
+                () -> null);
+    }
 
-        try {
-            return switch (imageData.getDataType()) {
-                case BYTES -> uploadBytes(imageData.getBytes(), imageData.getMimeType(), folder);
-                case URL -> uploadFromUrl(imageData.getUrl(), folder);
-                case DATA_URL -> uploadFromDataUrl(imageData, folder);
-            };
-        } catch (Exception e) {
-            log.error("上传 ImageData 到 COS 失败, dataType={}", imageData.getDataType(), e);
-            return null;
+    /**
+     * 执行实际上传。任一路径返回失败均归一为异常，
+     * 由熔断器计数并返回 null。
+     */
+    private String doUpload(ImageData imageData, String folder) {
+        String url = switch (imageData.getDataType()) {
+            case BYTES -> uploadBytes(imageData.getBytes(), imageData.getMimeType(), folder);
+            case URL -> uploadFromUrl(imageData.getUrl(), folder);
+            case DATA_URL -> uploadFromDataUrl(imageData, folder);
+        };
+        if (url == null || url.isEmpty()) {
+            throw new IllegalStateException("COS 上传失败: " + imageData.getDataType());
         }
+        return url;
     }
 
     /**

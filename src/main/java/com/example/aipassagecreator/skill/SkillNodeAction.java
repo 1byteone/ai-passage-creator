@@ -2,6 +2,9 @@ package com.example.aipassagecreator.skill;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import com.example.aipassagecreator.config.CircuitBreakerConfig;
+import com.example.aipassagecreator.exception.BusinessException;
+import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.skill.tool.WebSearchTool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -42,6 +45,7 @@ public class SkillNodeAction implements NodeAction {
     private final Map<String, String> phaseOutputKeyMap;
     /** 该阶段可用的工具（LLM 工具调用） */
     private final List<ToolCallback> toolCallbacks;
+    private final CircuitBreakerConfig breaker;
 
     public SkillNodeAction(PhaseDefinition phase,
                            int phaseIndex,
@@ -50,7 +54,8 @@ public class SkillNodeAction implements NodeAction {
                            ModelRouter modelRouter,
                            OutputParserRegistry parserRegistry,
                            Map<String, String> phaseOutputKeyMap,
-                           List<ToolCallback> toolCallbacks) {
+                           List<ToolCallback> toolCallbacks,
+                           CircuitBreakerConfig breaker) {
         this.phase = phase;
         this.phaseIndex = phaseIndex;
         this.totalPhases = totalPhases;
@@ -59,6 +64,7 @@ public class SkillNodeAction implements NodeAction {
         this.parserRegistry = parserRegistry;
         this.phaseOutputKeyMap = phaseOutputKeyMap;
         this.toolCallbacks = toolCallbacks == null ? List.of() : toolCallbacks;
+        this.breaker = breaker;
     }
 
     @Override
@@ -101,55 +107,66 @@ public class SkillNodeAction implements NodeAction {
         ctx.getSharedData().put("model_" + phase.getName(), modelName);
         ctx.recordModelUsed(modelName);
 
-        // 调用 LLM，失败时尝试降级到 fallback 模型
+        // 调用 LLM，失败时尝试降级到 fallback 模型。
+        // LLM 熔断：连续失败后 fail-fast 直接拒绝，避免反复打已故障的模型；
+        // 主/降级任一成功即视为服务可用，仅全部失败才记录失败。
+        if (!breaker.allowRequest("llm")) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "LLM 服务暂时不可用，请稍后重试");
+        }
         String output;
         int phaseTokens;
         long startTime = System.currentTimeMillis();
         try {
-            if (phase.isStreaming()) {
-                StreamResult streamResult = callStreaming(model, prompt, ctx, executionId, skillName);
-                output = streamResult.text();
-                phaseTokens = streamResult.totalTokens();
-            } else {
-                ChatResponse response;
-                if (!toolCallbacks.isEmpty()) {
-                    ToolCallingChatOptions toolOptions = ToolCallingChatOptions.builder()
-                            .toolCallbacks(toolCallbacks)
-                            .internalToolExecutionEnabled(true)
-                            .build();
-                    response = model.call(new Prompt(List.of(new UserMessage(prompt)), toolOptions));
-                } else {
-                    response = model.call(new Prompt(new UserMessage(prompt)));
-                }
-                output = response.getResult().getOutput().getText();
-                phaseTokens = extractTotalTokens(response);
-            }
-        } catch (Exception e) {
-            // 主模型失败，尝试降级到 fallback
-            ChatModel fallbackModel = modelRouter.resolveWithFallback(phase.getModel(),
-                    state.value("skillDefaultModel").map(Object::toString).orElse(null));
-            if (fallbackModel != model) {
-                log.warn("LLM 调用失败，降级到 fallback: phase={}, error={}", phase.getName(), e.getMessage());
-                String fallbackName = modelRouter.resolveModelName(null, null);
-                ctx.recordModelUsed(fallbackName);
+            try {
                 if (phase.isStreaming()) {
-                    StreamResult streamResult = callStreaming(fallbackModel, prompt, ctx, executionId, skillName);
+                    StreamResult streamResult = callStreaming(model, prompt, ctx, executionId, skillName);
                     output = streamResult.text();
                     phaseTokens = streamResult.totalTokens();
                 } else {
-                    ChatResponse response = fallbackModel.call(new Prompt(new UserMessage(prompt)));
+                    ChatResponse response;
+                    if (!toolCallbacks.isEmpty()) {
+                        ToolCallingChatOptions toolOptions = ToolCallingChatOptions.builder()
+                                .toolCallbacks(toolCallbacks)
+                                .internalToolExecutionEnabled(true)
+                                .build();
+                        response = model.call(new Prompt(List.of(new UserMessage(prompt)), toolOptions));
+                    } else {
+                        response = model.call(new Prompt(new UserMessage(prompt)));
+                    }
                     output = response.getResult().getOutput().getText();
                     phaseTokens = extractTotalTokens(response);
                 }
-            } else {
-                throw e; // fallback 与主模型相同，不再重试
+            } catch (Exception e) {
+                // 主模型失败，尝试降级到 fallback
+                ChatModel fallbackModel = modelRouter.resolveWithFallback(phase.getModel(),
+                        state.value("skillDefaultModel").map(Object::toString).orElse(null));
+                if (fallbackModel != model) {
+                    log.warn("LLM 调用失败，降级到 fallback: phase={}, error={}", phase.getName(), e.getMessage());
+                    String fallbackName = modelRouter.resolveModelName(null, null);
+                    ctx.recordModelUsed(fallbackName);
+                    if (phase.isStreaming()) {
+                        StreamResult streamResult = callStreaming(fallbackModel, prompt, ctx, executionId, skillName);
+                        output = streamResult.text();
+                        phaseTokens = streamResult.totalTokens();
+                    } else {
+                        ChatResponse response = fallbackModel.call(new Prompt(new UserMessage(prompt)));
+                        output = response.getResult().getOutput().getText();
+                        phaseTokens = extractTotalTokens(response);
+                    }
+                } else {
+                    throw e; // fallback 与主模型相同，不再重试
+                }
             }
+            long duration = System.currentTimeMillis() - startTime;
+            ctx.addTokenUsage(phaseTokens);
+            ctx.getSharedData().put("tokens_" + phase.getName(), phaseTokens);
+            log.info("LLM 调用完成: phase={}, model={}, duration={}ms, outputLength={}, tokens={}",
+                    phase.getName(), modelName, duration, output.length(), phaseTokens);
+            breaker.recordSuccess("llm");
+        } catch (Exception e) {
+            breaker.recordFailure("llm");
+            throw e;
         }
-        long duration = System.currentTimeMillis() - startTime;
-        ctx.addTokenUsage(phaseTokens);
-        ctx.getSharedData().put("tokens_" + phase.getName(), phaseTokens);
-        log.info("LLM 调用完成: phase={}, model={}, duration={}ms, outputLength={}, tokens={}",
-                phase.getName(), modelName, duration, output.length(), phaseTokens);
 
         // 解析输出
         Object parsed = parserRegistry.parse(phase.getOutputParser(), output, phase);

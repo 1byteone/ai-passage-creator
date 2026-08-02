@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.service.impl;
 
+import com.example.aipassagecreator.config.CircuitBreakerConfig;
 import com.example.aipassagecreator.config.StripeConfig;
 import com.example.aipassagecreator.constant.UserConstant;
 import com.example.aipassagecreator.enums.PaymentStatusEnum;
@@ -50,6 +51,9 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
     @Resource
     private PaymentRecordMapper paymentRecordMapper;
 
+    @Resource
+    private CircuitBreakerConfig breaker;
+
     /**
      * 创建 VIP 永久会员支付会话
      *
@@ -84,7 +88,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
                 .putMetadata("productType", productType.getValue())
                 .build();
 
-        return Session.create(params);
+        // Stripe 熔断：连续失败后 fail-fast 抛业务异常，不再打已故障的支付网关
+        return breaker.executeOrThrow("stripe", () -> Session.create(params));
     }
 
     /**
@@ -327,7 +332,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
                 .setPaymentIntent(paymentIntentId)
                 .setReason(RefundCreateParams.Reason.REQUESTED_BY_CUSTOMER)
                 .build();
-        return Refund.create(params);
+        return breaker.executeOrThrow("stripe", () -> Refund.create(params));
     }
 
     /**
