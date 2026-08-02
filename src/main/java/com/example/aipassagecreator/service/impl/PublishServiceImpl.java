@@ -9,6 +9,7 @@ import com.example.aipassagecreator.mapper.UserMapper;
 import com.example.aipassagecreator.model.po.Article;
 import com.example.aipassagecreator.model.po.PublishSchedule;
 import com.example.aipassagecreator.model.po.User;
+import com.example.aipassagecreator.publish.platform.ContentPublisher;
 import com.example.aipassagecreator.service.PublishService;
 import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
@@ -39,8 +40,12 @@ public class PublishServiceImpl implements PublishService {
     @Resource
     private ApprovalServiceImpl approvalService;
 
+    @Resource
+    private ContentPublisher contentPublisher;
+
     @Override
-    public PublishSchedule schedule(String taskId, LocalDateTime publishAt, Long userId) {
+    public PublishSchedule schedule(String taskId, LocalDateTime publishAt, String platform,
+                                    String methodologyName, Long userId) {
         if (publishAt == null || publishAt.isBefore(LocalDateTime.now())) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "发布时间必须晚于当前时间");
         }
@@ -63,6 +68,8 @@ public class PublishServiceImpl implements PublishService {
         PublishSchedule schedule = PublishSchedule.builder()
                 .articleTaskId(taskId)
                 .publishAt(publishAt)
+                .platform(platform != null ? platform : "wechat")
+                .methodologyName(methodologyName != null ? methodologyName : platform)
                 .status(STATUS_SCHEDULED)
                 .createdBy(userId)
                 .build();
@@ -107,7 +114,8 @@ public class PublishServiceImpl implements PublishService {
         List<PublishSchedule> due = scheduleMapper.selectListByQuery(
                 QueryWrapper.create()
                         .eq("status", STATUS_SCHEDULED)
-                        .le("publish_at", LocalDateTime.now()));
+                        .le("publish_at", LocalDateTime.now())
+                        .limit(10));
         int count = 0;
         for (PublishSchedule schedule : due) {
             try {
@@ -115,7 +123,7 @@ public class PublishServiceImpl implements PublishService {
                         QueryWrapper.create().eq("taskId", schedule.getArticleTaskId()));
                 if (article == null) continue;
 
-                // 发布前复核审批通过状态（防止排期期间被驳回）
+                // 发布前复核审批通过状态
                 String approvalStatus = approvalService.getStatus(
                         schedule.getArticleTaskId(), article.getUserId());
                 if (!ApprovalServiceImpl.STATUS_APPROVED.equals(approvalStatus)) {
@@ -123,14 +131,25 @@ public class PublishServiceImpl implements PublishService {
                     continue;
                 }
 
-                article.setStatus(STATUS_PUBLISHED);
-                articleMapper.update(article);
+                // 平台适配转换
+                String platform = schedule.getPlatform() != null ? schedule.getPlatform() : "wechat";
+                String methodology = schedule.getMethodologyName() != null
+                        ? schedule.getMethodologyName() : platform;
+                String adapterOutput = contentPublisher.convertAndValidate(
+                        article, platform, methodology);
 
+                schedule.setContentTitle(article.getMainTitle());
+                schedule.setAdapterOutput(adapterOutput);
                 schedule.setStatus(STATUS_PUBLISHED);
                 schedule.setPublishedAt(LocalDateTime.now());
                 scheduleMapper.update(schedule);
                 count++;
-                log.info("定时发布完成: scheduleId={}, taskId={}", schedule.getId(), schedule.getArticleTaskId());
+                log.info("定时发布完成: scheduleId={}, taskId={}, platform={}",
+                        schedule.getId(), schedule.getArticleTaskId(), platform);
+            } catch (IllegalArgumentException e) {
+                log.error("平台适配器异常: scheduleId={}, error={}", schedule.getId(), e.getMessage());
+                schedule.setStatus("FAILED");
+                scheduleMapper.update(schedule);
             } catch (Exception e) {
                 log.error("定时发布失败: scheduleId={}, error={}", schedule.getId(), e.getMessage(), e);
             }

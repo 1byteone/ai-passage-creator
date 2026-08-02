@@ -45,13 +45,15 @@ public class PublishController {
                 ErrorCode.PARAMS_ERROR);
         User loginUser = userService.getLoginUser(request);
         String taskId = (String) body.get("taskId");
+        String platform = body.get("platform") instanceof String s ? s : "wechat";
+        String methodologyName = body.get("methodologyName") instanceof String s ? s : null;
         LocalDateTime publishAt;
         try {
             publishAt = LocalDateTime.parse((String) body.get("publishAt"));
         } catch (Exception e) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR, "发布时间格式错误，请使用 ISO 格式如 2026-12-31T10:00:00");
         }
-        return ResultUtils.success(publishService.schedule(taskId, publishAt, loginUser.getId()));
+        return ResultUtils.success(publishService.schedule(taskId, publishAt, platform, methodologyName, loginUser.getId()));
     }
 
     /**

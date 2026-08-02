@@ -182,6 +182,10 @@ create table if not exists publish_schedule (
     article_task_id varchar(64) not null,
     publish_at datetime not null,
     status varchar(20) default 'SCHEDULED',
+    platform varchar(32) default 'wechat' null,
+    content_title varchar(256) null,
+    adapter_output text null,
+    methodology_name varchar(64) default 'default' null,
     published_at datetime,
     created_by bigint,
     create_time datetime default CURRENT_TIMESTAMP

@@ -21,6 +21,14 @@ public class PublishSchedule {
     private String articleTaskId;
     private LocalDateTime publishAt;
     private String status;
+    /** 目标平台：wechat / xiaohongshu / douyin */
+    private String platform;
+    /** 转换后的平台内容（JSON：title,body,topics,issues,metadata） */
+    private String adapterOutput;
+    /** 转换后的标题 */
+    private String contentTitle;
+    /** 方法论模板 */
+    private String methodologyName;
     private LocalDateTime publishedAt;
     private Long createdBy;
     private LocalDateTime createTime;
