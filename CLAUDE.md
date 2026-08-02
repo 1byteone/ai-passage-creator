@@ -43,6 +43,7 @@ AI 驱动的全栈文章创作平台：选题→标题→大纲→内容生成�
 | **后端** | Spring Boot + Java | 3.5.13 / 21 |
 | **ORM** | MyBatis-Flex (NOT MyBatis-Plus) | 1.11.1 |
 | **数据库** | MySQL (生产) / H2 (测试 MODE=MySQL) | — |
+| **迁移** | Flyway (生产/本地) / sql.init+H2 (测试) | Boot BOM 管理 |
 | **缓存/Session** | Redis + Spring Session | — |
 | **AI** | Spring AI Alibaba (DashScope/Qwen) + OpenAI Starter | 1.1.0 |
 | **存储** | 腾讯云 COS | 5.6.228 |
@@ -113,8 +114,8 @@ ai-passage-creator/
 │   └── utils/            # 工具类
 ├── src/main/resources/
 │   ├── application.yml   # 主配置
-│   ├── sql/              # 数据库迁移 SQL (无 Flyway!)
-│   └── db/migration/     # (预留，当前未使用)
+│   ├── db/migration/     # Flyway 迁移 (V1__baseline + V{n}__desc.sql)
+│   └── sql/              # 测试 schema (h2-schema.sql) + 历史迁移 SQL 参考
 ├── src/test/             # JUnit 5 + Mockito 测试
 ├── frontend/src/
 │   ├── api/              # API 调用 + OpenAPI 类型定义

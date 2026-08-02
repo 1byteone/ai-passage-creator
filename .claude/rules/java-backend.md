@@ -53,7 +53,7 @@ Controller → Service → Mapper → DB
 
 - **生产**: MySQL 8.0+ (`ai_passage_creator` 库)
 - **测试**: H2 `MODE=MySQL` (配置在 `application-test.yml`)
-- **迁移 SQL**: 放在 `src/main/resources/sql/` (无 Flyway!)
+- **迁移**: 生产/本地 schema 由 **Flyway** 管理 (`src/main/resources/db/migration/`)。新增表/列 → 写 `V{n}__desc.sql`（可移植 DDL）+ **同步** `h2-schema.sql`（测试），迁移集由 `FlywayMigrationCompatibilityTest` 在 CI 验证。测试档禁用 Flyway，走 `spring.sql.init`。
 - **Session**: Redis 存储 (`spring-session-data-redis`)，超期 30 天
 - **注意**: CI 测试时无 Redis → 配置 `spring.session.store-type=none`
 
