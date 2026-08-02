@@ -6,7 +6,9 @@ import com.qcloud.cos.COSClient;
 import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.auth.COSCredentials;
+import com.qcloud.cos.http.HttpMethodName;
 import com.qcloud.cos.http.HttpProtocol;
+import com.qcloud.cos.model.GeneratePresignedUrlRequest;
 import com.qcloud.cos.model.ObjectMetadata;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.region.Region;
@@ -22,6 +24,8 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
+import java.util.Date;
 import java.util.UUID;
 
 /**
@@ -269,10 +273,63 @@ public class CosService {
     }
 
     /**
-     * 构建 COS 访问 URL
+     * 构建 COS 访问 URL（公网直链，仅用于公开桶）
      */
     private String buildCosUrl(String fileName) {
         return String.format("https://%s.cos.%s.myqcloud.com/%s",
                 cosConfig.getBucket(), cosConfig.getRegion(), fileName);
+    }
+
+    /**
+     * 上传字节到 COS 指定 key（确定性文件名，可重复覆盖）。
+     * 与 {@link #uploadBytes} 不同，此方法不生成随机 UUID 文件名。
+     * @return 上传成功返回 cosKey，失败返回 null
+     */
+    public String uploadToKey(byte[] bytes, String mimeType, String cosKey) {
+        if (bytes == null || bytes.length == 0 || cosKey == null) {
+            return null;
+        }
+        try (InputStream inputStream = new ByteArrayInputStream(bytes)) {
+            ObjectMetadata metadata = new ObjectMetadata();
+            metadata.setContentLength(bytes.length);
+            metadata.setContentType(mimeType != null ? mimeType : "image/png");
+            PutObjectRequest request = new PutObjectRequest(
+                    cosConfig.getBucket(), cosKey, inputStream, metadata);
+            cosClient.putObject(request);
+            log.info("uploadToKey 成功: key={}, size={} bytes", cosKey, bytes.length);
+            return cosKey;
+        } catch (Exception e) {
+            log.error("uploadToKey 失败: key={}", cosKey, e);
+            return null;
+        }
+    }
+
+    /**
+     * 生成私有桶的预签名下载 URL。
+     * @param cosKey COS 对象键（不含 bucket，如 "cards/taskId/page.png"）
+     * @param expiry 过期时长
+     * @return 预签名 URL，生成失败返回 null
+     */
+    public String generatePresignedUrl(String cosKey, Duration expiry) {
+        if (cosClient == null || cosKey == null) {
+            return null;
+        }
+        try {
+            Date expiration = new Date(System.currentTimeMillis() + expiry.toMillis());
+            GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(
+                    cosConfig.getBucket(), cosKey, HttpMethodName.GET);
+            request.setExpiration(expiration);
+            return cosClient.generatePresignedUrl(request).toString();
+        } catch (Exception e) {
+            log.error("生成预签名 URL 失败: key={}", cosKey, e);
+            return null;
+        }
+    }
+
+    /**
+     * 生成预签名 URL（默认 1 小时过期）。
+     */
+    public String generatePresignedUrl(String cosKey) {
+        return generatePresignedUrl(cosKey, Duration.ofHours(1));
     }
 }

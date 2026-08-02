@@ -55,15 +55,15 @@ public class CardService {
         List<String> htmls = templateEngine.render(previewPages, cardStyle);
         List<PageResult> results = renderPipeline.render(htmls, taskId);
         List<String> urls = new ArrayList<>();
-        String folder = "cards/" + taskId;
         for (int i = 0; i < results.size(); i++) {
             PageResult r = results.get(i);
             if (r.getPngBytes() != null && r.isLayoutPassed()) {
-                String url = cosService.uploadBytes(r.getPngBytes(), "image/png", folder);
-                if (url != null) urls.add(url);
+                String key = cardCosKey(taskId, previewPages.get(i).getPageNo());
+                cosService.uploadToKey(r.getPngBytes(), "image/png", key);
+                String presigned = cosService.generatePresignedUrl(key);
+                if (presigned != null) urls.add(presigned);
             }
         }
-        log.info("卡片预览完成: taskId={}, urls={}", taskId, urls.size());
         return urls;
     }
 
@@ -94,24 +94,27 @@ public class CardService {
         List<String> htmls = templateEngine.render(pages, cardStyle);
         List<PageResult> results = renderPipeline.render(htmls, taskId);
 
-        // 4. 上传 + 持久化（幂等：先删旧卡）
+        // 4. 上传 + 持久化（幂等：先删旧卡）。用确定性 COS key + 预签名 URL
         cardPageMapper.deleteByQuery(QueryWrapper.create().eq("task_id", taskId));
-        String folder = "cards/" + taskId;
         List<CardPage> cardPages = new ArrayList<>();
         for (int i = 0; i < results.size(); i++) {
             PageResult r = results.get(i);
+            String key = cardCosKey(taskId, i + 1);
             if (r.getErrorMessage() != null) {
-                CardPage failed = buildCardPage(taskId, i + 1, cardStyle, null, folder, 0, 0,
+                CardPage failed = buildCardPage(taskId, i + 1, cardStyle, null, key, 0, 0,
                         "FAILED", r.getErrorMessage());
                 cardPageMapper.insert(failed);
                 cardPages.add(failed);
                 continue;
             }
-            String url = cosService.uploadBytes(r.getPngBytes(), "image/png", folder);
-            CardPage cp = buildCardPage(taskId, i + 1, cardStyle, url, folder,
+            cosService.uploadToKey(r.getPngBytes(), "image/png", key);
+            String presignedUrl = cosService.generatePresignedUrl(key);
+            CardPage cp = buildCardPage(taskId, i + 1, cardStyle,
+                    presignedUrl, key,
                     r.getPngBytes() != null ? r.getPngBytes().length : 0,
-                    r.getRenderMs(), url != null ? "COMPLETED" : "FAILED",
-                    url == null ? "COS 上传失败" : null);
+                    r.getRenderMs(),
+                    presignedUrl != null ? "COMPLETED" : "FAILED",
+                    presignedUrl == null ? "COS 上传失败" : null);
             cardPageMapper.insert(cp);
             cardPages.add(cp);
         }
@@ -119,6 +122,11 @@ public class CardService {
                 taskId, cardPages.size(),
                 cardPages.stream().filter(c -> "COMPLETED".equals(c.getStatus())).count());
         return cardPages;
+    }
+
+    /** 确定性 COS key：cards/{taskId}/{pageNo}.png，可重复覆盖 */
+    private static String cardCosKey(String taskId, int pageNo) {
+        return "cards/" + taskId + "/" + pageNo + ".png";
     }
 
     private CardPage buildCardPage(String taskId, int pageNo, String style,
