@@ -5,6 +5,11 @@
       <p class="stage-subtitle">AI 为您生成了以下标题，请选择一个或自定义</p>
     </div>
     
+    <div v-if="titleOptions.length === 0" class="empty-state" role="alert">
+      <h3>暂无标题方案</h3>
+      <p>AI 未生成有效标题，请返回上一步调整选题后重试。</p>
+    </div>
+
     <a-radio-group v-model:value="selectedIndex" class="title-options">
       <div v-for="(option, index) in titleOptions" :key="index" class="title-option">
         <a-radio :value="index">
@@ -95,14 +100,17 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-const selectedIndex = ref<number>(0)
+const selectedIndex = ref<number>(props.titleOptions.length > 0 ? 0 : -1)
 const customMainTitle = ref('')
 const customSubTitle = ref('')
 const userDescription = ref('')
 
 const canConfirm = computed(() => {
+  if (props.titleOptions.length === 0) {
+    return false // 空选项，由 empty state 提示
+  }
   if (selectedIndex.value === -1) {
-    return customMainTitle.value.trim() && customSubTitle.value.trim()
+    return !!customMainTitle.value.trim() && !!customSubTitle.value.trim()
   }
   return selectedIndex.value >= 0 && selectedIndex.value < props.titleOptions.length
 })
@@ -114,12 +122,12 @@ const handleConfirm = () => {
   if (selectedIndex.value === -1) {
     mainTitle = customMainTitle.value
     subTitle = customSubTitle.value
-  } else {
+  } else if (selectedIndex.value >= 0 && selectedIndex.value < props.titleOptions.length) {
     const selected = props.titleOptions[selectedIndex.value]
     mainTitle = selected.mainTitle
     subTitle = selected.subTitle
   }
-  
+
   emit('confirm', {
     mainTitle,
     subTitle,
