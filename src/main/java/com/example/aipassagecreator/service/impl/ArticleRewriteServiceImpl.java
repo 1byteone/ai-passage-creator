@@ -1,12 +1,15 @@
 package com.example.aipassagecreator.service.impl;
 
+import com.example.aipassagecreator.agent.agents.ContentMergerAgent;
 import com.example.aipassagecreator.mapper.ArticleMapper;
 import com.example.aipassagecreator.mapper.ArticleVersionMapper;
+import com.example.aipassagecreator.model.dto.article.ArticleState;
 import com.example.aipassagecreator.model.po.Article;
 import com.example.aipassagecreator.model.po.ArticleVersion;
 import com.example.aipassagecreator.service.ArticleRewriteService;
 import com.example.aipassagecreator.skill.ModelRouter;
 import com.example.aipassagecreator.utils.GsonUtils;
+import com.google.gson.reflect.TypeToken;
 import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -127,8 +130,9 @@ public class ArticleRewriteServiceImpl implements ArticleRewriteService {
                 .build();
         articleVersionMapper.insert(version);
 
-        // 更新文章内容
+        // 更新文章内容（配图重合并，保证卡片渲染用的 fullContent 同步，避免 refine 后卡片拿到旧文本）
         article.setContent(rewritten);
+        article.setFullContent(mergeImages(rewritten, article));
         articleMapper.update(article);
 
         log.info("文章改写完成: taskId={}, versionNo={}, model={}, duration={}ms",
@@ -189,6 +193,7 @@ public class ArticleRewriteServiceImpl implements ArticleRewriteService {
         articleVersionMapper.insert(version);
 
         article.setContent(rewritten);
+        article.setFullContent(mergeImages(rewritten, article));
         articleMapper.update(article);
         log.info("定向改写完成: taskId={}, versionNo={}, model={}, duration={}ms",
                 taskId, nextVersion, modelName, duration);
@@ -225,6 +230,7 @@ public class ArticleRewriteServiceImpl implements ArticleRewriteService {
             throw new IllegalArgumentException("文章不存在");
         }
         article.setContent(target.getContent());
+        article.setFullContent(mergeImages(target.getContent(), article));
         articleMapper.update(article);
 
         // 记录回退操作
@@ -251,6 +257,19 @@ public class ArticleRewriteServiceImpl implements ArticleRewriteService {
                 taskId, lastVer != null ? lastVer.getVersionNo() : 0, versionNo, nextVersion);
 
         return revertRecord;
+    }
+
+    /**
+     * 改写/回退后重合并配图，同步 fullContent。
+     * 卡片渲染优先读 fullContent，不重合并则 refine 后卡片会拿到改写前的旧文本。
+     */
+    private String mergeImages(String rewritten, Article article) {
+        if (article.getImages() == null || article.getImages().isBlank()) {
+            return rewritten;
+        }
+        List<ArticleState.ImageResult> images = GsonUtils.fromJsonSafe(
+                article.getImages(), new TypeToken<List<ArticleState.ImageResult>>() {});
+        return ContentMergerAgent.mergeImagesIntoContent(rewritten, images != null ? images : List.of());
     }
 
     private static int extractTokens(ChatResponse response) {

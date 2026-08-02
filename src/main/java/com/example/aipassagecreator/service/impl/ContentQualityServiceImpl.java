@@ -303,6 +303,23 @@ public class ContentQualityServiceImpl implements ContentQualityService {
                         .limit(1));
     }
 
+    @Override
+    public ArticleQuality restoreViral(String taskId, ArticleQuality quality) {
+        // 先删当前 VIRAL 行（其描述的内容已被回退掉），再落库历史评测
+        articleQualityMapper.deleteByQuery(
+                QueryWrapper.create()
+                        .eq("task_id", taskId)
+                        .eq("score_type", "VIRAL"));
+        if (quality == null) {
+            return null;
+        }
+        quality.setId(null); // 重新生成主键，避免复用已删除行 id
+        articleQualityMapper.insert(quality);
+        log.info("爆款评测已恢复(反哺回退): taskId={}, viralScore={}, versionNo={}",
+                taskId, quality.getViralScore(), quality.getVersionNo());
+        return quality;
+    }
+
     /** head-tail 双段快照 */
     private String buildHeadTailSnapshot(String content, int headLen) {
         if (content.length() <= headLen * 2) {

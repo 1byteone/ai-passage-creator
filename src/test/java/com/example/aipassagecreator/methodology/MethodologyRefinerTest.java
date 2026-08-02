@@ -193,6 +193,8 @@ class MethodologyRefinerTest {
         // #41: 回退后内容回到改写前的更优分数，afterScore 报 before（50.00）而非中间坏分（40.00）
         assertEquals(0, new BigDecimal("50.00").compareTo(result.getAfterScore()));
         verify(articleRewriteService).revertTo(TASK_ID, 2, 1L);
+        // B2-4: 回退目标内容（改写前）的评测必须恢复，否则 getLatestViral 停在坏分上
+        verify(contentQualityService).restoreViral(TASK_ID, initial);
     }
 
     /** 无提升但本轮改写版本为 1（无前驱版本可回退）→ 标记 reverted 但跳过 revertTo */
@@ -212,6 +214,8 @@ class MethodologyRefinerTest {
         MethodologyRefiner.RefineResult result = refiner.refine(TASK_ID, "default", 1L);
         assertTrue(result.isReverted());
         verify(articleRewriteService, never()).revertTo(any(), anyInt(), any());
+        // 无前驱版本可回退时不恢复评分（没有需要覆盖的"已回退内容"分数）
+        verify(contentQualityService, never()).restoreViral(any(), any());
     }
 
     /**

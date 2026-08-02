@@ -95,6 +95,9 @@ public class MethodologyRefiner {
                 int revertTarget = newVersion.getVersionNo() != null ? newVersion.getVersionNo() - 1 : 0;
                 if (revertTarget > 0) {
                     articleRewriteService.revertTo(taskId, revertTarget, loginUserId);
+                    // current 即回退目标内容对应的评测（本轮改写前）；恢复它，
+                    // 避免 evaluateViral 的 delete+insert 把最新 VIRAL 行留在"已回退内容"的分数上
+                    contentQualityService.restoreViral(taskId, current);
                 } else {
                     log.warn("无提升但不存在可回退的前驱版本(本轮版本号 {}), 跳过 revertTo: taskId={}",
                             newVersion.getVersionNo(), taskId);

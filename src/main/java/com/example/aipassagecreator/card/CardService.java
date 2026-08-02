@@ -58,7 +58,8 @@ public class CardService {
         for (int i = 0; i < results.size(); i++) {
             PageResult r = results.get(i);
             if (r.getPngBytes() != null && r.isLayoutPassed()) {
-                String key = cardCosKey(taskId, previewPages.get(i).getPageNo());
+                // 预览与正式生成隔离，避免覆盖正式卡产物（正式 key 见 cardCosKey）
+                String key = previewCardCosKey(taskId, previewPages.get(i).getPageNo());
                 cosService.uploadToKey(r.getPngBytes(), "image/png", key);
                 String presigned = cosService.generatePresignedUrl(key);
                 if (presigned != null) urls.add(presigned);
@@ -136,6 +137,11 @@ public class CardService {
     /** 确定性 COS key：cards/{taskId}/{pageNo}.png，可重复覆盖 */
     private static String cardCosKey(String taskId, int pageNo) {
         return "cards/" + taskId + "/" + pageNo + ".png";
+    }
+
+    /** 预览 COS key：独立 preview 前缀，防止预览覆盖正式卡片产物 */
+    private static String previewCardCosKey(String taskId, int pageNo) {
+        return "cards/" + taskId + "/preview/" + pageNo + ".png";
     }
 
     private CardPage buildCardPage(String taskId, int pageNo, String style,

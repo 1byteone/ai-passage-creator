@@ -59,9 +59,10 @@ public class ContentMergerAgent implements NodeAction {
     }
 
     /**
-     * 将配图插入正文（使用占位符替换）
+     * 将配图插入正文（使用占位符替换）。
+     * <p>纯函数，改写/回退后由 {@code ArticleRewriteServiceImpl} 复用，保持 fullContent 与 content 同步。</p>
      */
-    private String mergeImagesIntoContent(String content, List<ArticleState.ImageResult> images) {
+    public static String mergeImagesIntoContent(String content, List<ArticleState.ImageResult> images) {
         if (images == null || images.isEmpty()) {
             return content;
         }

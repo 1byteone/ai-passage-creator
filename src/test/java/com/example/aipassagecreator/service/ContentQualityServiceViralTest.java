@@ -150,4 +150,35 @@ class ContentQualityServiceViralTest {
         assertThrows(IllegalArgumentException.class,
                 () -> contentQualityService.evaluateViral(taskId, "default", 2L));
     }
+
+    @Test
+    void restoreViral_replacesLatestWithGivenQuality() {
+        String taskId = insertCompletedArticle();
+        // 首评 → versionNo=1（78.33），模拟反哺前的初始评测
+        mockResponse("""
+            {"structureScore":80,"logicScore":78,"languageScore":82,"seoScore":70,"readabilityScore":85,"overallScore":79,
+             "viral":{"emotionalTrigger":85,"goldenSentence":75,"interactionHook":60,"persuasion":90,"titleStrategy":80},
+             "titleStrategyHit":"curiosityGap","suggestions":["加强互动"]}""");
+        ArticleQuality first = contentQualityService.evaluateViral(taskId, "default", 2L);
+
+        // 二评（模拟反哺失败轮）→ delete+insert 覆盖为 versionNo=2 的低分
+        mockResponse("""
+            {"structureScore":40,"logicScore":38,"languageScore":42,"seoScore":30,"readabilityScore":45,"overallScore":39,
+             "viral":{"emotionalTrigger":40,"goldenSentence":40,"interactionHook":40,"persuasion":40,"titleStrategy":40},
+             "titleStrategyHit":"curiosityGap","suggestions":[]}""");
+        ArticleQuality second = contentQualityService.evaluateViral(taskId, "default", 2L);
+        assertEquals(Integer.valueOf(2), second.getVersionNo());
+
+        // 反哺回退：恢复首评（回退目标内容的评测）
+        ArticleQuality restored = contentQualityService.restoreViral(taskId, first);
+        assertNotNull(restored);
+        ArticleQuality latest = contentQualityService.getLatestViral(taskId);
+        assertEquals(0, first.getViralScore().compareTo(latest.getViralScore()),
+                "回退后 getLatestViral 应回到首评分数");
+        assertEquals(Integer.valueOf(1), latest.getVersionNo());
+        // 仍仅一行 VIRAL
+        List<ArticleQuality> allViralRows = qualityMapper.selectListByQuery(
+                QueryWrapper.create().eq("task_id", taskId).eq("score_type", "VIRAL"));
+        assertEquals(1, allViralRows.size());
+    }
 }

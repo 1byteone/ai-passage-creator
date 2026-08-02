@@ -60,9 +60,10 @@ public class MethodologyRegistry {
             methodologyMap.putAll(materialized);
             log.info("MethodologyRegistry 初始化完成，共 {} 个方法论: {}", methodologyMap.size(), methodologyMap.keySet());
         } catch (Exception e) {
-            log.error("MethodologyRegistry 初始化失败，使用内置兜底", e);
-            methodologyMap.clear();
-            methodologyMap.put("default", builtinDefault());
+            // fail-fast：方法论 yaml 是仓库内受控配置，解析/校验错误应在启动即暴露，
+            // 否则一个 yaml 笔误会让全部非 default 方法论在运行时 get() 报"方法论不存在"
+            throw new IllegalStateException(
+                    "MethodologyRegistry 初始化失败，请检查 methodology/*.yaml: " + e.getMessage(), e);
         }
     }
 

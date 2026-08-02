@@ -41,4 +41,15 @@ public interface ContentQualityService {
      * @return 最新爆款评测，无记录时返回 null
      */
     ArticleQuality getLatestViral(String taskId);
+
+    /**
+     * 反哺回退后恢复评分行：删除当前 VIRAL 行并重新落库给定评测。
+     * <p>evaluateViral 是 delete+insert 幂等（每任务仅一行），反哺无提升回退后，
+     * 当前 VIRAL 行描述的是已回退掉的内容。恢复前轮评测使 getLatestViral 与回退后内容一致。</p>
+     *
+     * @param taskId  文章任务 ID
+     * @param quality 要恢复的历史评测（回退目标内容对应的评分），null 时仅删除当前行
+     * @return 恢复后的评测
+     */
+    ArticleQuality restoreViral(String taskId, ArticleQuality quality);
 }
