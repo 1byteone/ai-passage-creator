@@ -274,6 +274,12 @@
 					</systemPropertyVariables>
 				</configuration>
 			</plugin>
+			<!-- Exec Maven Plugin - 运行独立工具类（字体上传 FontUploader） -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>3.5.0</version>
+			</plugin>
 		</plugins>
 	</build>
 
