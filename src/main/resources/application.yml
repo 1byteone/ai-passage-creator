@@ -145,3 +145,35 @@ article:
     auto-detox: true
     detox-intensity: medium
     pass-threshold: 50
+
+# 手写效果子系统配置
+handwriting:
+  render:
+    cos-base-url: ${TENCENT_COS_BUCKET}.cos.${TENCENT_COS_REGION:ap-guangzhou}.myqcloud.com
+    render-timeout-sec: 30
+    batch-timeout-sec: 120
+    viewport-width: 1240
+    viewport-height: 1754
+    device-scale-factor: 2.0
+  fonts:
+    # 手写字体 COS 路径前缀
+    cos-prefix: handwriting/fonts
+    # MVP 字体列表（SIL OFL 授权）
+    available:
+      - name: 手书体
+        key: shoushu
+        file: shoushu.ttf
+      - name: 851手写杂字体
+        key: tegakizatsu
+        file: 851tegakizatsu.ttf
+      - name: 今年也要加油鸭
+        key: jiayouya
+        file: jiayouya.ttf
+  papers:
+    # 纸张类型
+    types:
+      - blank
+      - line
+      - grid
+      - tianzi
+      - dot
