@@ -59,7 +59,9 @@ public class ImageServiceStrategy {
 
     /**
      * 获取图片并上传到 COS（推荐方法）
-     * 统一处理所有图片来源的上传逻辑
+     * 统一处理所有图片来源的上传逻辑。
+     * <p>AI 生图方式（isAiGenerated）在首选服务失败后会按 [NANO_BANANA, AGNES] 链依次降级，
+     * 全部失败才走 Picsum 兜底；非 AI 方式保持单次尝试 + Picsum 降级。</p>
      *
      * @param imageSource 图片来源
      * @param request     图片请求对象
@@ -67,6 +69,16 @@ public class ImageServiceStrategy {
      */
     public ImageResult getImageAndUpload(String imageSource, ImageRequest request) {
         ImageMethodEnum method = resolveMethod(imageSource);
+
+        // AI 生图：NANO_BANANA → AGNES → Picsum 三级降级
+        if (method.isAiGenerated()) {
+            ImageResult result = tryAiChain(method, request);
+            if (result != null) {
+                return result;
+            }
+            return handleFallbackWithUpload(request.getPosition());
+        }
+
         ImageSearchService service = serviceMap.get(method);
 
         if (service == null || !service.isAvailable()) {
@@ -78,6 +90,29 @@ public class ImageServiceStrategy {
         return breaker.execute("image",
                 () -> doFetch(service, method, request),
                 () -> handleFallbackWithUpload(request.getPosition()));
+    }
+
+    /**
+     * AI 生图降级链：按 NANO_BANANA → AGNES 顺序尝试，各经熔断器。
+     * 任一成功即返回，全部失败返回 null。
+     */
+    private ImageResult tryAiChain(ImageMethodEnum preferred, ImageRequest request) {
+        ImageMethodEnum[] chain = {ImageMethodEnum.NANO_BANANA, ImageMethodEnum.AGNES};
+        for (ImageMethodEnum candidate : chain) {
+            ImageSearchService service = serviceMap.get(candidate);
+            if (service == null || !service.isAvailable()) {
+                log.debug("AI 降级链跳过不可用服务: {}", candidate);
+                continue;
+            }
+            try {
+                return breaker.execute("image",
+                        () -> doFetch(service, candidate, request),
+                        () -> null);
+            } catch (Exception e) {
+                log.warn("AI 降级链 {} 失败: {}", candidate, e.getMessage());
+            }
+        }
+        return null;
     }
 
     /**
@@ -113,6 +148,7 @@ public class ImageServiceStrategy {
         return switch (method) {
             case PEXELS -> "pexels";
             case NANO_BANANA -> "nano-banana";
+            case AGNES -> "agnes";
             case MERMAID -> "mermaid";
             case ICONIFY -> "iconify";
             case EMOJI_PACK -> "emoji-pack";

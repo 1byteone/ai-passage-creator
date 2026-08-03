@@ -60,6 +60,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         // 普通用户限制
         for (String method : enabledImageMethods) {
             if (ImageMethodEnum.NANO_BANANA.getValue().equals(method) ||
+                    ImageMethodEnum.AGNES.getValue().equals(method) ||
                     ImageMethodEnum.SVG_DIAGRAM.getValue().equals(method)) {
                 throw new BusinessException(ErrorCode.NO_AUTH_ERROR,
                         "高级配图功能（AI 生图、SVG 图表）仅限 VIP 会员使用");
