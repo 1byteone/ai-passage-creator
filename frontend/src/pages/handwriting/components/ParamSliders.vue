@@ -1,11 +1,18 @@
 <script setup lang="ts">
+import { reactive, watch } from 'vue'
 import type { HandwritingParams } from '@/api/handwritingController'
 
 const props = defineProps<{ modelValue: HandwritingParams }>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: HandwritingParams): void }>()
 
+const local = reactive<HandwritingParams>({ ...props.modelValue })
+
+watch(() => props.modelValue, (v) => {
+  Object.assign(local, v)
+}, { deep: true })
+
 function emitUpdate() {
-  emit('update:modelValue', { ...props.modelValue })
+  emit('update:modelValue', { ...local })
 }
 </script>
 
@@ -15,8 +22,8 @@ function emitUpdate() {
       <span style="font-size:12px;color:#666">位置扰动</span>
       <a-slider
         :min="0" :max="10" :step="0.5"
-        :value="modelValue.positionJitter"
-        @change="(v: number) => { modelValue.positionJitter = v; emitUpdate() }"
+        v-model:value="local.positionJitter"
+        @change="emitUpdate"
         style="width:120px"
       />
     </div>
@@ -24,8 +31,8 @@ function emitUpdate() {
       <span style="font-size:12px;color:#666">旋转</span>
       <a-slider
         :min="0" :max="5" :step="0.5"
-        :value="modelValue.rotationJitter"
-        @change="(v: number) => { modelValue.rotationJitter = v; emitUpdate() }"
+        v-model:value="local.rotationJitter"
+        @change="emitUpdate"
         style="width:120px"
       />
     </div>
@@ -33,8 +40,8 @@ function emitUpdate() {
       <span style="font-size:12px;color:#666">字号变化</span>
       <a-slider
         :min="0" :max="20" :step="1"
-        :value="modelValue.sizeJitter"
-        @change="(v: number) => { modelValue.sizeJitter = v; emitUpdate() }"
+        v-model:value="local.sizeJitter"
+        @change="emitUpdate"
         style="width:120px"
       />
     </div>
@@ -42,8 +49,8 @@ function emitUpdate() {
       <span style="font-size:12px;color:#666">墨迹浓淡</span>
       <a-slider
         :min="0" :max="1" :step="0.05"
-        :value="modelValue.inkDensity"
-        @change="(v: number) => { modelValue.inkDensity = v; emitUpdate() }"
+        v-model:value="local.inkDensity"
+        @change="emitUpdate"
         style="width:120px"
       />
     </div>
