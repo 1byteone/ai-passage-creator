@@ -1,7 +1,9 @@
 package com.example.aipassagecreator.card;
 
 import com.example.aipassagecreator.card.model.PageResult;
+import com.example.aipassagecreator.handwriting.config.HandwritingRenderConfig;
 import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
@@ -17,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 /**
  * Playwright 池化安全渲染管线。
@@ -168,6 +171,137 @@ public class CardRenderPipeline {
                     .renderMs(renderMs).build();
         } finally {
             renderPermits.release();
+        }
+    }
+
+    /**
+     * 手写效果渲染（JS 启用 + COS URL 白名单路由 + 字体缓存）。
+     * <p>与现有 {@link #render(List, String)} 并行存在，不动原管线安全约束。
+     *
+     * @param htmls  手写 HTML 列表
+     * @param taskId 任务 ID
+     * @param config 手写渲染配置
+     */
+    public List<PageResult> renderWithJs(List<String> htmls, String taskId,
+                                         HandwritingRenderConfig config) {
+        List<PageResult> results = new ArrayList<>();
+        if (browser == null) {
+            log.warn("渲染引擎不可用，跳过全部页面: taskId={}, pages={}", taskId, htmls.size());
+            for (int i = 0; i < htmls.size(); i++) {
+                results.add(PageResult.builder().pageNo(i + 1)
+                        .errorMessage("渲染引擎不可用").build());
+            }
+            return results;
+        }
+
+        String cosBaseUrl = config.getCosBaseUrl() != null ? config.getCosBaseUrl() : "";
+        int viewportW = config.getViewportWidth() > 0 ? config.getViewportWidth() : 1240;
+        int viewportH = config.getViewportHeight() > 0 ? config.getViewportHeight() : 1754;
+        long batchStart = System.currentTimeMillis();
+        long batchTimeoutMs = config.getBatchTimeoutSec() * 1000L;
+
+        Predicate<String> isCosUrl = url ->
+                !cosBaseUrl.isBlank() && url.contains(cosBaseUrl);
+
+        try (var context = browser.newContext(
+                new Browser.NewContextOptions()
+                        .setViewportSize(viewportW, viewportH)
+                        .setDeviceScaleFactor(config.getDeviceScaleFactor() > 0
+                                ? config.getDeviceScaleFactor() : 2.0)
+                        .setJavaScriptEnabled(true))) {
+            for (int i = 0; i < htmls.size(); i++) {
+                if (System.currentTimeMillis() - batchStart > batchTimeoutMs) {
+                    log.warn("手写渲染批次超时: taskId={}, done={}/{}", taskId, i, htmls.size());
+                    results.add(PageResult.builder().pageNo(i + 1)
+                            .errorMessage("批次渲染超时").build());
+                    continue;
+                }
+                try {
+                    PageResult result = renderOneWithJs(context, htmls.get(i), i + 1,
+                            isCosUrl, config.getRenderTimeoutSec());
+                    results.add(result);
+                } catch (Exception e) {
+                    log.error("手写单页渲染失败: taskId={}, pageNo={}", taskId, i + 1, e);
+                    results.add(PageResult.builder().pageNo(i + 1)
+                            .errorMessage(e.getMessage()).build());
+                }
+            }
+        }
+        return results;
+    }
+
+    private PageResult renderOneWithJs(BrowserContext context, String html, int pageNo,
+                                       Predicate<String> isCosUrl, int timeoutSec) throws Exception {
+        if (!renderPermits.tryAcquire(timeoutSec, TimeUnit.SECONDS)) {
+            return PageResult.builder().pageNo(pageNo)
+                    .errorMessage("渲染资源不足，超时等待").build();
+        }
+        long start = System.currentTimeMillis();
+        try (var page = context.newPage()) {
+            page.setDefaultTimeout(timeoutSec * 1000L);
+
+            page.route("**", route -> {
+                if (isCosUrl.test(route.request().url())) {
+                    route.resume();
+                } else {
+                    route.abort();
+                }
+            });
+
+            page.setContent(html,
+                    new Page.SetContentOptions()
+                            .setWaitUntil(WaitUntilState.NETWORKIDLE));
+
+            byte[] png = page.screenshot(
+                    new Page.ScreenshotOptions()
+                            .setType(ScreenshotType.PNG)
+                            .setFullPage(true));
+
+            int renderMs = (int) (System.currentTimeMillis() - start);
+            if (png.length > MAX_PNG_BYTES) {
+                log.warn("手写 PNG 超限: pageNo={}, bytes={}", pageNo, png.length);
+            }
+            return PageResult.builder().pageNo(pageNo).pngBytes(png)
+                    .layoutPassed(true).renderMs(renderMs).build();
+        } finally {
+            renderPermits.release();
+        }
+    }
+
+    /**
+     * PDF 导出：Playwright page → PDF byte[]。
+     * 用于手写编辑器导出 PDF 格式。
+     */
+    public byte[] renderToPdf(String html, HandwritingRenderConfig config) {
+        if (browser == null) {
+            throw new IllegalStateException("渲染引擎不可用");
+        }
+        String cosBaseUrl = config.getCosBaseUrl() != null ? config.getCosBaseUrl() : "";
+        Predicate<String> isCosUrl = url ->
+                !cosBaseUrl.isBlank() && url.contains(cosBaseUrl);
+
+        try (var context = browser.newContext(
+                new Browser.NewContextOptions()
+                        .setViewportSize(config.getViewportWidth(), config.getViewportHeight())
+                        .setDeviceScaleFactor(config.getDeviceScaleFactor())
+                        .setJavaScriptEnabled(true));
+             var page = context.newPage()) {
+
+            page.route("**", route -> {
+                if (isCosUrl.test(route.request().url())) {
+                    route.resume();
+                } else {
+                    route.abort();
+                }
+            });
+
+            page.setContent(html,
+                    new Page.SetContentOptions()
+                            .setWaitUntil(WaitUntilState.NETWORKIDLE));
+
+            return page.pdf(new Page.PdfOptions()
+                    .setFormat("A4")
+                    .setPrintBackground(true));
         }
     }
 }
