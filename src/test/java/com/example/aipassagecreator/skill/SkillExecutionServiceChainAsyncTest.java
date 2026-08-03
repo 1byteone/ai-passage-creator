@@ -41,12 +41,15 @@ class SkillExecutionServiceChainAsyncTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private SkillRegistry skillRegistry;
+
     private SkillExecutionService service;
 
     @BeforeEach
     void setUp() {
         service = new SkillExecutionService(sseEmitterManager, executionRegistry,
-                quotaService, userService);
+                quotaService, userService, skillRegistry);
     }
 
     @Test

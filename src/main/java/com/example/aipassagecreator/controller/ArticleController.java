@@ -5,11 +5,14 @@ import com.example.aipassagecreator.aop.AuthCheck;
 import com.example.aipassagecreator.common.BaseResponse;
 import com.example.aipassagecreator.common.DeleteRequest;
 import com.example.aipassagecreator.common.ResultUtils;
+import com.example.aipassagecreator.enums.ArticleStatusEnum;
 import com.example.aipassagecreator.enums.ArticleStyleEnum;
+import com.example.aipassagecreator.exception.BusinessException;
 import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.exception.ThrowUtils;
 import com.example.aipassagecreator.manager.SseEmitterManager;
 import com.example.aipassagecreator.model.dto.article.*;
+import com.example.aipassagecreator.model.po.Article;
 import com.example.aipassagecreator.model.po.ArticleQuality;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.model.vo.AgentExecutionStats;
@@ -21,6 +24,8 @@ import com.example.aipassagecreator.service.ArticleRewriteService;
 import jakarta.validation.Valid;
 import com.example.aipassagecreator.service.ContentQualityService;
 import com.example.aipassagecreator.service.UserService;
+import com.example.aipassagecreator.skill.SkillExecution;
+import com.example.aipassagecreator.skill.SkillExecutionService;
 import com.mybatisflex.core.paginate.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,7 +35,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/article")
@@ -63,6 +70,9 @@ public class ArticleController {
 
     @Resource
     private com.example.aipassagecreator.methodology.MethodologyRefiner methodologyRefiner;
+
+    @Resource
+    private SkillExecutionService skillExecutionService;
 
     /**
      * 创建文章任务
@@ -492,6 +502,82 @@ public class ArticleController {
 
         return new org.springframework.http.ResponseEntity<>(content, headers,
                 org.springframework.http.HttpStatus.OK);
+    }
+
+    /**
+     * 利用已完成的文章内容一键执行 Skill（降AI味改写 / 文章转稿 / 种草文案等）。
+     * <p>
+     * 文章归属校验 + COMPLETED 状态校验后走公共派发，进度走既有 /skill/{executionId}/progress SSE。
+     */
+    @PostMapping("/{taskId}/skill/{skillName}")
+    @Operation(summary = "一键执行 Skill（完成后调用）")
+    public BaseResponse<?> executeArticleSkill(
+            @PathVariable String taskId,
+            @PathVariable String skillName,
+            HttpServletRequest httpServletRequest) {
+
+        User loginUser = userService.getLoginUser(httpServletRequest);
+
+        // 归属校验：防止 IDOR
+        var article = articleService.getByTaskId(taskId);
+        if (article == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "文章不存在");
+        }
+        if (!article.getUserId().equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权操作此文章");
+        }
+        if (!ArticleStatusEnum.COMPLETED.getValue().equals(article.getStatus())) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "文章未完成，暂不支持执行 Skill");
+        }
+
+        // 按 skillName 构建输入
+        Map<String, Object> inputs = buildArticleSkillInputs(skillName, article);
+
+        SkillExecution execution = skillExecutionService.dispatchAndExecute(
+                skillName, inputs, loginUser);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("skillExecutionId", execution.getExecutionId());
+        result.put("skillName", skillName);
+        result.put("status", "RUNNING");
+        result.put("progressUrl", "/skill/" + execution.getExecutionId() + "/progress");
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * 按 Skill 名称构建一键执行输入。
+     * <p>ai-detox/article-to-x → articleContent；seeding-copy → productInfo/platform/tone。</p>
+     */
+    private Map<String, Object> buildArticleSkillInputs(String skillName, Article article) {
+        String content = article.getFullContent();
+        if (content == null || content.isBlank()) {
+            content = article.getContent();
+        }
+
+        return switch (skillName) {
+            case "ai-detox" -> {
+                Map<String, Object> m = new HashMap<>();
+                m.put("articleContent", content != null ? content : "");
+                m.put("intensity", "medium");
+                yield m;
+            }
+            case "article-to-x" -> {
+                Map<String, Object> m = new HashMap<>();
+                m.put("articleContent", content != null ? content : "");
+                yield m;
+            }
+            case "seeding-copy" -> {
+                String title = article.getMainTitle() != null ? article.getMainTitle()
+                        : article.getTopic() != null ? article.getTopic() : "";
+                Map<String, Object> m = new HashMap<>();
+                m.put("productInfo", title);
+                m.put("platform", "xiaohongshu");
+                m.put("tone", "种草推荐");
+                yield m;
+            }
+            default -> throw new BusinessException(ErrorCode.PARAMS_ERROR,
+                    "不支持的 Skill: " + skillName + "，支持: ai-detox / article-to-x / seeding-copy");
+        };
     }
 
 }

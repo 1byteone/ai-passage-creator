@@ -24,6 +24,38 @@ public class SkillExecutionService {
     private final SkillExecutionRegistry executionRegistry;
     private final QuotaService quotaService;
     private final UserService userService;
+    private final SkillRegistry skillRegistry;
+
+    /**
+     * 公共派发：配额校验与扣减 → 创建执行 → prepare → 含确认则注册 → executeAsync。
+     * <p>
+     * 由 {@link SkillController#executeSkill} 和 {@code ArticleController#executeArticleSkill}
+     * 共用，消除 Copy-Paste Sprawl。角色校验仍由各 Controller 负责（Skill 有 requiredRoles、
+     * 文章一键执行仅校验归属 + COMPLETED 状态）。
+     *
+     * @param skillName Skill 名称
+     * @param inputs    初始输入
+     * @param user      执行用户（用于配额校验与 userId 注入）
+     * @return 已 create+prepare 的 SkillExecution（executeAsync 已触发）
+     */
+    public SkillExecution dispatchAndExecute(String skillName, Map<String, Object> inputs, User user) {
+        quotaService.checkAndConsumeQuota(user, "配额不足，无法执行此 Skill");
+
+        SkillExecution execution;
+        try {
+            execution = skillRegistry.createExecution(skillName, inputs);
+            execution.prepare(user.getId());
+            if (skillRegistry.hasConfirmationPhase(skillName)) {
+                executionRegistry.register(execution, user.getId());
+            }
+            executeAsync(execution, user.getId());
+        } catch (Exception e) {
+            log.error("Skill 派发失败，退还配额: skillName={}, userId={}", skillName, user.getId(), e);
+            quotaService.refundQuota(user);
+            throw e;
+        }
+        return execution;
+    }
 
     @Async("skillExecutor")
     public void executeAsync(SkillExecution execution, Long userId) {

@@ -3,6 +3,12 @@
     <div class="action-bar">
       <a-button @click="goBack"><template #icon><ArrowLeftOutlined /></template>返回历史</a-button>
       <div class="primary-actions">
+        <a-button v-if="hasContent" @click="detoxLauncherOpen = true">
+          <template #icon><FileTextOutlined /></template>降AI味改写
+        </a-button>
+        <a-button v-if="hasContent" @click="seedLauncherOpen = true">
+          <template #icon><SmileOutlined /></template>种草文案
+        </a-button>
         <a-button v-if="hasContent" @click="skillLauncherOpen = true">
           <template #icon><ShareAltOutlined /></template>转为社交文案
         </a-button>
@@ -99,6 +105,18 @@
 
     <SkillLauncher
       v-if="article"
+      v-model:open="detoxLauncherOpen"
+      skill-name="ai-detox"
+      :initial-inputs="{ articleContent: article.fullContent || article.content || '', intensity: 'medium' }"
+    />
+    <SkillLauncher
+      v-if="article"
+      v-model:open="seedLauncherOpen"
+      skill-name="seeding-copy"
+      :initial-inputs="{ productInfo: article.mainTitle || article.topic || '', platform: 'xiaohongshu', tone: '种草推荐' }"
+    />
+    <SkillLauncher
+      v-if="article"
       v-model:open="skillLauncherOpen"
       skill-name="article-to-x"
       :initial-inputs="{ articleContent: article.fullContent || article.content || '' }"
@@ -115,8 +133,10 @@ import {
   ClockCircleOutlined,
   DownOutlined,
   DownloadOutlined,
+  FileTextOutlined,
   RedoOutlined,
   ShareAltOutlined,
+  SmileOutlined,
 } from '@ant-design/icons-vue'
 import ArticleReadingView from '@/components/ArticleReadingView.vue'
 import SkillLauncher from '@/pages/skill/components/SkillLauncher.vue'
@@ -134,6 +154,8 @@ const logsLoading = ref(false)
 const logsError = ref('')
 const showExecutionLogs = ref(false)
 const skillLauncherOpen = ref(false)
+const detoxLauncherOpen = ref(false)
+const seedLauncherOpen = ref(false)
 const hasContent = computed(() => Boolean(article.value?.fullContent || article.value?.content))
 const taskId = computed(() => (typeof route.params.taskId === 'string' ? route.params.taskId : ''))
 

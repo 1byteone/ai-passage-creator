@@ -80,7 +80,6 @@ public class SkillController {
         User loginUser = userService.getLoginUser(servletRequest);
         List<String> requiredRoles = def.getRequiredRoles();
         if (requiredRoles != null && !requiredRoles.isEmpty()) {
-            // 满足任一所需角色即可（admin 豁免 + vip 为 user 超集，与 AuthInterceptor 同语义）
             boolean hasRole = requiredRoles.stream()
                     .anyMatch(role -> UserRoleEnum.satisfies(loginUser.getUserRole(), role));
             if (!hasRole) {
@@ -88,29 +87,12 @@ public class SkillController {
             }
         }
 
-        // 配额校验与扣减：每次执行消耗 1 配额，admin/VIP 豁免（与文章生成同规则）
-        quotaService.checkAndConsumeQuota(loginUser, "配额不足，无法执行此 Skill");
-
         Map<String, Object> inputs = request == null || request.getInputs() == null
                 ? Map.of()
                 : request.getInputs();
 
-        SkillExecution execution;
-        try {
-            execution = skillRegistry.createExecution(skillName, inputs);
-            execution.prepare(loginUser.getId());
-            // 含确认阶段的 Skill 需登记实例，confirm 时才能取回并从检查点续跑
-            if (skillRegistry.hasConfirmationPhase(skillName)) {
-                executionRegistry.register(execution, loginUser.getId());
-            }
-            // 异步执行（通过 SkillExecutionService 确保 @Async 生效）
-            skillExecutionService.executeAsync(execution, loginUser.getId());
-        } catch (Exception e) {
-            // 派发失败说明未真正消耗算力，退还配额避免白扣
-            log.error("Skill 派发失败，退还配额: skillName={}, userId={}", skillName, loginUser.getId(), e);
-            quotaService.refundQuota(loginUser);
-            throw e;
-        }
+        // 公共派发：配额校验 → 创建 → prepare → executeAsync → 失败退额
+        SkillExecution execution = skillExecutionService.dispatchAndExecute(skillName, inputs, loginUser);
 
         SkillExecuteResponse response = SkillExecuteResponse.builder()
                 .skillExecutionId(execution.getExecutionId())
