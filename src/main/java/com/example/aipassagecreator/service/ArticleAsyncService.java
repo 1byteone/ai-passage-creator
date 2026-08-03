@@ -9,6 +9,7 @@ import com.example.aipassagecreator.enums.SseMessageTypeEnum;
 import com.example.aipassagecreator.manager.SseEmitterManager;
 import com.example.aipassagecreator.model.dto.article.ArticleState;
 import com.example.aipassagecreator.model.po.Article;
+import com.example.aipassagecreator.model.po.ArticleQuality;
 import com.example.aipassagecreator.utils.GsonUtils;
 import com.google.gson.reflect.TypeToken;
 import jakarta.annotation.Resource;
@@ -16,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +40,12 @@ public class ArticleAsyncService {
 
     @Resource
     private AgentConfig agentConfig;
+
+    @Resource
+    private ArticleQualityGateService articleQualityGateService;
+
+    @Resource
+    private ContentQualityService contentQualityService;
 
     /**
      * 异步执行文章生成任务
@@ -279,11 +287,39 @@ public class ArticleAsyncService {
                 });
             }
 
+            // 质量门检测（生成内容后、保存前）
+            ArticleQualityGateService.GateResult gate = articleQualityGateService
+                    .checkAndDetox(state, taskId, article.getUserId());
+
             // 保存完整文章到数据库
             articleService.saveArticleContent(taskId, state);
 
-            // 更新状态为已完成
+            // 更新状态为已完成（evaluateViral 要求 COMPLETED 状态）
             articleService.updateArticleStatus(taskId, ArticleStatusEnum.COMPLETED, null);
+
+            // VIP/管理员专属爆款评分（必须在 COMPLETED 之后）
+            BigDecimal viralScore = null;
+            if (articleQualityGateService.isVipOrAdmin(article.getUserId())) {
+                try {
+                    ArticleQuality viral = contentQualityService.evaluateViral(
+                            taskId, state.getMethodology(), article.getUserId());
+                    viralScore = viral != null ? viral.getViralScore() : null;
+                } catch (Exception e) {
+                    log.error("爆款评分失败: taskId={}", taskId, e);
+                }
+            }
+
+            // 推送质量门报告（ALL_COMPLETE 之前）
+            Map<String, Object> qualityData = new HashMap<>();
+            qualityData.put("taskId", taskId);
+            qualityData.put("score", gate.score());
+            qualityData.put("passed", gate.passed());
+            qualityData.put("detoxed", gate.detoxed());
+            qualityData.put("violations", gate.violations());
+            if (viralScore != null) {
+                qualityData.put("viralScore", viralScore);
+            }
+            sendSseMessage(taskId, SseMessageTypeEnum.QUALITY_CHECKED, qualityData);
 
             // 推送完成消息
             sendSseMessage(taskId, SseMessageTypeEnum.ALL_COMPLETE, Map.of("taskId", taskId));

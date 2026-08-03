@@ -311,6 +311,36 @@
           </div>
           </div>
 
+          <!-- 质量门报告（COMPLETED 前显示） -->
+          <div v-if="qualityReport && currentPhase === 'COMPLETED'" class="quality-report-panel">
+            <a-alert
+              :type="qualityReport.passed ? 'success' : 'warning'"
+              :show-icon="true"
+              :closable="false"
+            >
+              <template #message>
+                <span class="quality-title">
+                  创作质量检测 {{ qualityReport.passed ? '✓ 通过' : '✗ 未通过' }}
+                  <span class="quality-score">{{ qualityReport.score }} 分</span>
+                </span>
+                <template v-if="qualityReport.detoxed">
+                  <a-tag color="processing" class="quality-tag">已自动降AI味改写</a-tag>
+                </template>
+                <template v-if="qualityReport.viralScore != null">
+                  <a-tag color="blue" class="quality-tag">爆款分 {{ qualityReport.viralScore }}</a-tag>
+                </template>
+              </template>
+              <template v-if="qualityReport.violations.length > 0" #description>
+                <div class="quality-violations">
+                  <span class="violations-label">AI 味违规项 ({{ qualityReport.violations.length }})：</span>
+                  <ul>
+                    <li v-for="(v, idx) in qualityReport.violations" :key="idx">{{ v }}</li>
+                  </ul>
+                </div>
+              </template>
+            </a-alert>
+          </div>
+
           <!-- 创作完成 -->
           <CompletedState
             v-else-if="currentPhase === 'COMPLETED'"
@@ -692,6 +722,15 @@ interface RealtimeLog {
   level: string
   message: string
 }
+
+interface QualityReport {
+  score: number
+  passed: boolean
+  detoxed: boolean
+  violations: string[]
+  viralScore?: number
+}
+const qualityReport = ref<QualityReport | null>(null)
 const realtimeLogs = ref<RealtimeLog[]>([])
 
 const currentAgentStep = computed(() => {
@@ -986,6 +1025,22 @@ const handleSSEMessage = (msg: SSEMessage) => {
       addLog('文章创作完成', 'success')
       break
 
+    case 'QUALITY_CHECKED':
+      // 质量门报告（ALL_COMPLETE 之前到达）
+      qualityReport.value = {
+        score: msg.score ?? 100,
+        passed: msg.passed ?? true,
+        detoxed: msg.detoxed ?? false,
+        violations: msg.violations ?? [],
+        viralScore: msg.viralScore,
+      }
+      const qr = qualityReport.value!
+      addLog(
+        `质量检测: ${qr.score} 分${qr.passed ? ' ✓通过' : ' ✗未通过'}${qr.detoxed ? '（已自动降AI味改写）' : ''}${qr.viralScore != null ? ` | 爆款分: ${qr.viralScore}` : ''}`,
+        qr.passed ? 'success' : 'warning'
+      )
+      break
+
     case 'ERROR':
       errorMessage.value = msg.message || '创作失败'
       errorVisible.value = true
@@ -1078,6 +1133,7 @@ const resetCreate = () => {
   outline.value = []
   isCreating.value = false
   isCompleted.value = false
+  qualityReport.value = null
   isStreaming.value = false
   isOutlineStreaming.value = false
   currentStep.value = 0
@@ -2483,6 +2539,47 @@ onBeforeUnmount(() => {
   .methods-group :deep(.ant-checkbox-wrapper) {
     min-height: 36px;
     padding: 6px 10px;
+  }
+}
+
+/* 质量门报告面板 */
+.quality-report-panel {
+  margin-bottom: 20px;
+
+  .quality-title {
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .quality-score {
+    margin-left: 8px;
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .quality-tag {
+    margin-left: 8px;
+  }
+
+  .quality-violations {
+    margin-top: 8px;
+
+    .violations-label {
+      font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+
+    ul {
+      margin: 6px 0 0 16px;
+      padding: 0;
+      line-height: 1.8;
+
+      li {
+        color: var(--color-text-secondary);
+        font-size: 13px;
+      }
+    }
   }
 }
 </style>

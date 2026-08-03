@@ -139,3 +139,9 @@ article:
     orchestrator:
       enabled: true
     max-iterations: 10
+  # 创作质量门 — 生成后自动检测反AI味，未通过则触发改写
+  quality-gate:
+    enabled: true
+    auto-detox: true
+    detox-intensity: medium
+    pass-threshold: 50

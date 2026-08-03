@@ -19,6 +19,12 @@ export interface SSEMessage {
     mainTitle: string
     subTitle: string
   }>
+  // 质量门报告字段（QUALITY_CHECKED 事件）
+  score?: number
+  passed?: boolean
+  detoxed?: boolean
+  violations?: string[]
+  viralScore?: number
 }
 
 export interface SSEOptions {
