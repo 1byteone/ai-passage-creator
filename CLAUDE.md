@@ -131,7 +131,7 @@ ai-passage-creator/
 │   └── main.ts           # 入口
 ├── frontend/tests/       # Playwright E2E + 技能状态单元测试
 ├── .github/workflows/ci.yml  # CI: mvn test + Docker 构建
-└── scripts/git-push.sh   # 双远程推送 (github + gitee)
+└── scripts/git-push.sh   # 单 remote 推送脚本 (github / origin=Gitee)
 ```
 
 ---
@@ -212,7 +212,12 @@ User Input → Vue → POST /api/article/create → SSE taskId → EventSource �
 - **类型**: `feat` / `fix` / `docs` / `refactor` / `test` / `chore` / `style` / `perf`
 - **Scope**: `frontend` / `backend` / `card` / `skill` / `infra` / `db`
 - **分支**: `dev` (开发) / `master` (生产) / `track/*` (特性分支)
-- **推送**: `bash scripts/git-push.sh github dev` 同时推到 GitHub + Gitee
+- **推送**: 脚本每次只推单个 remote，GitHub 用 `github`，Gitee 用 `origin`（`gitee` 名不存在）：
+  ```bash
+  bash scripts/git-push.sh github dev   # → GitHub
+  bash scripts/git-push.sh origin dev   # → Gitee
+  ```
+  查看 remote 列表: `git remote -v`
 
 ---
 
@@ -227,7 +232,7 @@ User Input → Vue → POST /api/article/create → SSE taskId → EventSource �
 4. type-check → cd frontend && npm run type-check (零容忍 TS 错误)
 5. test → cd .. && mvn test (零容忍测试失败)
 6. commit → Conventional Commits 格式 + Co-Authored-By: Claude
-7. push → bash scripts/git-push.sh github dev (双远程)
+7. push → `bash scripts/git-push.sh github dev` (GitHub) + `bash scripts/git-push.sh origin dev` (Gitee)
 ```
 
 ### Plan-before-code (禁止盲目实施)
