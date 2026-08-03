@@ -96,7 +96,10 @@ public class CardService {
         List<PageResult> results = renderPipeline.render(htmls, taskId);
 
         // 4. 上传 + 持久化（幂等：先删旧卡）。用确定性 COS key + 预签名 URL
-        cardPageMapper.deleteByQuery(QueryWrapper.create().eq("task_id", taskId));
+        cardPageMapper.deleteByQuery(
+                QueryWrapper.create()
+                        .eq("task_id", taskId)
+                        .eq("style", cardStyle));
         List<CardPage> cardPages = new ArrayList<>();
         for (int i = 0; i < results.size(); i++) {
             PageResult r = results.get(i);
