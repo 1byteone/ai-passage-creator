@@ -27,3 +27,14 @@ export const formatDateShort = (date: string | number): string => {
 export const formatDateFull = (date: string | number): string => {
   return formatDate(date, 'YYYY-MM-DD HH:mm:ss')
 }
+
+/**
+ * 格式化耗时（毫秒）
+ * 统一展示：<1s 显示 ms，<60s 显示秒，否则显示分+秒；0/null 显示 '—'
+ */
+export const formatDuration = (ms?: number): string => {
+  if (ms == null || ms === 0) return '—'
+  if (ms < 1000) return `${ms}ms`
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
+  return `${Math.floor(ms / 60000)}m ${Math.round((ms % 60000) / 1000)}s`
+}

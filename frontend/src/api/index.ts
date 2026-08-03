@@ -8,6 +8,13 @@ import * as articleController from './articleController'
 import * as statisticsController from './statisticsController'
 import * as healthController from './healthController'
 import * as skillController from './skillController'
+import * as apikeyController from './apikeyController'
+import * as cardController from './cardController'
+import * as approvalController from './approvalController'
+import * as publishController from './publishController'
+import * as analyticsController from './analyticsController'
+import * as adminToolboxController from './adminToolboxController'
+import * as workspaceController from './workspaceController'
 export default {
   userController,
   paymentController,
@@ -15,4 +22,11 @@ export default {
   statisticsController,
   healthController,
   skillController,
+  apikeyController,
+  cardController,
+  approvalController,
+  publishController,
+  analyticsController,
+  adminToolboxController,
+  workspaceController,
 }

@@ -18,6 +18,16 @@
         <a-button type="primary" :disabled="!hasContent" @click="exportMarkdown">
           <template #icon><DownloadOutlined /></template>导出 Markdown
         </a-button>
+        <RouterLink v-if="article?.status === 'COMPLETED'" :to="`/article/${encodeURIComponent(taskId)}/cards`">
+          <a-button>
+            <template #icon><PictureOutlined /></template>卡片管理
+          </a-button>
+        </RouterLink>
+        <RouterLink v-if="article?.status === 'COMPLETED'" :to="`/article/${encodeURIComponent(taskId)}/publish`">
+          <a-button>
+            <template #icon><SendOutlined /></template>发布管理
+          </a-button>
+        </RouterLink>
       </div>
     </div>
 
@@ -100,6 +110,110 @@
             </template>
           </div>
         </section>
+
+        <!-- 审批面板 -->
+        <section v-if="article?.status === 'COMPLETED'" class="approval-panel" aria-labelledby="approval-title">
+          <button
+            type="button"
+            :aria-expanded="showApproval"
+            aria-controls="approval-content"
+            @click="toggleApproval"
+          >
+            <span>
+              <AuditOutlined />
+              <strong id="approval-title">审批状态</strong>
+              <small v-if="approvalStatus">{{ approvalStatusLabel }}</small>
+            </span>
+            <DownOutlined :class="{ expanded: showApproval }" />
+          </button>
+
+          <div v-if="showApproval" id="approval-content" class="approval-content">
+            <a-skeleton v-if="approvalLoading" active :paragraph="{ rows: 2 }" />
+            <a-alert
+              v-else-if="approvalError"
+              type="warning"
+              :message="approvalError"
+              show-icon
+            >
+              <template #action>
+                <a-button size="small" @click="loadApprovalHistory">重试</a-button>
+              </template>
+            </a-alert>
+            <template v-else>
+              <!-- 审批操作区 -->
+              <div v-if="isOwnArticle && !approvalRecords.length" class="approval-action">
+                <p>文章已完成，可以提交审批。审批通过后方可排期发布。</p>
+                <a-button type="primary" :loading="submittingApproval" @click="handleSubmitApproval">
+                  <template #icon><SendOutlined /></template>提交审批
+                </a-button>
+              </div>
+
+              <div v-else-if="isOwnArticle && latestApproval?.status === 'REJECTED'" class="approval-action">
+                <a-alert type="error" show-icon :message="`审批驳回：${latestApproval.comment || '未提供原因'}`" />
+                <a-button style="margin-top: 12px" :loading="submittingApproval" @click="handleSubmitApproval">
+                  <template #icon><RedoOutlined /></template>重新提交
+                </a-button>
+              </div>
+
+              <div v-else-if="isAdmin && !isOwnArticle && latestApproval?.status === 'PENDING'" class="approval-action">
+                <div class="approval-review">
+                  <a-input
+                    v-model:value="reviewComment"
+                    placeholder="审批意见（可选）"
+                    :maxlength="500"
+                    style="margin-bottom: 8px"
+                  />
+                  <div class="approval-review-buttons">
+                    <a-button type="primary" :loading="approvingAction" @click="handleApprove">
+                      <template #icon><CheckOutlined /></template>通过
+                    </a-button>
+                    <a-popconfirm
+                      title="确定驳回此文章？"
+                      :description="reviewComment || undefined"
+                      ok-text="驳回"
+                      cancel-text="取消"
+                      ok-type="danger"
+                      @confirm="handleReject"
+                    >
+                      <a-button danger :loading="approvingAction">驳回</a-button>
+                    </a-popconfirm>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else-if="isAdmin && !isOwnArticle && !approvalRecords.length" class="approval-action">
+                <p>该文章尚未提交审批。</p>
+              </div>
+
+              <!-- 当前审批状态 -->
+              <div v-if="latestApproval" class="approval-status-card">
+                <span class="approval-badge" :class="`approval-${latestApproval.status?.toLowerCase()}`">
+                  {{ statusText(latestApproval.status) }}
+                </span>
+                <span v-if="latestApproval.comment" class="approval-comment">{{ latestApproval.comment }}</span>
+                <span class="approval-time">
+                  {{ latestApproval.status === 'PENDING' ? '提交于' : '' }}
+                  {{ formatDate(latestApproval.submitTime || '') }}
+                  <template v-if="latestApproval.reviewTime">
+                    · 审批于 {{ formatDate(latestApproval.reviewTime || '') }}
+                  </template>
+                </span>
+              </div>
+
+              <!-- 审批历史 -->
+              <div v-if="approvalRecords.length > 1" class="approval-history">
+                <span class="history-label">历史记录</span>
+                <div v-for="record in approvalRecords.slice(0, -1)" :key="record.id" class="history-item">
+                  <span class="approval-badge approval-history-badge" :class="`approval-${record.status?.toLowerCase()}`">
+                    {{ statusText(record.status) }}
+                  </span>
+                  <span v-if="record.comment" class="approval-comment">{{ record.comment }}</span>
+                  <span class="approval-time">{{ formatDate((record.reviewTime || record.submitTime) || '') }}</span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </section>
       </template>
     </div>
 
@@ -127,25 +241,32 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Alert as AAlert, Modal, message } from 'ant-design-vue'
+import { Alert as AAlert, Modal, Popconfirm as APopconfirm, message } from 'ant-design-vue'
 import {
   ArrowLeftOutlined,
+  AuditOutlined,
+  CheckOutlined,
   ClockCircleOutlined,
   DownOutlined,
   DownloadOutlined,
   FileTextOutlined,
+  PictureOutlined,
   RedoOutlined,
+  SendOutlined,
   ShareAltOutlined,
   SmileOutlined,
 } from '@ant-design/icons-vue'
 import ArticleReadingView from '@/components/ArticleReadingView.vue'
 import SkillLauncher from '@/pages/skill/components/SkillLauncher.vue'
 import { getArticle, getExecutionLogs } from '@/api/articleController'
+import { submitForApproval, approveArticle, rejectArticle, getApprovalHistory } from '@/api/approvalController'
 import { exportAsMarkdown } from '@/utils/article'
 import { formatDate } from '@/utils/date'
+import { useLoginUserStore } from '@/stores/loginUser'
 
 const router = useRouter()
 const route = useRoute()
+const loginUserStore = useLoginUserStore()
 const loading = ref(false)
 const article = ref<API.ArticleVO | null>(null)
 const errorMessage = ref('')
@@ -241,6 +362,119 @@ const getAgentDisplayName = (name: string) => {
   return labels[name] || name || '未知步骤'
 }
 
+// ── 审批状态 ──
+
+const showApproval = ref(false)
+const approvalLoading = ref(false)
+const approvalError = ref('')
+const approvalRecords = ref<API.ApprovalRecord[]>([])
+const submittingApproval = ref(false)
+const approvingAction = ref(false)
+const reviewComment = ref('')
+
+const isAdmin = computed(() => loginUserStore.loginUser.userRole === 'admin')
+const isOwnArticle = computed(() =>
+  article.value ? String(article.value.userId) === String(loginUserStore.loginUser.id) : false,
+)
+
+const latestApproval = computed(() =>
+  approvalRecords.value.length ? approvalRecords.value[approvalRecords.value.length - 1] : null,
+)
+
+const approvalStatus = computed(() => latestApproval.value?.status)
+
+const STATUS_TEXT: Record<string, string> = { PENDING: '待审批', APPROVED: '已通过', REJECTED: '已驳回' }
+
+const approvalStatusLabel = computed(() => STATUS_TEXT[approvalStatus.value ?? ''] || '')
+
+const statusText = (status?: string) => STATUS_TEXT[status ?? ''] || status || '—'
+
+const loadApprovalHistory = async () => {
+  if (!taskId.value) return
+  approvalLoading.value = true
+  approvalError.value = ''
+  try {
+    const res = await getApprovalHistory(taskId.value)
+    if (res.data.code === 0) {
+      approvalRecords.value = res.data.data ?? []
+    } else {
+      // 40400 = 还没有审批记录
+      if (res.data.code === 40400) {
+        approvalRecords.value = []
+      } else {
+        throw new Error(res.data.message || '加载失败')
+      }
+    }
+  } catch (e) {
+    approvalError.value = e instanceof Error ? e.message : '审批记录暂时不可用'
+  } finally {
+    approvalLoading.value = false
+  }
+}
+
+const toggleApproval = () => {
+  showApproval.value = !showApproval.value
+  if (showApproval.value && !approvalRecords.value.length && !approvalLoading.value) {
+    void loadApprovalHistory()
+  }
+}
+
+const handleSubmitApproval = async () => {
+  if (!taskId.value || submittingApproval.value) return
+  submittingApproval.value = true
+  try {
+    const res = await submitForApproval({ taskId: taskId.value })
+    if (res.data.code === 0) {
+      message.success('已提交审批')
+      await loadApprovalHistory()
+    } else {
+      throw new Error(res.data.message || '提交失败')
+    }
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '提交审批失败，请稍后重试')
+  } finally {
+    submittingApproval.value = false
+  }
+}
+
+const handleApprove = async () => {
+  if (!taskId.value || approvingAction.value) return
+  approvingAction.value = true
+  try {
+    const res = await approveArticle({ taskId: taskId.value, comment: reviewComment.value.trim() || undefined })
+    if (res.data.code === 0) {
+      message.success('已审批通过')
+      reviewComment.value = ''
+      await loadApprovalHistory()
+    } else {
+      throw new Error(res.data.message || '审批失败')
+    }
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '审批操作失败')
+  } finally {
+    approvingAction.value = false
+  }
+}
+
+const handleReject = async () => {
+  if (!taskId.value || approvingAction.value) return
+  approvingAction.value = true
+  try {
+    const res = await rejectArticle({ taskId: taskId.value, comment: reviewComment.value.trim() || '未提供原因' })
+    if (res.data.code === 0) {
+      message.success('已驳回')
+      reviewComment.value = ''
+      await loadApprovalHistory()
+    } else {
+      throw new Error(res.data.message || '驳回失败')
+    }
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '驳回操作失败')
+  } finally {
+    approvingAction.value = false
+  }
+}
+
 onMounted(loadArticle)
 </script>
 
@@ -333,6 +567,137 @@ onMounted(loadArticle)
   padding: 18px 0 4px;
   border-top: 1px solid var(--border-subtle);
 }
+
+// ── 审批面板 ──
+
+.approval-panel {
+  margin-top: 24px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+
+  > button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 14px 20px;
+    border: 0;
+    background: none;
+    color: var(--text-body);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+
+    &:hover { background: var(--surface-muted); }
+
+    > span {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    small {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+  }
+
+  .anticon-down {
+    transition: transform var(--transition-fast);
+    font-size: 12px;
+    color: var(--text-muted);
+    &.expanded { transform: rotate(180deg); }
+  }
+}
+
+.approval-content {
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.approval-action {
+  padding: 16px 0;
+
+  p {
+    margin: 0 0 12px;
+    color: var(--text-subtle);
+    font-size: 13px;
+  }
+}
+
+.approval-review {
+  padding: 12px 0;
+}
+
+.approval-review-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.approval-status-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.approval-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.approval-pending { background: #fef3c7; color: #92400e; }
+.approval-approved { background: #d1fae5; color: #065f46; }
+.approval-rejected { background: #fee2e2; color: #991b1b; }
+
+.approval-history-badge {
+  font-size: 11px;
+  padding: 1px 8px;
+}
+
+.approval-comment {
+  color: var(--text-subtle);
+  font-size: 12px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.approval-time {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.approval-history {
+  padding: 12px 0 0;
+
+  .history-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+// ── 旧样式 ──
 
 .execution-summary {
   display: grid;

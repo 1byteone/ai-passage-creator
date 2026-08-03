@@ -56,3 +56,18 @@ export async function confirmSkill(
     ...(options || {}),
   })
 }
+
+/** 分页查询 Skill 执行历史 POST /skill/executions */
+export async function listSkillExecutions(
+  body?: API.SkillExecutionQueryRequest,
+  options?: { [key: string]: unknown },
+) {
+  return request<API.BaseResponsePageSkillExecutionVO>('/skill/executions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body ?? {},
+    ...(options || {}),
+  })
+}

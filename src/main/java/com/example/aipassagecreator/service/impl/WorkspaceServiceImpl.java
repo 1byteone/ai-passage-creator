@@ -22,6 +22,13 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private static final List<String> ROLE_HIERARCHY = List.of(
             ROLE_VIEWER, ROLE_MEMBER, ROLE_ADMIN, ROLE_OWNER);
 
+    /** 可被添加/分配的成员角色（不含 owner，owner 仅限创建者） */
+    private static final List<String> ASSIGNABLE_ROLES = List.of(
+            ROLE_VIEWER, ROLE_MEMBER, ROLE_ADMIN);
+
+    private static final String STATUS_ACTIVE = "ACTIVE";
+    private static final String STATUS_ARCHIVED = "ARCHIVED";
+
     @Resource
     private WorkspaceMapper workspaceMapper;
 
@@ -31,12 +38,18 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Workspace create(String name, String description, Long ownerId) {
+        if (name == null || name.isBlank()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "空间名称不能为空");
+        }
+        if (name.length() > 128) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "空间名称最长 128 字符");
+        }
         Workspace ws = Workspace.builder()
-                .name(name)
+                .name(name.trim())
                 .description(description)
                 .ownerId(ownerId)
                 .memberCount(1)
-                .status("ACTIVE")
+                .status(STATUS_ACTIVE)
                 .build();
         workspaceMapper.insert(ws);
 
@@ -48,21 +61,27 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
     @Override
     public Workspace getById(Long workspaceId, Long userId) {
+        Workspace ws = workspaceMapper.selectOneById(workspaceId);
+        if (ws == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+        }
         String role = getRole(workspaceId, userId);
         if (role == null) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "不在该空间成员中");
         }
-        return workspaceMapper.selectOneById(workspaceId);
+        return ws;
     }
 
     @Override
     public List<Workspace> listByUser(Long userId) {
+        // 子查询条件用参数化 .eq，避免字符串拼接
+        QueryWrapper memberIds = QueryWrapper.create()
+                .select("workspace_id")
+                .from("workspace_member")
+                .eq("user_id", userId);
         return workspaceMapper.selectListByQuery(
                 QueryWrapper.create()
-                        .in("id", QueryWrapper.create()
-                                .select("workspace_id")
-                                .from("workspace_member")
-                                .where("user_id = " + userId))
+                        .in("id", memberIds)
                         .eq("status", "ACTIVE")
                         .orderBy("create_time", false));
     }
@@ -74,6 +93,9 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         if (ws == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "空间不存在");
         }
+        if (STATUS_ARCHIVED.equals(ws.getStatus())) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "空间已归档，不可修改");
+        }
         if (name != null && !name.isBlank()) ws.setName(name);
         if (description != null) ws.setDescription(description);
         workspaceMapper.update(ws);
@@ -84,8 +106,8 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     public void archive(Long workspaceId, Long userId) {
         requireRole(workspaceId, userId, ROLE_OWNER);
         Workspace ws = workspaceMapper.selectOneById(workspaceId);
-        if (ws != null) {
-            ws.setStatus("ARCHIVED");
+        if (ws != null && !STATUS_ARCHIVED.equals(ws.getStatus())) {
+            ws.setStatus(STATUS_ARCHIVED);
             workspaceMapper.update(ws);
             log.info("归档协作空间: id={}", workspaceId);
         }
@@ -95,8 +117,10 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Transactional(rollbackFor = Exception.class)
     public void addMember(Long workspaceId, Long targetUserId, String role, Long operatorId) {
         requireRole(workspaceId, operatorId, ROLE_ADMIN);
-        if (ROLE_OWNER.equals(role)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "owner 角色不可添加，仅限创建者");
+        requireActive(workspaceId);
+        if (ROLE_OWNER.equals(role) || !ASSIGNABLE_ROLES.contains(role)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR,
+                    "角色仅支持 viewer/member/admin");
         }
         // 去重
         WorkspaceMember existing = findMember(workspaceId, targetUserId);
@@ -118,6 +142,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Transactional(rollbackFor = Exception.class)
     public void removeMember(Long workspaceId, Long targetUserId, Long operatorId) {
         requireRole(workspaceId, operatorId, ROLE_ADMIN);
+        requireActive(workspaceId);
         WorkspaceMember target = findMember(workspaceId, targetUserId);
         if (target == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "成员不存在");
@@ -162,6 +187,14 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         if (!hasRole(workspaceId, userId, minRole)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR,
                     "需要 " + minRole + " 及以上权限");
+        }
+    }
+
+    /** 归档后的空间只读，拒绝任何修改类操作 */
+    private void requireActive(Long workspaceId) {
+        Workspace ws = workspaceMapper.selectOneById(workspaceId);
+        if (ws != null && STATUS_ARCHIVED.equals(ws.getStatus())) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "空间已归档，不可修改");
         }
     }
 

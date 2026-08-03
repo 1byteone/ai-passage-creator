@@ -88,6 +88,20 @@
           <ArrowRightOutlined aria-hidden="true" />
         </span>
       </RouterLink>
+
+      <RouterLink to="/skill/history" class="chain-banner history-banner">
+        <div class="chain-banner-icon">
+          <HistoryOutlined aria-hidden="true" />
+        </div>
+        <div class="chain-banner-copy">
+          <h2>执行历史</h2>
+          <p>查看所有 Skill 的执行记录，恢复未完成的任务，或复用成功结果。</p>
+        </div>
+        <span class="chain-banner-open">
+          查看历史
+          <ArrowRightOutlined aria-hidden="true" />
+        </span>
+      </RouterLink>
     </div>
   </section>
 </template>
@@ -98,10 +112,11 @@ import {
   ArrowRightOutlined,
   BulbOutlined,
   FileDoneOutlined,
+  HistoryOutlined,
   PartitionOutlined,
   ShareAltOutlined,
 } from '@ant-design/icons-vue'
-import { getSkillUiConfig, PUBLIC_SKILL_ORDER } from '@/config/skill'
+import { getSkillUiConfig } from '@/config/skill'
 
 const skills = ref<API.SkillSummary[]>([])
 const loading = ref(true)

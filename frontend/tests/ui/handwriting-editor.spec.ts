@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Request } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 const viewports = [
   { width: 1024, height: 900 },
@@ -17,8 +17,6 @@ const adminPassword = process.env.UI_TEST_ADMIN_PASSWORD ?? 'AdminTest@2026'
 const collectRuntimeProblems = (page: Page) => {
   const problems: RuntimeProblem[] = []
   const currentPath = '/handwriting'
-
-  const isApiRequest = (request: Request) => request.url().includes('/api/')
 
   page.on('console', (message) => {
     if (message.type() === 'warning' || message.type() === 'error') {

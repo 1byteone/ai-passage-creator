@@ -41,6 +41,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/article/:taskId/publish',
+      name: '发布管理',
+      component: () => import('@/pages/article/PublishPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/skill',
       name: 'AI 技能中心',
       component: () => import('@/pages/skill/SkillCenterPage.vue'),
@@ -98,6 +106,27 @@ const router = createRouter({
       component: () => import('@/pages/admin/StatisticsPage.vue'),
     },
     {
+      path: '/admin/toolbox',
+      name: '系统工具箱',
+      component: () => import('@/pages/admin/ToolboxPage.vue'),
+    },
+    {
+      path: '/workspace',
+      name: '协作空间',
+      component: () => import('@/pages/workspace/WorkspaceListPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/workspace/:id',
+      name: '空间详情',
+      component: () => import('@/pages/workspace/WorkspaceDetailPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/vip',
       name: '会员购买',
       component: () => import('@/pages/VipPage.vue'),
@@ -109,6 +138,22 @@ const router = createRouter({
       path: '/apikey',
       name: 'API Key',
       component: () => import('@/pages/user/ApiKeyPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/approval',
+      name: '审批工作台',
+      component: () => import('@/pages/approval/ApprovalPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/analytics',
+      name: '数据分析',
+      component: () => import('@/pages/analytics/AnalyticsPage.vue'),
       meta: {
         requiresAuth: true,
       },

@@ -65,7 +65,7 @@ const executionState = ref<ExecutionState>('INPUT')
 const uiConfig = computed(() => getSkillUiConfig(props.skillName))
 const drawerWidth = 'min(720px, 100vw)'
 
-const handleStateChange = (nextState: ExecutionState, _executionId?: string) => {
+const handleStateChange = (nextState: ExecutionState) => {
   executionState.value = nextState
 }
 </script>

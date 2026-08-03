@@ -101,6 +101,10 @@ import {
   BarChartOutlined,
   AppstoreOutlined,
   MoreOutlined,
+  KeyOutlined,
+  AuditOutlined,
+  ToolOutlined,
+  TeamOutlined,
 } from '@ant-design/icons-vue'
 import { isVip as checkIsVip } from '@/utils/permission'
 
@@ -135,6 +139,30 @@ const originItems = [
     lowFrequency: true,
   },
   {
+    key: '/apikey',
+    icon: KeyOutlined,
+    label: 'API Key',
+    lowFrequency: true,
+  },
+  {
+    key: '/approval',
+    icon: AuditOutlined,
+    label: '审批',
+    lowFrequency: true,
+  },
+  {
+    key: '/analytics',
+    icon: BarChartOutlined,
+    label: '分析',
+    lowFrequency: true,
+  },
+  {
+    key: '/workspace',
+    icon: TeamOutlined,
+    label: '空间',
+    lowFrequency: true,
+  },
+  {
     key: '/admin/userManage',
     icon: SettingOutlined,
     label: '管理',
@@ -145,6 +173,13 @@ const originItems = [
     key: '/admin/statistics',
     icon: BarChartOutlined,
     label: '数据',
+    admin: true,
+    lowFrequency: true,
+  },
+  {
+    key: '/admin/toolbox',
+    icon: ToolOutlined,
+    label: '工具箱',
     admin: true,
     lowFrequency: true,
   },
@@ -185,7 +220,7 @@ const doLogout = async () => {
     } else {
       message.error('退出登录失败，' + res.data.message)
     }
-  } catch (e) {
+  } catch {
     // 网络错误或 API 不可达时仍清除本地状态并跳转
     loginUserStore.resetLoginUser()
     try {

@@ -483,4 +483,285 @@ declare namespace API {
     userRole?: string
     createTime?: string
   }
+
+  // ── Skill Execution History ──
+
+  type SkillExecutionVO = {
+    skillExecutionId?: string
+    skillName?: string
+    status?: string
+    phase?: string
+    tokenUsage?: number
+    modelUsed?: string
+    durationMs?: number
+    errorMessage?: string
+    createTime?: string
+  }
+
+  type SkillExecutionQueryRequest = {
+    skillName?: string
+    status?: string
+    current?: number
+    pageSize?: number
+    sortField?: string
+    sortOrder?: string
+  }
+
+  type PageSkillExecutionVO = {
+    records?: SkillExecutionVO[]
+    pageNumber?: number
+    pageSize?: number
+    totalPage?: number
+    totalRow?: number
+    optimizeCountQuery?: boolean
+  }
+
+  type BaseResponsePageSkillExecutionVO = {
+    code?: number
+    data?: PageSkillExecutionVO
+    message?: string
+  }
+
+  // ── Approval 审批 ──
+
+  type ApprovalRecord = {
+    id?: number
+    articleTaskId?: string
+    versionNo?: number
+    status?: string
+    submittedBy?: number
+    reviewerId?: number
+    comment?: string
+    submitTime?: string
+    reviewTime?: string
+  }
+
+  type BaseResponseApprovalRecord = {
+    code?: number
+    data?: ApprovalRecord
+    message?: string
+  }
+
+  type BaseResponseListApprovalRecord = {
+    code?: number
+    data?: ApprovalRecord[]
+    message?: string
+  }
+
+  // ── Publish 发布排期 ──
+
+  type PublishSchedule = {
+    id?: number
+    articleTaskId?: string
+    publishAt?: string
+    status?: string
+    platform?: string
+    adapterOutput?: string
+    contentTitle?: string
+    methodologyName?: string
+    publishedAt?: string
+    createdBy?: number
+    createTime?: string
+  }
+
+  type PublishScheduleRequest = {
+    taskId: string
+    publishAt: string
+    platform?: string
+    methodologyName?: string
+  }
+
+  type BaseResponsePublishSchedule = {
+    code?: number
+    data?: PublishSchedule
+    message?: string
+  }
+
+  type BaseResponseListPublishSchedule = {
+    code?: number
+    data?: PublishSchedule[]
+    message?: string
+  }
+
+  // ── Analytics 分析 ──
+
+  type AnalyticsVO = {
+    totalArticles?: number
+    styleDistribution?: Record<string, number>
+    imageMethodDistribution?: Record<string, number>
+    qualityTrend?: number[]
+    avgQualityScore?: number
+    skillUsageTop?: Record<string, number>
+    modelUsage?: Record<string, number>
+    dailyActiveUsers?: Record<string, number>
+    quotaConsumed?: number
+    successRate?: number
+    totalTokenUsage?: number
+  }
+
+  type BaseResponseAnalyticsVO = {
+    code?: number
+    data?: AnalyticsVO
+    message?: string
+  }
+
+  // ── Admin 工具箱 ──
+
+  type BreakerStatusItem = {
+    status?: string
+    failures?: number
+  }
+
+  type BreakerStatus = Record<string, BreakerStatusItem>
+
+  type BaseResponseBreakerStatus = {
+    code?: number
+    data?: BreakerStatus
+    message?: string
+  }
+
+  // ── Workspace 协作空间 ──
+
+  type Workspace = {
+    id?: number
+    name?: string
+    description?: string
+    ownerId?: number
+    memberCount?: number
+    status?: string
+    createTime?: string
+    updateTime?: string
+  }
+
+  type WorkspaceMember = {
+    id?: number
+    workspaceId?: number
+    userId?: number
+    role?: string
+    joinedAt?: string
+  }
+
+  type WorkspaceCreateRequest = {
+    name: string
+    description?: string
+  }
+
+  type WorkspaceUpdateRequest = {
+    name?: string
+    description?: string
+  }
+
+  type BaseResponseWorkspace = {
+    code?: number
+    data?: Workspace
+    message?: string
+  }
+
+  type BaseResponseListWorkspace = {
+    code?: number
+    data?: Workspace[]
+    message?: string
+  }
+
+  type BaseResponseListWorkspaceMember = {
+    code?: number
+    data?: WorkspaceMember[]
+    message?: string
+  }
+
+  // ── Card 卡片 ──
+
+  type CardGenerateRequest = {
+    taskId?: string
+    cardStyle?: string
+    methodologyName?: string
+  }
+
+  type CardPage = {
+    id?: number
+    taskId?: string
+    pageNo?: number
+    pageType?: string
+    style?: string
+    imageUrl?: string
+    imageKey?: string
+    width?: number
+    height?: number
+    bytes?: number
+    status?: string
+    complianceReport?: string
+    errorMessage?: string
+    renderMs?: number
+    createTime?: string
+  }
+
+  type CardGenerateResponse = {
+    taskId?: string
+    progressUrl?: string
+  }
+
+  type BaseResponseListString = {
+    code?: number
+    data?: string[]
+    message?: string
+  }
+
+  type BaseResponseListCardPage = {
+    code?: number
+    data?: CardPage[]
+    message?: string
+  }
+
+  type BaseResponseCardGenerateResponse = {
+    code?: number
+    data?: CardGenerateResponse
+    message?: string
+  }
+
+  // ── API Key ──
+
+  type ApiKeyVO = {
+    id?: number
+    userId?: number
+    name?: string
+    apiKeyPrefix?: string
+    lastUsedAt?: string
+    expiresAt?: string
+    createTime?: string
+  }
+
+  type ApiKeyCreateVO = {
+    id?: number
+    name?: string
+    apiKey?: string
+    apiKeyPrefix?: string
+    expiresAt?: string
+  }
+
+  type ApiKeyCreateRequest = {
+    userId?: number
+    name?: string
+    expiresAt?: string
+  }
+
+  type PageApiKeyVO = {
+    records?: ApiKeyVO[]
+    pageNumber?: number
+    pageSize?: number
+    totalPage?: number
+    totalRow?: number
+    optimizeCountQuery?: boolean
+  }
+
+  type BaseResponseApiKeyCreateVO = {
+    code?: number
+    data?: ApiKeyCreateVO
+    message?: string
+  }
+
+  type BaseResponsePageApiKeyVO = {
+    code?: number
+    data?: PageApiKeyVO
+    message?: string
+  }
 }

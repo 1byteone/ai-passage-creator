@@ -117,6 +117,8 @@
             v-if="executionId"
             class="execution-reference"
             type="button"
+            aria-label="复制执行编号"
+            title="点击复制执行编号"
             @click="copyExecutionId"
           >
             执行编号：{{ executionId }}
@@ -128,14 +130,16 @@
         <div class="completion-bar">
           <div>
             <span><CheckCircleOutlined /> 已完成</span>
-            <button type="button" @click="copyExecutionId">
+            <button type="button" aria-label="复制执行编号" title="点击复制执行编号" @click="copyExecutionId">
               {{ executionId }}
             </button>
           </div>
-          <a-button @click="returnToInput">
-            <template #icon><EditOutlined /></template>
-            调整输入
-          </a-button>
+          <div class="completion-metrics">
+            <span v-if="executionMeta.durationMs">耗时 <strong>{{ formatDuration(executionMeta.durationMs) }}</strong></span>
+            <span v-if="executionMeta.tokenUsage">Token <strong>{{ executionMeta.tokenUsage }}</strong></span>
+            <span v-if="executionMeta.modelUsed">模型 <strong>{{ executionMeta.modelUsed }}</strong></span>
+            <RouterLink to="/skill/history" class="history-link">查看执行历史</RouterLink>
+          </div>
         </div>
         <SkillResultRenderer
           :skill-name="skillName"
@@ -152,10 +156,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import { CheckCircleOutlined, ClockCircleOutlined, EditOutlined } from '@ant-design/icons-vue'
-import { executeSkill, getSkillDefinition, getSkillResult, confirmSkill } from '@/api/skillController'
+import { CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons-vue'
+import { executeSkill, getSkillDefinition, getSkillResult, confirmSkill, listSkillExecutions } from '@/api/skillController'
 import { getFieldDefinition, getPhaseLabel, getSkillUiConfig } from '@/config/skill'
 import { connectSkillSSE, type SkillSSEConnection } from '@/utils/sse'
+import { formatDuration } from '@/utils/date'
 import {
   applySkillProgressEvent,
   type SkillRuntimeSnapshot,
@@ -205,6 +210,7 @@ const phaseIndex = ref(1)
 const streamedText = ref('')
 const outputData = ref<Record<string, unknown>>({})
 const errorMessage = ref('')
+const executionMeta = ref<{ durationMs?: number; tokenUsage?: number; modelUsed?: string }>({})
 const pollingStartedAt = ref(0)
 const awaitingPhase = ref('')
 const pendingOutput = ref<unknown>(null)
@@ -308,6 +314,7 @@ const handleConfirm = async (action: API.SkillConfirmAction) => {
       throw new Error(response.data.message || '确认失败')
     }
     // 确认成功，回到执行态继续接收 SSE 事件
+    if (unmounted) return
     setState('EXECUTING')
     openSSE()
   } catch (error) {
@@ -331,6 +338,7 @@ const startExecution = async () => {
   submitting.value = true
   errorMessage.value = ''
   outputData.value = {}
+  executionMeta.value = {}
   streamedText.value = ''
   currentPhase.value = ''
   phaseIndex.value = 1
@@ -345,6 +353,7 @@ const startExecution = async () => {
     executionId.value = response.data.data.skillExecutionId
     sessionStorage.setItem(executionKey.value, JSON.stringify(executionId.value))
     emit('executionChange', executionId.value)
+    if (unmounted) return
     setState('EXECUTING')
     openSSE()
   } catch (error) {
@@ -419,6 +428,11 @@ const refreshResult = async (): Promise<boolean> => {
       return false
     }
     if (result.status === 'SUCCESS') {
+      if (result.skillName && result.skillName !== props.skillName) {
+        errorMessage.value = '执行记录属于其他技能，请从技能中心重新发起'
+        setState('FAILED')
+        return true
+      }
       if (result.inputData) {
         inputs.value = result.inputData
       }
@@ -470,7 +484,10 @@ const startPolling = () => {
 }
 
 const completeExecution = (result: Record<string, unknown>) => {
+  // SSE 完成事件与轮询结果可能同时到达，幂等处理
+  if (state.value === 'COMPLETED') return
   outputData.value = result
+  errorMessage.value = ''
   sessionStorage.removeItem(draftKey.value)
   streamedText.value = ''
   phaseIndex.value = definition.value?.phases?.length
@@ -478,6 +495,7 @@ const completeExecution = (result: Record<string, unknown>) => {
     : phaseIndex.value
   stopConnections()
   setState('COMPLETED')
+  void loadExecutionMetrics()
   emit('complete', {
     skillName: props.skillName,
     executionId: executionId.value,
@@ -486,9 +504,35 @@ const completeExecution = (result: Record<string, unknown>) => {
   })
 }
 
+// 补全执行指标（token/模型/耗时），来自执行历史记录
+const loadExecutionMetrics = async () => {
+  const id = executionId.value
+  if (!id) return
+  try {
+    const res = await listSkillExecutions({
+      skillName: props.skillName,
+      current: 1,
+      pageSize: 10,
+    })
+    if (unmounted || id !== executionId.value) return
+    const record = res.data.code === 0
+      ? res.data.data?.records?.find((r) => r.skillExecutionId === id)
+      : undefined
+    if (!record) return
+    executionMeta.value = {
+      durationMs: record.durationMs ?? undefined,
+      tokenUsage: record.tokenUsage ?? undefined,
+      modelUsed: record.modelUsed ?? undefined,
+    }
+  } catch {
+    // 指标加载失败不影响结果展示
+  }
+}
+
 const returnToInput = () => {
   stopConnections()
   errorMessage.value = ''
+  executionMeta.value = {}
   awaitingPhase.value = ''
   pendingOutput.value = null
   supportedActions.value = []
@@ -538,6 +582,17 @@ watch(
 watch(
   () => props.skillName,
   () => loadDefinition(),
+)
+
+// 从最近执行列表点击（同路由仅 query 变化）时，组件不会重新挂载，
+// 需监听 restoreExecutionId 主动恢复对应执行
+watch(
+  () => props.restoreExecutionId,
+  (id) => {
+    if (unmounted || !id || id === executionId.value) return
+    if (state.value === 'EXECUTING' || state.value === 'AWAITING_CONFIRMATION') return
+    void resumeExecution(id)
+  },
 )
 
 watch(
@@ -727,6 +782,33 @@ defineExpose({
   font-family: 'SFMono-Regular', Consolas, monospace;
   font-size: 11px;
   cursor: pointer;
+}
+
+.completion-metrics {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  span {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+
+    strong {
+      color: var(--color-text);
+    }
+  }
+}
+
+.history-link {
+  color: var(--color-primary-dark);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .embedded .surface-title {
