@@ -33,6 +33,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/article/:taskId/cards',
+      name: '卡片管理',
+      component: () => import('@/pages/article/CardPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/skill',
       name: 'AI 技能中心',
       component: () => import('@/pages/skill/SkillCenterPage.vue'),
@@ -46,9 +54,25 @@ const router = createRouter({
       },
     },
     {
+      path: '/skill/history',
+      name: 'Skill 执行历史',
+      component: () => import('@/pages/skill/SkillExecutionHistoryPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/skill/:skillName',
       name: '执行 AI 技能',
       component: () => import('@/pages/skill/SkillExecutePage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/handwriting',
+      name: '手写笔记编辑器',
+      component: () => import('@/pages/handwriting/HandwritingEditorPage.vue'),
       meta: {
         requiresAuth: true,
       },
@@ -77,6 +101,14 @@ const router = createRouter({
       path: '/vip',
       name: '会员购买',
       component: () => import('@/pages/VipPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/apikey',
+      name: 'API Key',
+      component: () => import('@/pages/user/ApiKeyPage.vue'),
       meta: {
         requiresAuth: true,
       },
