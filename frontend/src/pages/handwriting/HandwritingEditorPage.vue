@@ -9,7 +9,7 @@ import { message } from 'ant-design-vue'
 
 const store = useHandwritingStore()
 const content = ref('')
-const selectedFont = ref('shoushu')
+const selectedFont = ref('maoken-yingbi')
 const selectedPaper = ref('line')
 
 onMounted(async () => {

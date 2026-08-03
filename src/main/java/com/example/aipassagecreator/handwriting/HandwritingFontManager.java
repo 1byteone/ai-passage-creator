@@ -25,9 +25,13 @@ public class HandwritingFontManager {
     private static final Duration URL_DURATION = Duration.ofMinutes(30);
 
     private static final List<FontEntry> REGISTRY = List.of(
-        new FontEntry("手书体", "shoushu", "shoushu.ttf", "春眠不觉晓，处处闻啼鸟"),
-        new FontEntry("851手写杂字体", "tegakizatsu", "851tegakizatsu.ttf", "夜来风雨声，花落知多少"),
-        new FontEntry("今年也要加油鸭", "jiayouya", "jiayouya.ttf", "举头望明月，低头思故乡")
+        new FontEntry("猫啃硬笔楷书", "maoken-yingbi", "maoken-yingbi.ttf", "春眠不觉晓，处处闻啼鸟"),
+        new FontEntry("写意体", "xieyi", "xieyi.ttf", "夜来风雨声，花落知多少"),
+        new FontEntry("随峰体Plus", "suifeng-plus", "suifeng-plus.ttf", "举头望明月，低头思故乡"),
+        new FontEntry("Y式笔书体", "yshi-bishu", "yshi-bishu.ttf", "白日依山尽，黄河入海流"),
+        new FontEntry("荷塘月色手写体", "hetang-yuese", "hetang-yuese.ttf", "欲穷千里目，更上一层楼"),
+        new FontEntry("油茶馓子体", "youcha-sanzi", "youcha-sanzi.ttf", "床前明月光，疑是地上霜"),
+        new FontEntry("白路棒棒手写体", "bailu-bangbang", "bailu-bangbang.ttf", "小时不识月，呼作白玉盘")
     );
 
     public List<HandwritingFont> listFonts() {
