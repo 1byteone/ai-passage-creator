@@ -193,17 +193,17 @@ public class CardController {
      */
     private String resolveCardStyle(String requestCardStyle, String methodologyName) {
         if (requestCardStyle != null && !requestCardStyle.isBlank()) {
-            return requestCardStyle;
+            return CardStyle.from(requestCardStyle).getName();
         }
         try {
             var def = methodologyRegistry.get(
                     methodologyName != null ? methodologyName : "default");
             if (def.getPlatform() != null && def.getPlatform().getCardStyle() != null) {
-                return def.getPlatform().getCardStyle();
+                return CardStyle.from(def.getPlatform().getCardStyle()).getName();
             }
         } catch (IllegalArgumentException e) {
             log.warn("方法论不存在，卡片风格回退默认 warm: {}", e.getMessage());
         }
-        return "warm";
+        return CardStyle.WARM.getName();
     }
 }
