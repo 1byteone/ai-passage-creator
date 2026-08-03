@@ -39,7 +39,11 @@ public class FontUploader {
     public static void main(String[] args) {
         String secretId = System.getenv("TENCENT_COS_SECRET_ID");
         String secretKey = System.getenv("TENCENT_COS_SECRET_KEY");
-        String region = System.getenv().getOrDefault("TENCENT_COS_REGION", "ap-guangzhou");
+        // getOrDefault 对空字符串不生效，需显式判空回退默认 region
+        String region = System.getenv("TENCENT_COS_REGION");
+        if (region == null || region.isBlank()) {
+            region = "ap-guangzhou";
+        }
         String bucket = System.getenv("TENCENT_COS_BUCKET");
 
         if (secretId == null || secretId.isBlank()
@@ -67,6 +71,24 @@ public class FontUploader {
         ClientConfig clientConfig = new ClientConfig(new Region(region));
         clientConfig.setHttpProtocol(HttpProtocol.https);
         COSClient cosClient = new COSClient(cred, clientConfig);
+
+        boolean verifyMode = args.length > 0 && "--verify".equals(args[0]);
+        if (verifyMode) {
+            int found = 0;
+            for (File font : fonts) {
+                String cosKey = COS_PREFIX + "/" + font.getName();
+                boolean exists = cosClient.doesObjectExist(bucket, cosKey);
+                if (exists) {
+                    log.info("✅ 已存在: cos://{}/{}", bucket, cosKey);
+                    found++;
+                } else {
+                    log.warn("❌ 缺失: cos://{}/{}", bucket, cosKey);
+                }
+            }
+            log.info("验证完成: {}/{} 个字体存在于 COS", found, fonts.length);
+            cosClient.shutdown();
+            System.exit(found == fonts.length ? 0 : 1);
+        }
 
         int success = 0;
         try {
