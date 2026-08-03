@@ -9,6 +9,7 @@ const protectedRoutes = [
   '/vip',
   '/admin/statistics',
   '/admin/userManage',
+  '/handwriting',
 ]
 
 const viewports = [
@@ -104,6 +105,13 @@ const routeContracts: Record<string, RouteContract> = {
       await expect(page.locator('.user-section .loading-state')).toHaveCount(0)
       await expect(page.locator('.user-section .result-state')).toHaveCount(0)
       await expect(page.getByRole('heading', { level: 2, name: /^(全部用户|筛选结果)$/ })).toBeVisible()
+    },
+  },
+  '/handwriting': {
+    heading: '手写笔记编辑器',
+    ready: async (page) => {
+      await expect(page.getByPlaceholder('在此输入或粘贴文字内容...')).toBeVisible()
+      await expect(page.getByRole('button', { name: '预览', exact: true })).toBeVisible()
     },
   },
 }
