@@ -224,7 +224,7 @@ onBeforeRouteLeave(() => {
   }
 }
 
-// ── 最近执行 ──
+/* ── 最近执行 ── */
 
 .recent-runs {
   margin-top: 32px;

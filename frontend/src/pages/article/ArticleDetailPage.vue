@@ -568,7 +568,7 @@ onMounted(loadArticle)
   border-top: 1px solid var(--border-subtle);
 }
 
-// ── 审批面板 ──
+/* ── 审批面板 ── */
 
 .approval-panel {
   margin-top: 24px;
@@ -697,7 +697,7 @@ onMounted(loadArticle)
   padding: 6px 0;
 }
 
-// ── 旧样式 ──
+/* ── 旧样式 ── */
 
 .execution-summary {
   display: grid;
