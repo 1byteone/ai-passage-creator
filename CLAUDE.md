@@ -249,8 +249,9 @@ User Input → Vue → POST /api/article/create → SSE taskId → EventSource �
 ```
 每次实施后自动触发:
 1. npm run type-check (前端)
-2. mvn test (后端)
-3. 验证无新增 ESLint 告警
+2. npm run build (前端 — vite build 才能发现纯 CSS `//` 注释等编译错误，type-check 检测不到)
+3. mvn test (后端)
+4. 验证无新增 ESLint 告警
 ```
 
 ### Commit 质量门禁
@@ -288,6 +289,7 @@ User Input → Vue → POST /api/article/create → SSE taskId → EventSource �
 | 11 | **空列表死端** — `titleOptions=[]` 时 `selectedIndex=0` 导致按钮永久禁用 | TitleSelectingStage | 空时显示 empty state + `canConfirm` 提前 return false |
 | 12 | **Sortable 未销毁** — 组件卸载时拖拽实例未 `destroy()` | OutlineEditingStage | `onBeforeUnmount` 中 `sortableInstance.destroy()` |
 | 13 | **双重提交** — `startExecution` 无 `submitting` 守卫 | SkillExecuteSurface | `if (submitting.value) return` |
+| 14 | **纯 CSS 中写 `//` 注释** — `<style scoped>` 无 `lang="scss"` 时 `//` 非法，vite build 失败 | 任何 .vue style 块 | style 无 `lang="scss"` 时用 `/* */` 注释；改 scss 前确认已声明 lang |
 
 ---
 
