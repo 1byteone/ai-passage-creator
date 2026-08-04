@@ -77,11 +77,11 @@
           </div>
           <div>
             <dt>创建时间</dt>
-            <dd>{{ formatTime(workspace.createTime) }}</dd>
+            <dd>{{ formatDateTime(workspace.createTime) }}</dd>
           </div>
           <div>
             <dt>最后更新</dt>
-            <dd>{{ formatTime(workspace.updateTime) }}</dd>
+            <dd>{{ formatDateTime(workspace.updateTime) }}</dd>
           </div>
         </dl>
 
@@ -237,7 +237,6 @@ import {
   message,
 } from 'ant-design-vue'
 import { EditOutlined, ReloadOutlined, UserAddOutlined } from '@ant-design/icons-vue'
-import dayjs from 'dayjs'
 import {
   getWorkspace,
   updateWorkspace,
@@ -248,6 +247,8 @@ import {
   listWorkspaceMembers,
 } from '@/api/workspaceController'
 import { useLoginUserStore } from '@/stores/loginUser'
+import { formatDateTime } from '@/utils/date'
+import type { OperationNotice } from '@/types/operationNotice'
 
 const route = useRoute()
 const loginUserStore = useLoginUserStore()
@@ -263,11 +264,6 @@ const membersLoading = ref(false)
 const loadError = ref('')
 const membersError = ref('')
 
-interface OperationNotice {
-  type: 'success' | 'error'
-  message: string
-  description?: string
-}
 const operationNotice = ref<OperationNotice | null>(null)
 
 const memberCount = computed(() => workspace.value?.memberCount ?? members.value.length)
@@ -312,10 +308,6 @@ const memberName = (member: API.WorkspaceMember) =>
 const isSelf = (member: API.WorkspaceMember) =>
   String(member.userId) === String(loginUserStore.loginUser.id)
 
-const formatTime = (v?: string) => {
-  if (!v || !dayjs(v).isValid()) return '—'
-  return dayjs(v).format('YYYY-MM-DD HH:mm')
-}
 
 const loadDetail = async () => {
   if (!workspaceId.value) {

@@ -70,10 +70,10 @@
               </span>
             </template>
             <template v-else-if="column.key === 'publishAt'">
-              <span class="mono-text">{{ formatTime(record.publishAt) }}</span>
+              <span class="mono-text">{{ formatDateTime(record.publishAt) }}</span>
             </template>
             <template v-else-if="column.key === 'published'">
-              <span v-if="record.publishedAt" class="mono-text">{{ formatTime(record.publishedAt) }}</span>
+              <span v-if="record.publishedAt" class="mono-text">{{ formatDateTime(record.publishedAt) }}</span>
               <span v-else class="muted-text">—</span>
             </template>
             <template v-else-if="column.key === 'action'">
@@ -123,6 +123,8 @@ import { Alert as AAlert, DatePicker as ADatePicker, Empty as AEmpty, Form as AF
 import { PlusOutlined } from '@ant-design/icons-vue'
 import { getArticlePublish, schedulePublish, cancelPublish } from '@/api/publishController'
 import { getArticle } from '@/api/articleController'
+import { formatDateTime } from '@/utils/date'
+import type { OperationNotice } from '@/types/operationNotice'
 
 const route = useRoute()
 const taskId = computed(() => route.params.taskId as string)
@@ -175,15 +177,9 @@ const schedules = ref<API.PublishSchedule[]>([])
 const loading = ref(false)
 const loadError = ref('')
 
-interface OperationNotice { type: 'success' | 'error'; message: string; description?: string }
 const operationNotice = ref<OperationNotice | null>(null)
 
 const listTitle = computed(() => schedules.value.length ? '全部排期' : '暂无排期')
-
-const formatTime = (v?: string) => {
-  if (!v || !dayjs(v).isValid()) return '—'
-  return dayjs(v).format('YYYY-MM-DD HH:mm')
-}
 
 const disabledDate = (current: Dayjs) => current.isBefore(dayjs().startOf('day'))
 

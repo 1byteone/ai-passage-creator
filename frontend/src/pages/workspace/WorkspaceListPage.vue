@@ -69,7 +69,7 @@
           <p class="workspace-desc">{{ ws.description || '暂无描述' }}</p>
           <div class="workspace-meta">
             <span><TeamOutlined /> {{ ws.memberCount ?? 0 }} 名成员</span>
-            <span class="workspace-time">{{ formatTime(ws.createTime) }}</span>
+            <span class="workspace-time">{{ formatDateTime(ws.createTime, 'YYYY-MM-DD') }}</span>
           </div>
         </RouterLink>
       </div>
@@ -115,8 +115,9 @@ import {
   message,
 } from 'ant-design-vue'
 import { PlusOutlined, TeamOutlined } from '@ant-design/icons-vue'
-import dayjs from 'dayjs'
 import { createWorkspace, listMyWorkspaces } from '@/api/workspaceController'
+import { formatDateTime } from '@/utils/date'
+import type { OperationNotice } from '@/types/operationNotice'
 
 // ── 列表 ──
 
@@ -124,17 +125,8 @@ const workspaces = ref<API.Workspace[]>([])
 const loading = ref(false)
 const loadError = ref('')
 
-interface OperationNotice {
-  type: 'success' | 'error'
-  message: string
-  description: string
-}
 const operationNotice = ref<OperationNotice | null>(null)
 
-const formatTime = (v?: string) => {
-  if (!v || !dayjs(v).isValid()) return '—'
-  return dayjs(v).format('YYYY-MM-DD')
-}
 
 const loadWorkspaces = async () => {
   loading.value = true

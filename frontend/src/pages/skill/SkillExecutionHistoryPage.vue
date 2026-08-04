@@ -134,7 +134,7 @@
               <span class="mono-text">{{ formatDuration(record.durationMs) }}</span>
             </template>
             <template v-else-if="column.key === 'time'">
-              <a-tooltip :title="formatTime(record.createTime)">
+              <a-tooltip :title="formatDateTime(record.createTime, 'YYYY-MM-DD HH:mm:ss', '时间未知')">
                 <time class="time-text">{{ timeAgo(record.createTime) }}</time>
               </a-tooltip>
             </template>
@@ -242,7 +242,8 @@ import {
 import { ReloadOutlined } from '@ant-design/icons-vue'
 import { listSkills, listSkillExecutions, getSkillResult } from '@/api/skillController'
 import { getSkillUiConfig } from '@/config/skill'
-import { formatDuration } from '@/utils/date'
+import { formatDateTime, formatDuration } from '@/utils/date'
+import type { OperationNotice } from '@/types/operationNotice'
 
 dayjs.extend(relativeTimePlugin)
 dayjs.locale('zh-cn')
@@ -258,11 +259,6 @@ const labelPageSizeControl = (element: HTMLElement) => {
 const vPageSizeLabel = {
   mounted: labelPageSizeControl,
   updated: labelPageSizeControl,
-}
-
-const formatTime = (value?: string) => {
-  if (!value || !dayjs(value).isValid()) return '时间未知'
-  return dayjs(value).format('YYYY-MM-DD HH:mm:ss')
 }
 
 const timeAgo = (value?: string) => {
@@ -356,11 +352,6 @@ const loading = ref(false)
 const loadedOnce = ref(false)
 const loadError = ref('')
 
-interface OperationNotice {
-  type: 'success' | 'error'
-  message: string
-  description: string
-}
 const operationNotice = ref<OperationNotice | null>(null)
 
 const pageNum = ref(1)

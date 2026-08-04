@@ -51,7 +51,7 @@
               {{ statusLabel(run.status) }}
             </span>
             <span class="run-meta">
-              <span>{{ formatTime(run.createTime) }}</span>
+              <span>{{ formatDateTime(run.createTime, 'MM-DD HH:mm', '时间未知') }}</span>
               <template v-if="run.durationMs">· {{ formatDuration(run.durationMs) }}</template>
             </span>
             <RouterLink
@@ -73,10 +73,9 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { Alert as AAlert, Modal } from 'ant-design-vue'
 import { ArrowLeftOutlined, ArrowRightOutlined, HistoryOutlined } from '@ant-design/icons-vue'
-import dayjs from 'dayjs'
 import SkillExecuteSurface from './components/SkillExecuteSurface.vue'
 import { listSkillExecutions } from '@/api/skillController'
-import { formatDuration } from '@/utils/date'
+import { formatDateTime, formatDuration } from '@/utils/date'
 
 const route = useRoute()
 const router = useRouter()
@@ -118,11 +117,6 @@ const statusMap: Record<string, { label: string; cls: string }> = {
 const statusLabel = (s?: string) => statusMap[s ?? '']?.label ?? s ?? '—'
 const statusClass = (s?: string) => statusMap[s ?? '']?.cls ?? 'unknown'
 const isTerminal = (s?: string) => s === 'SUCCESS' || s === 'FAILED'
-
-const formatTime = (v?: string) => {
-  if (!v || !dayjs(v).isValid()) return '时间未知'
-  return dayjs(v).format('MM-DD HH:mm')
-}
 
 const loadRecentRuns = async () => {
   if (!skillName.value) return

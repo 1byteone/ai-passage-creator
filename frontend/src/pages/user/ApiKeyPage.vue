@@ -116,12 +116,12 @@
             </template>
             <template v-else-if="column.key === 'created'">
               <time class="time-text" :datetime="record.createTime">
-                {{ formatTime(record.createTime) }}
+                {{ formatDateTime(record.createTime, undefined, '时间未知') }}
               </time>
             </template>
             <template v-else-if="column.key === 'lastUsed'">
               <time v-if="record.lastUsedAt" class="time-text" :datetime="record.lastUsedAt">
-                {{ formatTime(record.lastUsedAt) }}
+                {{ formatDateTime(record.lastUsedAt, undefined, '时间未知') }}
               </time>
               <span v-else class="muted-text">—</span>
             </template>
@@ -133,7 +133,7 @@
                 :class="{ 'expired-text': isExpired(record.expiresAt) }"
                 :datetime="record.expiresAt"
               >
-                {{ formatTime(record.expiresAt) }}
+                {{ formatDateTime(record.expiresAt, undefined, '时间未知') }}
               </time>
             </template>
             <template v-else-if="column.key === 'status'">
@@ -287,16 +287,10 @@ import { CopyOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import { createApiKey, listApiKeys, revokeApiKey } from '@/api/apikeyController'
 import { listUserVoByPage } from '@/api/userController'
 import { useLoginUserStore } from '@/stores/loginUser'
+import { formatDateTime } from '@/utils/date'
+import type { OperationNotice } from '@/types/operationNotice'
 
 // ── 辅助 ──
-
-type NoticeType = 'success' | 'error'
-
-interface OperationNotice {
-  type: NoticeType
-  message: string
-  description: string
-}
 
 const labelPageSizeControl = (element: HTMLElement) => {
   element
@@ -307,11 +301,6 @@ const labelPageSizeControl = (element: HTMLElement) => {
 const vPageSizeLabel = {
   mounted: labelPageSizeControl,
   updated: labelPageSizeControl,
-}
-
-const formatTime = (value?: string) => {
-  if (!value || !dayjs(value).isValid()) return '时间未知'
-  return dayjs(value).format('YYYY-MM-DD HH:mm')
 }
 
 const isExpired = (expiresAt: string) => {
@@ -568,7 +557,7 @@ const doCreate = async () => {
     newSecret.value = created.apiKey ?? ''
     newSecretPrefix.value = created.apiKeyPrefix ?? ''
     newSecretExpires.value = created.expiresAt
-      ? formatTime(created.expiresAt)
+      ? formatDateTime(created.expiresAt, undefined, '时间未知')
       : ''
 
     createModalOpen.value = false

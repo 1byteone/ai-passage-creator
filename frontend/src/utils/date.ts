@@ -13,6 +13,24 @@ export const formatDate = (date: string | number, format = 'YYYY-MM-DD HH:mm'): 
 }
 
 /**
+ * 格式化日期（带空值/非法值兜底）
+ *
+ * 统一各页面本地 formatTime 的重复实现：
+ * 值为空或非法时返回 fallback（默认 '—'），否则按 format 格式化。
+ * @param value 日期字符串或时间戳，可空
+ * @param format 格式化模板，默认 'YYYY-MM-DD HH:mm'
+ * @param fallback 空值/非法值兜底文案，默认 '—'
+ */
+export const formatDateTime = (
+  value?: string | number | null,
+  format = 'YYYY-MM-DD HH:mm',
+  fallback = '—',
+): string => {
+  if (!value || !dayjs(value).isValid()) return fallback
+  return dayjs(value).format(format)
+}
+
+/**
  * 格式化日期（短格式）
  * @param date 日期字符串或时间戳
  */

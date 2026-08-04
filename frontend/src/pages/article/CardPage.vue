@@ -185,6 +185,7 @@ import {
 } from '@ant-design/icons-vue'
 import { previewCards, generateCards, getCards } from '@/api/cardController'
 import { getArticle } from '@/api/articleController'
+import type { OperationNotice } from '@/types/operationNotice'
 
 const route = useRoute()
 
@@ -238,11 +239,6 @@ const doPreview = async () => {
 
 const generating = ref(false)
 
-interface OperationNotice {
-  type: 'success' | 'error'
-  message: string
-  description: string
-}
 const operationNotice = ref<OperationNotice | null>(null)
 
 const doGenerate = async () => {

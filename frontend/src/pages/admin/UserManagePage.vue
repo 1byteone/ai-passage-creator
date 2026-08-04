@@ -158,7 +158,7 @@
             </template>
             <template v-else-if="column.key === 'created'">
               <time class="time-text" :datetime="record.createTime">
-                {{ formatTime(record.createTime) }}
+                {{ formatDateTime(record.createTime, undefined, '时间未知') }}
               </time>
             </template>
             <template v-else-if="column.key === 'action'">
@@ -206,7 +206,7 @@
               </div>
               <div>
                 <dt>创建时间</dt>
-                <dd>{{ formatTime(record.createTime) }}</dd>
+                <dd>{{ formatDateTime(record.createTime, undefined, '时间未知') }}</dd>
               </div>
             </dl>
             <a-button class="mobile-detail-button" @click="openUserDrawer(record)">
@@ -264,7 +264,7 @@
           </div>
           <div>
             <dt>创建时间</dt>
-            <dd>{{ formatTime(selectedUser.createTime) }}</dd>
+            <dd>{{ formatDateTime(selectedUser.createTime, undefined, '时间未知') }}</dd>
           </div>
         </dl>
 
@@ -354,7 +354,6 @@
 
 <script lang="ts" setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import dayjs from 'dayjs'
 import {
   Alert as AAlert,
   Drawer as ADrawer,
@@ -369,14 +368,8 @@ import {
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons-vue'
 import { deleteUser, listUserVoByPage, updateUser } from '@/api/userController'
 import { useLoginUserStore } from '@/stores/loginUser'
-
-type NoticeType = 'success' | 'error'
-
-interface OperationNotice {
-  type: NoticeType
-  message: string
-  description: string
-}
+import { formatDateTime } from '@/utils/date'
+import type { OperationNotice } from '@/types/operationNotice'
 
 const labelPageSizeControl = (element: HTMLElement) => {
   element
@@ -501,11 +494,6 @@ const avatarFallback = (user: API.UserVO) => {
 
 const isCurrentUser = (user: API.UserVO) => {
   return String(user.id) === String(loginUserStore.loginUser.id)
-}
-
-const formatTime = (value?: string) => {
-  if (!value || !dayjs(value).isValid()) return '时间未知'
-  return dayjs(value).format('YYYY-MM-DD HH:mm')
 }
 
 let fetchSeq = 0

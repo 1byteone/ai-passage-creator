@@ -76,7 +76,7 @@
               </div>
             </template>
             <template v-else-if="column.key === 'time'">
-              <span class="mono-text">{{ formatTime(record.completedTime || record.createTime) }}</span>
+              <span class="mono-text">{{ formatDateTime(record.completedTime || record.createTime) }}</span>
             </template>
             <template v-else-if="column.key === 'action'">
               <RouterLink :to="`/article/${record.taskId}`">
@@ -121,7 +121,8 @@ import {
 } from 'ant-design-vue'
 import { listArticle } from '@/api/articleController'
 import { useLoginUserStore } from '@/stores/loginUser'
-import dayjs from 'dayjs'
+import { formatDateTime } from '@/utils/date'
+import type { OperationNotice } from '@/types/operationNotice'
 
 const loginUserStore = useLoginUserStore()
 const isAdmin = computed(() => loginUserStore.loginUser.userRole === 'admin')
@@ -155,10 +156,6 @@ const loading = ref(false)
 const loadedOnce = ref(false)
 const loadError = ref('')
 
-interface OperationNotice {
-  type: 'success' | 'error'
-  message: string
-}
 const operationNotice = ref<OperationNotice | null>(null)
 
 const pageNum = ref(1)
@@ -168,11 +165,6 @@ const initialLoading = computed(() => loading.value && !loadedOnce.value)
 const initialError = computed(
   () => loadedOnce.value && Boolean(loadError.value) && articles.value.length === 0,
 )
-
-const formatTime = (value?: string) => {
-  if (!value || !dayjs(value).isValid()) return '—'
-  return dayjs(value).format('YYYY-MM-DD HH:mm')
-}
 
 const labelPageSizeControl = (element: HTMLElement) => {
   element
