@@ -98,32 +98,4 @@ defineEmits<{
   }
 }
 
-.create-btn.ant-btn {
-  height: 52px;
-  font-size: 16px;
-  font-weight: 600;
-  border-radius: var(--radius-lg);
-  background: var(--gradient-primary) !important;
-  border: none !important;
-  color: white !important;
-  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3) !important;
-
-  &:hover,
-  &:focus,
-  &:active {
-    background: var(--gradient-primary) !important;
-    color: white !important;
-    border: none !important;
-    box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3) !important;
-    opacity: 0.92;
-  }
-
-  &:disabled,
-  &.ant-btn-disabled {
-    background: var(--color-border) !important;
-    box-shadow: none !important;
-    opacity: 0.6;
-    color: var(--color-text-muted) !important;
-  }
-}
 </style>

@@ -3,30 +3,31 @@
  */
 
 :root {
-  /* 品牌色 - 绿色系 */
-  --color-primary: #22C55E;
+  /* 品牌色 - 绿色系（旧 token，为兼容历史页面保留，值指向下方新语义 token）
+     迁移完成后旧页面不感知，未来主题切换只需改新 set */
+  --color-primary: var(--bg-primary);
   --color-primary-light: #4ADE80;
-  --color-primary-dark: #16A34A;
-  --color-secondary: #0F172A;
+  --color-primary-dark: var(--bg-primary-hover);
+  --color-secondary: var(--bg-dark);
   --color-secondary-light: #334155;
 
   /* 功能色 */
-  --color-cta: #22C55E;
-  --color-success: #22C55E;
+  --color-cta: var(--bg-primary);
+  --color-success: var(--bg-success);
   --color-warning: #EAB308;
   --color-error: #EF4444;
   --color-info: #3B82F6;
 
-  /* 中性色 */
-  --color-background: #FFFFFF;
-  --color-background-secondary: #F8FAFC;
-  --color-background-tertiary: #F1F5F9;
-  --color-background-dark: #0F172A;
-  --color-text: #0F172A;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94A3B8;
-  --color-border: #E2E8F0;
-  --color-border-light: #F1F5F9;
+  /* 中性色（旧 token → 新语义 token alias，单一来源） */
+  --color-background: var(--surface-canvas);
+  --color-background-secondary: var(--surface-page);
+  --color-background-tertiary: var(--surface-muted);
+  --color-background-dark: var(--bg-dark);
+  --color-text: var(--text-strong);
+  --color-text-secondary: var(--text-subtle);
+  --color-text-muted: var(--text-disabled);
+  --color-border: var(--border-default);
+  --color-border-light: var(--border-subtle);
 
   /* 语义化表面层 */
   --surface-canvas: #FFFFFF;

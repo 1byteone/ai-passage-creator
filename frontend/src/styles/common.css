@@ -474,3 +474,82 @@ a[role="button"]:focus-visible,
   contain: layout style;
   overflow-anchor: none;
 }
+
+/* ==================== 页面外壳（统一 11 页重复定义） ==================== */
+
+/* 页面顶部标题区 */
+.page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  margin-bottom: 28px;
+}
+
+.page-heading h1 {
+  margin: 0 0 8px;
+  color: var(--text-strong);
+  font-family: var(--font-heading);
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.page-heading p {
+  margin: 0;
+  color: var(--text-subtle);
+  font-size: 14px;
+}
+
+/* 页眉小标签（kicker）与区块标签 */
+.page-kicker,
+.section-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--state-success-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* 页头右侧操作区 */
+.heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 操作反馈区 */
+.page-feedback {
+  margin-bottom: 20px;
+}
+
+/* 主 CTA 按钮（52px 大按钮，用于创作页/输入页提交） */
+.create-btn.ant-btn {
+  height: 52px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: var(--radius-lg);
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3) !important;
+}
+
+.create-btn.ant-btn:hover,
+.create-btn.ant-btn:focus,
+.create-btn.ant-btn:active {
+  background: var(--gradient-primary) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3) !important;
+  opacity: 0.92;
+}
+
+.create-btn.ant-btn:disabled,
+.create-btn.ant-btn.ant-btn-disabled {
+  background: var(--color-border) !important;
+  box-shadow: none !important;
+  opacity: 0.6;
+  color: var(--color-text-muted) !important;
+}

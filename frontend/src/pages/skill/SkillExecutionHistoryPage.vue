@@ -501,38 +501,9 @@ onMounted(() => {
   margin-left: auto;
 }
 
-.page-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 32px;
-  margin-bottom: 28px;
-}
 
-.page-kicker,
-.section-label {
-  display: block;
-  margin-bottom: 7px;
-  color: var(--state-success-text);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
 
-.page-heading h1 {
-  margin: 0 0 8px;
-  color: var(--text-strong);
-  font-family: var(--font-heading);
-  font-size: 36px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
 
-.page-heading p {
-  margin: 0;
-  color: var(--text-subtle);
-  font-size: 14px;
-}
 
 .heading-actions {
   display: flex;
@@ -572,9 +543,6 @@ onMounted(() => {
   }
 }
 
-.page-feedback {
-  margin-bottom: 20px;
-}
 
 // ── 表格区域 ──
 

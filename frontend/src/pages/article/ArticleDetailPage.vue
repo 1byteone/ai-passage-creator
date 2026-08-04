@@ -161,6 +161,7 @@
                     v-model:value="reviewComment"
                     placeholder="审批意见（可选）"
                     :maxlength="500"
+                    size="large"
                     style="margin-bottom: 8px"
                   />
                   <div class="approval-review-buttons">

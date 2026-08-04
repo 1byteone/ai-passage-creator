@@ -186,10 +186,10 @@
           name="name"
           :rules="[{ type: 'string' as const, required: true, message: '请输入空间名称' }, { type: 'string' as const, max: 128, message: '名称最长 128 字符' }]"
         >
-          <a-input v-model:value="editForm.name" :maxlength="128" show-count />
+          <a-input v-model:value="editForm.name" :maxlength="128" size="large" show-count />
         </a-form-item>
         <a-form-item label="空间描述" name="description">
-          <a-textarea v-model:value="editForm.description" :maxlength="512" :rows="3" show-count />
+          <a-textarea v-model:value="editForm.description" :maxlength="512" :rows="3" size="large" show-count />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -209,6 +209,7 @@
             v-model:value="addMemberUserId"
             :min="1"
             :max="2147483647"
+            size="large"
             style="width: 100%"
             placeholder="输入用户 ID"
             aria-label="成员用户 ID"
@@ -512,13 +513,6 @@ onMounted(() => {
   margin-left: auto;
 }
 
-.page-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 32px;
-  margin-bottom: 28px;
-}
 
 .breadcrumb {
   display: flex;
@@ -543,36 +537,9 @@ onMounted(() => {
   }
 }
 
-.page-kicker,
-.section-label {
-  display: block;
-  margin-bottom: 7px;
-  color: var(--state-success-text);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
 
-.page-heading h1 {
-  margin: 0 0 8px;
-  color: var(--text-strong);
-  font-family: var(--font-heading);
-  font-size: 36px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
 
-.page-heading p {
-  margin: 0;
-  color: var(--text-subtle);
-  font-size: 14px;
-}
 
-.heading-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 
 .page-feedback,
 .archived-banner {

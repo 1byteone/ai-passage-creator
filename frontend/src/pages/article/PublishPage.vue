@@ -101,13 +101,13 @@
     <a-modal v-model:open="createModalOpen" title="新建发布排期" :confirm-loading="creating" ok-text="新建" cancel-text="取消" @ok="doCreate" @cancel="resetCreateForm">
       <a-form ref="createFormRef" layout="vertical" :model="createForm">
         <a-form-item label="目标平台" name="platform" :rules="[{ type: 'string' as const, required: true, message: '请选择平台', trigger: 'change' }]">
-          <a-select v-model:value="createForm.platform" :options="platformOptions" />
+          <a-select v-model:value="createForm.platform" size="large" :options="platformOptions" />
         </a-form-item>
         <a-form-item label="发布时间" name="publishAt" :rules="[{ type: 'string' as const, required: true, message: '请选择发布时间', trigger: 'change' }]">
-          <a-date-picker v-model:value="createForm.publishAt" show-time format="YYYY-MM-DD HH:mm" :disabled-date="disabledDate" style="width: 100%" placeholder="选择发布时间" />
+          <a-date-picker v-model:value="createForm.publishAt" show-time size="large" format="YYYY-MM-DD HH:mm" :disabled-date="disabledDate" style="width: 100%" placeholder="选择发布时间" />
         </a-form-item>
         <a-form-item label="方法论（可选）" name="methodologyName">
-          <a-input v-model:value="createForm.methodologyName" placeholder="留空则使用文章默认" :maxlength="64" />
+          <a-input v-model:value="createForm.methodologyName" size="large" placeholder="留空则使用文章默认" :maxlength="64" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -282,22 +282,11 @@ onMounted(() => { void loadArticle(); void fetchSchedules() })
   margin-right: auto; margin-left: auto;
 }
 
-.page-heading {
-  display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; margin-bottom: 28px;
-}
-
 .breadcrumb {
   display: flex; align-items: center; gap: 6px; margin-bottom: 10px; color: var(--text-muted); font-size: 12px;
   a { color: var(--text-subtle); text-decoration: none; &:hover { color: var(--color-primary); } }
   .current { color: var(--text-strong); font-weight: 600; }
 }
-
-.page-kicker, .section-label { display: block; margin-bottom: 7px; color: var(--state-success-text); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
-
-.page-heading h1 { margin: 0 0 8px; color: var(--text-strong); font-family: var(--font-heading); font-size: 36px; font-weight: 700; letter-spacing: -0.03em; }
-.page-heading p { margin: 0; color: var(--text-subtle); font-size: 14px; }
-
-.heading-actions { display: flex; align-items: center; gap: 12px; }
 
 .count-badge { color: var(--text-muted); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
 

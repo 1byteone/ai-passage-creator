@@ -38,6 +38,7 @@
               v-model:value="searchKeyword"
               placeholder="搜索当前页文章"
               allow-clear
+              size="large"
               @search="applyLocalFilters"
               @change="handleSearchChange"
             >
@@ -49,6 +50,7 @@
             <span>创建日期</span>
             <a-range-picker
               v-model:value="dateRange"
+              size="large"
               :placeholder="['开始日期', '结束日期']"
               @change="applyLocalFilters"
             />
@@ -56,7 +58,7 @@
 
           <label class="filter-field status-field">
             <span>任务状态</span>
-            <a-select v-model:value="statusFilter" @change="handleStatusChange">
+            <a-select v-model:value="statusFilter" size="large" @change="handleStatusChange">
               <a-select-option value="">全部状态</a-select-option>
               <a-select-option value="COMPLETED">已完成</a-select-option>
               <a-select-option value="PROCESSING">生成中</a-select-option>

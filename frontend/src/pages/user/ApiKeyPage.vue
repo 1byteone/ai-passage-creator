@@ -193,6 +193,7 @@
           <a-input
             v-model:value="createForm.name"
             :maxlength="64"
+            size="large"
             show-count
             placeholder="例如：我的博客发布工具"
           />
@@ -202,6 +203,7 @@
             v-model:value="createForm.userId"
             allow-clear
             show-search
+            size="large"
             placeholder="留空则为本人创建"
             :filter-option="filterUserOption"
             :options="userOptions"
@@ -211,6 +213,7 @@
           <a-date-picker
             v-model:value="createForm._expiresAt"
             show-time
+            size="large"
             format="YYYY-MM-DD HH:mm:ss"
             placeholder="留空则永不过期"
             :disabled-date="disabledDate"
@@ -623,38 +626,9 @@ onMounted(() => {
   margin-left: auto;
 }
 
-.page-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 32px;
-  margin-bottom: 28px;
-}
 
-.page-kicker,
-.section-label {
-  display: block;
-  margin-bottom: 7px;
-  color: var(--state-success-text);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
 
-.page-heading h1 {
-  margin: 0 0 8px;
-  color: var(--text-strong);
-  font-family: var(--font-heading);
-  font-size: 36px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
 
-.page-heading p {
-  margin: 0;
-  color: var(--text-subtle);
-  font-size: 14px;
-}
 
 .heading-actions {
   display: flex;
@@ -690,9 +664,6 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.page-feedback {
-  margin-bottom: 20px;
-}
 
 // ── 表格区域 ──
 

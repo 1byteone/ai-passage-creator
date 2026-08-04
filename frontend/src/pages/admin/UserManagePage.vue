@@ -37,6 +37,7 @@
           <a-input
             v-model:value="searchParams.userAccount"
             allow-clear
+            size="large"
             autocomplete="off"
             placeholder="输入账号关键字"
           />
@@ -45,6 +46,7 @@
           <a-input
             v-model:value="searchParams.userName"
             allow-clear
+            size="large"
             autocomplete="off"
             placeholder="输入用户名关键字"
           />
@@ -53,6 +55,7 @@
           <a-select
             v-model:value="searchParams.userRole"
             allow-clear
+            size="large"
             placeholder="全部角色"
             :options="roleOptions"
           />
@@ -299,6 +302,7 @@
             <a-input
               v-model:value="editForm.userName"
               :maxlength="50"
+              size="large"
               show-count
               placeholder="输入用户显示名称"
             />
@@ -307,6 +311,7 @@
             <a-select
               v-model:value="editForm.userRole"
               :disabled="isCurrentUser(selectedUser)"
+              size="large"
               :options="roleOptions"
             />
           </a-form-item>
@@ -315,6 +320,7 @@
               v-model:value="editForm.userProfile"
               :maxlength="200"
               :rows="4"
+              size="large"
               show-count
               placeholder="填写用户简介"
             />
@@ -662,38 +668,9 @@ onMounted(() => {
   margin-left: auto;
 }
 
-.page-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 32px;
-  margin-bottom: 28px;
-}
 
-.page-kicker,
-.section-label {
-  display: block;
-  margin-bottom: 7px;
-  color: var(--state-success-text);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
 
-.page-heading h1 {
-  margin: 0 0 8px;
-  color: var(--text-strong);
-  font-family: var(--font-heading);
-  font-size: 36px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
 
-.page-heading p {
-  margin: 0;
-  color: var(--text-subtle);
-  font-size: 14px;
-}
 
 .heading-actions {
   display: flex;
@@ -771,9 +748,6 @@ onMounted(() => {
   min-height: var(--control-height-md);
 }
 
-.page-feedback {
-  margin-bottom: 20px;
-}
 
 .user-section {
   overflow: hidden;
