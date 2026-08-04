@@ -104,6 +104,19 @@ public class WorkspaceController {
     }
 
     /**
+     * 恢复已归档空间
+     */
+    @PostMapping("/{workspaceId}/unarchive")
+    @Operation(summary = "恢复已归档空间")
+    @AuthCheck(mustRole = "user")
+    public BaseResponse<Boolean> unarchive(@PathVariable Long workspaceId,
+                                           HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        workspaceService.unarchive(workspaceId, loginUser.getId());
+        return ResultUtils.success(true);
+    }
+
+    /**
      * 添加成员
      */
     @PostMapping("/{workspaceId}/members")

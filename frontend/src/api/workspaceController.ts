@@ -35,6 +35,13 @@ export async function archiveWorkspace(workspaceId: number) {
   })
 }
 
+/** 恢复已归档空间 POST /workspace/{workspaceId}/unarchive */
+export async function unarchiveWorkspace(workspaceId: number) {
+  return request<API.BaseResponseBoolean>(`/workspace/${workspaceId}/unarchive`, {
+    method: 'POST',
+  })
+}
+
 /** 添加空间成员 POST /workspace/{workspaceId}/members */
 export async function addWorkspaceMember(workspaceId: number, params: { userId: number; role?: string }) {
   return request<API.BaseResponseBoolean>(`/workspace/${workspaceId}/members`, {

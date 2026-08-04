@@ -22,4 +22,9 @@ public class WorkspaceMember {
     private Long userId;
     private String role;
     private LocalDateTime joinedAt;
+
+    /** 冗余展示字段：成员真实用户名（listMembers 时 join 填充，不落库） */
+    private String userName;
+    /** 冗余展示字段：成员头像（listMembers 时 join 填充，不落库） */
+    private String userAvatar;
 }

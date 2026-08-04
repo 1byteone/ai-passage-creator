@@ -1,8 +1,10 @@
 package com.example.aipassagecreator.service.impl;
 
 import com.example.aipassagecreator.exception.BusinessException;
+import com.example.aipassagecreator.mapper.UserMapper;
 import com.example.aipassagecreator.mapper.WorkspaceMapper;
 import com.example.aipassagecreator.mapper.WorkspaceMemberMapper;
+import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.model.po.Workspace;
 import com.example.aipassagecreator.model.po.WorkspaceMember;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+
+import java.util.List;
 import static org.mockito.Mockito.when;
 
 /**
@@ -36,6 +40,9 @@ class WorkspaceServiceImplTest {
     @Mock
     private WorkspaceMemberMapper memberMapper;
 
+    @Mock
+    private UserMapper userMapper;
+
     @InjectMocks
     private WorkspaceServiceImpl workspaceService;
 
@@ -43,6 +50,7 @@ class WorkspaceServiceImplTest {
     void setUp() {
         ReflectionTestUtils.setField(workspaceService, "workspaceMapper", workspaceMapper);
         ReflectionTestUtils.setField(workspaceService, "memberMapper", memberMapper);
+        ReflectionTestUtils.setField(workspaceService, "userMapper", userMapper);
     }
 
     private Workspace workspace(Long id, String status) {
@@ -154,5 +162,60 @@ class WorkspaceServiceImplTest {
 
         assertThrows(BusinessException.class,
                 () -> workspaceService.removeMember(1L, 2L, 1L));
+    }
+
+    @Test
+    @DisplayName("成员列表 — join 用户表填充真实用户名与头像")
+    void listMembers_enrichesWithUserInfo() {
+        when(memberMapper.selectOneByQuery(any())).thenReturn(member(1L, 1L, "owner"));
+        WorkspaceMember m2 = WorkspaceMember.builder().id(20L).workspaceId(1L).userId(2L).role("member").build();
+        when(memberMapper.selectListByQuery(any())).thenReturn(List.of(m2));
+        User u2 = new User();
+        u2.setId(2L);
+        u2.setUserName("张三");
+        u2.setUserAvatar("http://avatar/zhangsan.png");
+        when(userMapper.selectListByQuery(any())).thenReturn(List.of(u2));
+
+        List<WorkspaceMember> result = workspaceService.listMembers(1L, 1L);
+
+        assertEquals("张三", result.get(0).getUserName());
+        assertEquals("http://avatar/zhangsan.png", result.get(0).getUserAvatar());
+    }
+
+    @Test
+    @DisplayName("成员列表 — 用户不存在时保持兜底（不填充）")
+    void listMembers_userMissing_keepsFallback() {
+        when(memberMapper.selectOneByQuery(any())).thenReturn(member(1L, 1L, "owner"));
+        WorkspaceMember m2 = WorkspaceMember.builder().id(20L).workspaceId(1L).userId(2L).role("member").build();
+        when(memberMapper.selectListByQuery(any())).thenReturn(List.of(m2));
+        when(userMapper.selectListByQuery(any())).thenReturn(List.of());
+
+        List<WorkspaceMember> result = workspaceService.listMembers(1L, 1L);
+
+        assertEquals(1, result.size());
+        assertEquals(null, result.get(0).getUserName());
+    }
+
+    @Test
+    @DisplayName("恢复 — owner 可将归档空间恢复为 ACTIVE")
+    void unarchive_ownerRestoresToActive() {
+        when(memberMapper.selectOneByQuery(any())).thenReturn(member(1L, 1L, "owner"));
+        Workspace archived = workspace(1L, "ARCHIVED");
+        when(workspaceMapper.selectOneById(1L)).thenReturn(archived);
+
+        workspaceService.unarchive(1L, 1L);
+
+        assertEquals("ACTIVE", archived.getStatus());
+        verify(workspaceMapper).update(any(Workspace.class));
+    }
+
+    @Test
+    @DisplayName("恢复 — 非 owner 抛无权限")
+    void unarchive_nonOwner_throwsNoAuth() {
+        when(memberMapper.selectOneByQuery(any())).thenReturn(member(1L, 2L, "member"));
+
+        assertThrows(BusinessException.class,
+                () -> workspaceService.unarchive(1L, 2L));
+        verify(workspaceMapper, never()).update(any(Workspace.class));
     }
 }

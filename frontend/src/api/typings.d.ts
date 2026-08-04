@@ -639,6 +639,8 @@ declare namespace API {
     userId?: number
     role?: string
     joinedAt?: string
+    userName?: string
+    userAvatar?: string
   }
 
   type WorkspaceCreateRequest = {

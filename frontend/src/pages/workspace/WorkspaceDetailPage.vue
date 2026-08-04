@@ -100,6 +100,16 @@
           >
             <a-button danger :loading="archiving">归档空间</a-button>
           </a-popconfirm>
+          <a-popconfirm
+            v-if="isOwner && isArchived"
+            title="确定恢复此空间？"
+            description="恢复后空间重新可用，成员可继续协作。"
+            ok-text="恢复"
+            cancel-text="取消"
+            @confirm="doUnarchive"
+          >
+            <a-button :loading="unarchiving">恢复空间</a-button>
+          </a-popconfirm>
         </div>
       </section>
 
@@ -133,7 +143,9 @@
 
         <ul v-else class="member-list">
           <li v-for="member in members" :key="member.userId" class="member-item">
-            <a-avatar :size="36" class="member-avatar">{{ memberName(member).slice(0, 1) }}</a-avatar>
+            <a-avatar :src="member.userAvatar || undefined" :size="36" class="member-avatar">
+              {{ memberName(member).slice(0, 1) }}
+            </a-avatar>
             <div class="member-info">
               <span class="member-name">{{ memberName(member) }}</span>
               <span class="member-role">{{ roleLabel(member.role) }}</span>
@@ -230,6 +242,7 @@ import {
   getWorkspace,
   updateWorkspace,
   archiveWorkspace,
+  unarchiveWorkspace,
   addWorkspaceMember,
   removeWorkspaceMember,
   listWorkspaceMembers,
@@ -292,7 +305,9 @@ const ROLE_LABELS: Record<string, string> = {
 
 const roleLabel = (role?: string) => ROLE_LABELS[role ?? ''] || role || '—'
 
-const memberName = (member: API.WorkspaceMember) => `用户 #${member.userId}`
+// 优先展示真实用户名；后端未 join 时兜底为用户 ID
+const memberName = (member: API.WorkspaceMember) =>
+  member.userName?.trim() || `用户 #${member.userId}`
 
 const isSelf = (member: API.WorkspaceMember) =>
   String(member.userId) === String(loginUserStore.loginUser.id)
@@ -399,6 +414,25 @@ const doArchive = async () => {
     message.error(e instanceof Error ? e.message : '归档失败')
   } finally {
     archiving.value = false
+  }
+}
+
+// ── 恢复归档 ──
+
+const unarchiving = ref(false)
+
+const doUnarchive = async () => {
+  if (unarchiving.value) return
+  unarchiving.value = true
+  try {
+    const res = await unarchiveWorkspace(workspaceId.value)
+    if (res.data.code !== 0) throw new Error(res.data.message || '恢复失败')
+    operationNotice.value = { type: 'success', message: '空间已恢复' }
+    await loadDetail()
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '恢复失败')
+  } finally {
+    unarchiving.value = false
   }
 }
 

@@ -42,6 +42,11 @@ public interface WorkspaceService {
     void archive(Long workspaceId, Long userId);
 
     /**
+     * 恢复已归档空间（仅 owner）
+     */
+    void unarchive(Long workspaceId, Long userId);
+
+    /**
      * 添加成员（仅 owner/admin）
      */
     void addMember(Long workspaceId, Long targetUserId, String role, Long operatorId);

@@ -4,6 +4,8 @@ import com.example.aipassagecreator.exception.BusinessException;
 import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.mapper.WorkspaceMapper;
 import com.example.aipassagecreator.mapper.WorkspaceMemberMapper;
+import com.example.aipassagecreator.mapper.UserMapper;
+import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.model.po.Workspace;
 import com.example.aipassagecreator.model.po.WorkspaceMember;
 import com.example.aipassagecreator.service.WorkspaceService;
@@ -14,6 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -34,6 +39,9 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
     @Resource
     private WorkspaceMemberMapper memberMapper;
+
+    @Resource
+    private UserMapper userMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -75,6 +83,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Override
     public List<Workspace> listByUser(Long userId) {
         // 子查询条件用参数化 .eq，避免字符串拼接
+        // 不按 status 过滤：归档空间也需可见，便于 owner 找回并恢复（卡片用「已归档」标签区分）
         QueryWrapper memberIds = QueryWrapper.create()
                 .select("workspace_id")
                 .from("workspace_member")
@@ -82,7 +91,6 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         return workspaceMapper.selectListByQuery(
                 QueryWrapper.create()
                         .in("id", memberIds)
-                        .eq("status", "ACTIVE")
                         .orderBy("create_time", false));
     }
 
@@ -110,6 +118,17 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             ws.setStatus(STATUS_ARCHIVED);
             workspaceMapper.update(ws);
             log.info("归档协作空间: id={}", workspaceId);
+        }
+    }
+
+    @Override
+    public void unarchive(Long workspaceId, Long userId) {
+        requireRole(workspaceId, userId, ROLE_OWNER);
+        Workspace ws = workspaceMapper.selectOneById(workspaceId);
+        if (ws != null && !STATUS_ACTIVE.equals(ws.getStatus())) {
+            ws.setStatus(STATUS_ACTIVE);
+            workspaceMapper.update(ws);
+            log.info("恢复协作空间: id={}", workspaceId);
         }
     }
 
@@ -162,8 +181,27 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Override
     public List<WorkspaceMember> listMembers(Long workspaceId, Long userId) {
         requireRole(workspaceId, userId, ROLE_VIEWER);
-        return memberMapper.selectListByQuery(
+        List<WorkspaceMember> members = memberMapper.selectListByQuery(
                 QueryWrapper.create().eq("workspace_id", workspaceId));
+        if (members.isEmpty()) {
+            return members;
+        }
+        // 批量 join 用户信息，避免 N+1 查询
+        Set<Long> userIds = members.stream()
+                .map(WorkspaceMember::getUserId)
+                .collect(Collectors.toSet());
+        List<User> users = userMapper.selectListByQuery(
+                QueryWrapper.create().in("id", userIds));
+        Map<Long, User> userById = users.stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+        for (WorkspaceMember member : members) {
+            User user = userById.get(member.getUserId());
+            if (user != null) {
+                member.setUserName(user.getUserName());
+                member.setUserAvatar(user.getUserAvatar());
+            }
+        }
+        return members;
     }
 
     @Override
