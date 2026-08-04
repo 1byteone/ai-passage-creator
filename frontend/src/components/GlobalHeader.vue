@@ -12,7 +12,7 @@
               decoding="async"
               class="logo-img"
             />
-            <span class="site-title">AI文章创作器</span>
+            <span class="site-title">AI 文章创作器</span>
           </div>
         </RouterLink>
       </div>
@@ -20,23 +20,20 @@
       <!-- 中间：导航菜单 -->
       <nav class="nav-center">
         <RouterLink
-          v-for="item in menuItems"
+          v-for="item in visibleItems"
           :key="item.key"
           :to="item.key"
-          :class="[
-            'nav-item',
-            { active: isActive(item.key), 'low-frequency': item.lowFrequency },
-          ]"
+          :class="['nav-item', { active: isActive(item.key) }]"
         >
           <component :is="item.icon" class="nav-icon" />
-          <span>{{ item.label }}</span>
+          <span class="nav-label">{{ item.label }}</span>
         </RouterLink>
-        <details v-if="overflowItems.length" class="mobile-more">
+        <details v-if="narrowCollapsedItems.length" class="mobile-more">
           <summary class="more-button" aria-label="更多导航">
             <MoreOutlined />
           </summary>
           <div class="mobile-more-menu">
-            <RouterLink v-for="item in overflowItems" :key="item.key" :to="item.key">
+            <RouterLink v-for="item in narrowCollapsedItems" :key="item.key" :to="item.key">
                 <component :is="item.icon" />
                 <span>{{ item.label }}</span>
             </RouterLink>
@@ -59,7 +56,11 @@
 
           <a-dropdown>
             <a-space class="user-info">
-              <a-avatar :src="loginUserStore.loginUser.userAvatar" :size="36" class="user-avatar" />
+              <a-avatar
+                :src="getAvatar(loginUserStore.loginUser.userAvatar, loginUserStore.loginUser.userName)"
+                :size="36"
+                class="user-avatar"
+              />
               <span class="user-name">
                 {{ loginUserStore.loginUser.userName ?? '无名' }}
               </span>
@@ -71,6 +72,11 @@
                   <span>永久会员权益</span>
                 </a-menu-item>
                 <a-menu-divider v-if="isVip" />
+                <a-menu-item v-for="item in dropdownItems" :key="item.key" class="dropdown-item" @click="router.push(item.key)">
+                  <component :is="item.icon" />
+                  <span>{{ item.label }}</span>
+                </a-menu-item>
+                <a-menu-divider />
                 <a-menu-item @click="doLogout" class="dropdown-item">
                   <LogoutOutlined />
                   <span>退出登录</span>
@@ -88,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import {
@@ -107,6 +113,7 @@ import {
   TeamOutlined,
 } from '@ant-design/icons-vue'
 import { isVip as checkIsVip } from '@/utils/permission'
+import { getAvatar } from '@/utils/avatar'
 
 const loginUserStore = useLoginUserStore()
 const router = useRouter()
@@ -135,55 +142,46 @@ const originItems = [
   {
     key: '/article/list',
     icon: UnorderedListOutlined,
-    label: '历史',
-    lowFrequency: true,
-  },
-  {
-    key: '/apikey',
-    icon: KeyOutlined,
-    label: 'API Key',
-    lowFrequency: true,
-  },
-  {
-    key: '/approval',
-    icon: AuditOutlined,
-    label: '审批',
-    lowFrequency: true,
-  },
-  {
-    key: '/analytics',
-    icon: BarChartOutlined,
-    label: '分析',
-    lowFrequency: true,
+    label: '文章',
   },
   {
     key: '/workspace',
     icon: TeamOutlined,
     label: '空间',
-    lowFrequency: true,
   },
+  // 管理员专属菜单项
   {
     key: '/admin/userManage',
     icon: SettingOutlined,
-    label: '管理',
+    label: '用户管理',
     admin: true,
-    lowFrequency: true,
   },
   {
     key: '/admin/statistics',
     icon: BarChartOutlined,
-    label: '数据',
+    label: '数据分析',
     admin: true,
-    lowFrequency: true,
   },
   {
     key: '/admin/toolbox',
     icon: ToolOutlined,
     label: '工具箱',
     admin: true,
-    lowFrequency: true,
   },
 ]
+
+// 用户下拉菜单项目（低频入口）
+const dropdownItems = computed(() => {
+  const items: Array<{ key: string; icon: Component; label: string }> = [
+    { key: '/apikey', icon: KeyOutlined, label: 'API 密钥' },
+  ]
+  const loginUser = loginUserStore.loginUser
+  if (loginUser && loginUser.userRole === 'admin') {
+    items.push({ key: '/approval', icon: AuditOutlined, label: '审批工作台' })
+    items.push({ key: '/analytics', icon: BarChartOutlined, label: '数据分析' })
+  }
+  return items
+})
 
 // 过滤菜单项
 const menuItems = computed(() => {
@@ -196,7 +194,29 @@ const menuItems = computed(() => {
   })
 })
 
-const overflowItems = computed(() => menuItems.value.filter((item) => item.lowFrequency))
+// 是否在窄屏下折叠
+const isNarrow = ref(false)
+
+// 响应式监听
+let resizeHandler: (() => void) | null = null
+
+const checkNarrow = () => {
+  isNarrow.value = window.innerWidth < 480
+}
+
+// 窄屏下折叠的菜单项（非核心项）
+const narrowCollapsedItems = computed(() => {
+  if (!isNarrow.value) return []
+  const coreKeys = new Set(['/', '/create', '/skill'])
+  return menuItems.value.filter((item) => !coreKeys.has(item.key))
+})
+
+const visibleItems = computed(() => {
+  const items = menuItems.value
+  if (!isNarrow.value) return items
+  const coreKeys = new Set(['/', '/create', '/skill'])
+  return items.filter((item) => coreKeys.has(item.key))
+})
 
 const isActive = (path: string) => {
   if (path === '/') {
@@ -230,6 +250,20 @@ const doLogout = async () => {
     await router.push('/user/login')
   }
 }
+
+// 响应式监听
+onMounted(() => {
+  checkNarrow()
+  resizeHandler = () => checkNarrow()
+  window.addEventListener('resize', resizeHandler)
+})
+
+onBeforeUnmount(() => {
+  if (resizeHandler) {
+    window.removeEventListener('resize', resizeHandler)
+    resizeHandler = null
+  }
+})
 </script>
 
 <style scoped>
@@ -245,13 +279,13 @@ const doLogout = async () => {
   line-height: 64px;
   border-bottom: 1px solid var(--color-border);
   transition: all var(--transition-normal);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .header-container {
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -516,21 +550,31 @@ const doLogout = async () => {
 }
 
 /* 响应式 */
+@media (max-width: 992px) {
+  .nav-label {
+    display: none;
+  }
+
+  .nav-item {
+    padding: 8px 12px;
+  }
+}
+
 @media (max-width: 768px) {
   .header-container {
     padding: 0 16px;
   }
 
   .site-title {
-    display: none;
+    font-size: 15px;
   }
 
-  .nav-item span {
-    display: none;
+  .nav-center {
+    gap: 4px;
   }
 
   .nav-item {
-    padding: 8px 12px;
+    padding: 8px 10px;
   }
 
   .user-name {
@@ -545,7 +589,7 @@ const doLogout = async () => {
 
 @media (max-width: 480px) {
   .header-container {
-    gap: 6px;
+    gap: 4px;
     padding: 0 10px;
   }
 
@@ -563,10 +607,6 @@ const doLogout = async () => {
     height: 40px;
     justify-content: center;
     padding: 0;
-  }
-
-  .nav-item.low-frequency {
-    display: none;
   }
 
   .mobile-more {

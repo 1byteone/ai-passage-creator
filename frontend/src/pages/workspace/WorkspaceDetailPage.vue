@@ -143,7 +143,11 @@
 
         <ul v-else class="member-list">
           <li v-for="member in members" :key="member.userId" class="member-item">
-            <a-avatar :src="member.userAvatar || undefined" :size="36" class="member-avatar">
+            <a-avatar
+              :src="getAvatar(member.userAvatar, memberName(member))"
+              :size="36"
+              class="member-avatar"
+            >
               {{ memberName(member).slice(0, 1) }}
             </a-avatar>
             <div class="member-info">
@@ -248,6 +252,7 @@ import {
 } from '@/api/workspaceController'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { formatDateTime } from '@/utils/date'
+import { getAvatar } from '@/utils/avatar'
 import type { OperationNotice } from '@/types/operationNotice'
 
 const route = useRoute()

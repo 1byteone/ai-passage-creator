@@ -136,7 +136,7 @@
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'identity'">
               <div class="identity-cell">
-                <a-avatar :src="record.userAvatar" :size="40">
+                <a-avatar :src="getAvatar(record.userAvatar, displayName(record))" :size="40">
                   {{ avatarFallback(record) }}
                 </a-avatar>
                 <div>
@@ -184,7 +184,7 @@
           <article v-for="record in data" :key="record.id" class="mobile-user-item">
             <div class="mobile-user-head">
               <div class="identity-cell">
-                <a-avatar :src="record.userAvatar" :size="40">
+                <a-avatar :src="getAvatar(record.userAvatar, displayName(record))" :size="40">
                   {{ avatarFallback(record) }}
                 </a-avatar>
                 <div>
@@ -242,7 +242,7 @@
     >
       <template v-if="selectedUser">
         <div class="drawer-identity">
-          <a-avatar :src="selectedUser.userAvatar" :size="52">
+          <a-avatar :src="getAvatar(selectedUser.userAvatar, displayName(selectedUser))" :size="52">
             {{ avatarFallback(selectedUser) }}
           </a-avatar>
           <div>
@@ -369,6 +369,7 @@ import { ReloadOutlined, SearchOutlined } from '@ant-design/icons-vue'
 import { deleteUser, listUserVoByPage, updateUser } from '@/api/userController'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { formatDateTime } from '@/utils/date'
+import { getAvatar } from '@/utils/avatar'
 import type { OperationNotice } from '@/types/operationNotice'
 
 const labelPageSizeControl = (element: HTMLElement) => {

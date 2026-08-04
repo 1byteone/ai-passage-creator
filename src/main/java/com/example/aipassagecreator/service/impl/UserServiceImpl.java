@@ -64,6 +64,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setUserPassword(encryptPassword);
         user.setUserName("无名小羊");
         user.setUserRole(UserRoleEnum.USER.getValue());
+        // 默认头像：DiceBear Open Peeps（手绘插画风），以账号为确定性种子
+        user.setUserAvatar(buildDefaultAvatar(userAccount));
         boolean saved = this.save(user);
         if(!saved){
             throw new BusinessException(ErrorCode.OPERATION_ERROR,"注册失败,数据库错误");
@@ -81,6 +83,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 盐值，混淆密码
         final String SALT = "yupi";
         return DigestUtils.md5DigestAsHex((userPassword + SALT).getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * 生成默认头像 URL（DiceBear Open Peeps）
+     * <p>
+     * 以账号为确定性种子，同一账号恒定同一头像；无需上传/存储。
+     * 背景用项目主题绿色系 (#d5f5e3)，与前端 utils/avatar.ts 保持一致。
+     */
+    private String buildDefaultAvatar(String seed) {
+        String safeSeed = cn.hutool.core.util.URLUtil.encode(seed == null ? "default" : seed);
+        return "https://api.dicebear.com/10.x/open-peeps/svg"
+                + "?seed=" + safeSeed
+                + "&backgroundColor=d5f5e3";
     }
 
     /**

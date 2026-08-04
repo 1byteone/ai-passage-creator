@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -66,6 +67,27 @@ class UserServiceImplTest {
 
         assertEquals(1L, result);
         verify(userMapper, times(1)).insert(any(), anyBoolean());
+    }
+
+    @Test
+    @DisplayName("注册成功 — 自动生成 DiceBear 默认头像")
+    void userRegister_assignsDiceBearAvatar() {
+        when(userMapper.selectCountByQuery(any())).thenReturn(0L);
+        when(userMapper.insert(any(), anyBoolean())).thenAnswer(inv -> {
+            User user = inv.getArgument(0);
+            user.setId(1L);
+            return 1;
+        });
+
+        userService.userRegister("avatar_user", "password123", "password123");
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userMapper).insert(captor.capture(), anyBoolean());
+        User saved = captor.getValue();
+        // 以账号为 seed 生成确定性 DiceBear Open Peeps 头像
+        assertNotNull(saved.getUserAvatar());
+        assertTrue(saved.getUserAvatar().startsWith("https://api.dicebear.com/10.x/open-peeps/svg"));
+        assertTrue(saved.getUserAvatar().contains("seed=avatar_user"));
     }
 
     @Test
