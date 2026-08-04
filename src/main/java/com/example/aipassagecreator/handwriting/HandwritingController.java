@@ -24,7 +24,7 @@ import java.util.UUID;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/handwriting")
+@RequestMapping("/handwriting")
 @RequiredArgsConstructor
 public class HandwritingController {
 
