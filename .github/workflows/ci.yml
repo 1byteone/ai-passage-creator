@@ -7,7 +7,8 @@ on:
     branches: [master, dev]
 
 jobs:
-  build-and-test:
+  backend:
+    name: Backend
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -27,3 +28,35 @@ jobs:
       - name: Build Docker Image
         if: github.ref == 'refs/heads/master'
         run: docker build -t ai-passage-creator:${{ github.sha }} .
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint:check
+
+      - name: Type-check & Build
+        working-directory: frontend
+        # vite build 能发现 type-check/lint 检测不到的 CSS 编译错误（如纯 CSS 中的 // 注释）
+        run: npm run build
+
+      - name: Unit tests
+        working-directory: frontend
+        run: npm run test:skill
