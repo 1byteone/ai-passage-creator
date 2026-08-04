@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -27,18 +28,32 @@ import java.util.Map;
 @Component
 public class WebSearchTool {
 
-    private static final String SEARCH_API_URL = "https://api.langsearch.com/v1/web-search";
+    private static final String DEFAULT_SEARCH_API_URL = "https://api.langsearch.com/v1/web-search";
 
     private final HttpClient httpClient;
     private final String apiKey;
     private final CircuitBreakerConfig breaker;
+    private final String searchApiUrl;
 
+    /**
+     * Spring 装配主构造器：默认 HttpClient + 默认 LangSearch 地址。
+     * 类存在测试用辅助构造器，需显式标注避免多构造器歧义。
+     */
+    @Autowired
     public WebSearchTool(@Value("${langsearch.api-key:}") String apiKey, CircuitBreakerConfig breaker) {
+        this(apiKey, breaker, HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build(), DEFAULT_SEARCH_API_URL);
+    }
+
+    /**
+     * 测试构造器：可注入 mock HttpClient 与本地测试 URL
+     */
+    WebSearchTool(String apiKey, CircuitBreakerConfig breaker, HttpClient httpClient, String searchApiUrl) {
         this.apiKey = apiKey;
         this.breaker = breaker;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
+        this.httpClient = httpClient;
+        this.searchApiUrl = searchApiUrl;
         log.info("WebSearchTool 初始化完成，apiKey={}", apiKey.isEmpty() ? "未配置" : "已配置");
     }
 
@@ -76,7 +91,7 @@ public class WebSearchTool {
         );
 
         HttpRequest httpRequest = HttpRequest.newBuilder()
-                .uri(URI.create(SEARCH_API_URL))
+                .uri(URI.create(searchApiUrl))
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(GsonUtils.toJson(requestBody)))

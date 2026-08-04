@@ -137,9 +137,8 @@ public class SkillNodeAction implements NodeAction {
                     phaseTokens = extractTotalTokens(response);
                 }
             } catch (Exception e) {
-                // 主模型失败，尝试降级到 fallback
-                ChatModel fallbackModel = modelRouter.resolveWithFallback(phase.getModel(),
-                        state.value("skillDefaultModel").map(Object::toString).orElse(null));
+                // 主模型失败，切换到配置的 fallback 模型重试（默认 dashscope）
+                ChatModel fallbackModel = modelRouter.resolveFallback();
                 if (fallbackModel != model) {
                     log.warn("LLM 调用失败，降级到 fallback: phase={}, error={}", phase.getName(), e.getMessage());
                     String fallbackName = modelRouter.resolveModelName(null, null);

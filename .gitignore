@@ -35,6 +35,7 @@ build/
 ### Environment ###
 .env
 .env.*
+!.env.example
 *.log
 hs_err_pid*
 replay_pid*

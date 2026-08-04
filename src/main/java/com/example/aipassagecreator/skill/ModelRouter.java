@@ -72,6 +72,16 @@ public class ModelRouter {
         }
     }
 
+    /**
+     * 解析降级模型实例（由配置的 fallback 模型名决定，默认 dashscope）。
+     * <p>
+     * 与 {@link #resolve} 的返回实例必然不同（agnes ≠ dashscope），
+     * 供调用方在运行时 LLM 故障时切换到真正不同的模型重试。
+     */
+    public ChatModel resolveFallback() {
+        return resolve(config.getFallback(), config.getFallback());
+    }
+
     /** 获取图片生成模型名称 */
     public String getImageModel() {
         return config.getImageModel();
