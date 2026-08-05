@@ -960,6 +960,7 @@ const startCreate = async () => {
   imageCount.value = 0
   imagePhase.value = 'analyzing'
   allImagesDone.value = false
+  totalImages.value = 5
   addLog('开始创建文章任务...', 'info')
 
   try {
