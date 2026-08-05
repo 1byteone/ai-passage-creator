@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.card;
 
+import com.example.aipassagecreator.card.illustration.IllustrationImageService;
 import com.example.aipassagecreator.card.model.PagePlan;
 import com.example.aipassagecreator.card.model.PageResult;
 import com.example.aipassagecreator.service.CosService;
@@ -46,6 +47,9 @@ class CardServiceTest {
 
     @Mock
     private CosService cosService;
+
+    @Mock
+    private IllustrationImageService illustrationImageService;
 
     @InjectMocks
     private CardService cardService;

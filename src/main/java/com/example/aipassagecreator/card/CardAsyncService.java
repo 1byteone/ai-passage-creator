@@ -40,7 +40,8 @@ public class CardAsyncService {
     }
 
     @Async("cardExecutor")
-    public void generateCards(String taskId, String cardStyle, String methodologyName, Long loginUserId) {
+    public void generateCards(String taskId, String cardStyle, String characterStyle,
+                              String methodologyName, Long loginUserId) {
         try {
             Article article = articleService.getByTaskId(taskId);
             if (article == null) {
@@ -55,7 +56,7 @@ public class CardAsyncService {
 
             cardService.generate(fullContent, article.getMainTitle(),
                     article.getSubTitle(), article.getCoverImage(), article.getImages(),
-                    cardStyle, taskId, methodologyName);
+                    cardStyle, characterStyle, taskId, methodologyName);
 
             sseEmitterManager.send(taskId, GsonUtils.toJson(Map.of("type", "card_complete", "taskId", taskId)));
             sseEmitterManager.complete(taskId);

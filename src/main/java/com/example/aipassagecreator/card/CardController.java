@@ -2,6 +2,7 @@ package com.example.aipassagecreator.card;
 
 import com.example.aipassagecreator.annotation.RateLimit;
 import com.example.aipassagecreator.aop.AuthCheck;
+import com.example.aipassagecreator.card.illustration.IllustrationCharacterStyle;
 import com.example.aipassagecreator.card.model.CardGenerateRequest;
 import com.example.aipassagecreator.common.BaseResponse;
 import com.example.aipassagecreator.common.ResultUtils;
@@ -81,11 +82,13 @@ public class CardController {
                         .filter(s -> !s.isBlank())
                         .orElse("default"));
         String cardStyle = resolveCardStyle(request.getCardStyle(), effectiveMethodology);
+        String characterStyle = IllustrationCharacterStyle.from(request.getCharacterStyle()).getName();
         try {
             List<String> urls = cardService.preview(
                     article.getFullContent() != null ? article.getFullContent() : article.getContent(),
                     article.getMainTitle(), article.getSubTitle(),
-                    article.getCoverImage(), article.getImages(), cardStyle, request.getTaskId());
+                    article.getCoverImage(), article.getImages(), cardStyle, characterStyle,
+                    request.getTaskId());
             return ResultUtils.success(urls);
         } catch (IllegalArgumentException e) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR, e.getMessage());
@@ -128,8 +131,9 @@ public class CardController {
         }
 
         String cardStyle = resolveCardStyle(request.getCardStyle(), effectiveMethodology);
+        String characterStyle = IllustrationCharacterStyle.from(request.getCharacterStyle()).getName();
         try {
-            cardAsyncService.generateCards(request.getTaskId(), cardStyle,
+            cardAsyncService.generateCards(request.getTaskId(), cardStyle, characterStyle,
                     effectiveMethodology,
                     loginUser.getId());
         } catch (Exception e) {

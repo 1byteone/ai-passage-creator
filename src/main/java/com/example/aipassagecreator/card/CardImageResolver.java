@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import java.util.Base64;
@@ -36,6 +37,10 @@ public class CardImageResolver {
         if (imageUrl.startsWith("data:")) {
             return imageUrl;
         }
+        // classpath 静态素材（illustration 熔断兜底）→ 读 classpath 字节转 base64
+        if (imageUrl.startsWith("classpath:")) {
+            return loadClasspath(imageUrl);
+        }
         try {
             Request request = new Request.Builder().url(imageUrl).build();
             try (Response response = httpClient.newCall(request).execute()) {
@@ -65,5 +70,30 @@ public class CardImageResolver {
     /** 截断长 URL 用于日志 */
     private static String truncate(String s) {
         return s != null && s.length() > 80 ? s.substring(0, 80) + "…" : s;
+    }
+
+    /**
+     * 读取 classpath 静态素材并转为 base64 data URL。
+     * 同 HTTP 分支一致：超限/不存在/异常返回 null，由模板降级为无图。
+     */
+    private String loadClasspath(String imageUrl) {
+        try {
+            String path = imageUrl.substring("classpath:".length());
+            ClassPathResource resource = new ClassPathResource(path);
+            if (!resource.exists()) {
+                log.warn("卡片配图 classpath 资源不存在: path={}", path);
+                return null;
+            }
+            byte[] body = resource.getInputStream().readAllBytes();
+            if (body.length == 0 || body.length > MAX_IMAGE_BYTES) {
+                log.warn("卡片配图大小不合法: path={}, bytes={}", path, body.length);
+                return null;
+            }
+            String b64 = Base64.getEncoder().encodeToString(body);
+            return "data:image/png;base64," + b64;
+        } catch (Exception e) {
+            log.warn("卡片配图 classpath 读取异常: url={}, err={}", truncate(imageUrl), e.getMessage());
+            return null;
+        }
     }
 }

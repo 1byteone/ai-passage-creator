@@ -1,5 +1,7 @@
 package com.example.aipassagecreator.card;
 
+import com.example.aipassagecreator.card.illustration.IllustrationCharacterStyle;
+import com.example.aipassagecreator.card.illustration.IllustrationImageService;
 import com.example.aipassagecreator.card.model.ComplianceReport;
 import com.example.aipassagecreator.card.model.PagePlan;
 import com.example.aipassagecreator.card.model.PageResult;
@@ -32,16 +34,19 @@ public class CardService {
     private final CardComplianceChecker complianceChecker;
     private final CardPageMapper cardPageMapper;
     private final CosService cosService;
+    private final IllustrationImageService illustrationImageService;
 
     public CardService(CardStructurePlanner planner, CardTemplateEngine templateEngine,
                        CardRenderPipeline renderPipeline, CardComplianceChecker complianceChecker,
-                       CardPageMapper cardPageMapper, CosService cosService) {
+                       CardPageMapper cardPageMapper, CosService cosService,
+                       IllustrationImageService illustrationImageService) {
         this.planner = planner;
         this.templateEngine = templateEngine;
         this.renderPipeline = renderPipeline;
         this.complianceChecker = complianceChecker;
         this.cardPageMapper = cardPageMapper;
         this.cosService = cosService;
+        this.illustrationImageService = illustrationImageService;
     }
 
     /**
@@ -51,15 +56,18 @@ public class CardService {
     public List<String> preview(String fullContent, String mainTitle,
                                 String subTitle, String coverImage,
                                 String cardStyle, String taskId) {
-        return preview(fullContent, mainTitle, subTitle, coverImage, null, cardStyle, taskId);
+        return preview(fullContent, mainTitle, subTitle, coverImage, null,
+                cardStyle, null, taskId);
     }
 
-    /** 预览重载：携带配图 JSON（article.images 字段），支持卡片内联配图 */
+    /** 预览重载：携带配图 JSON（article.images 字段）与插画子风格，支持卡片内联配图 */
     public List<String> preview(String fullContent, String mainTitle,
                                 String subTitle, String coverImage,
-                                String imagesJson, String cardStyle, String taskId) {
+                                String imagesJson, String cardStyle, String characterStyle,
+                                String taskId) {
         List<PagePlan> pages = planner.plan(fullContent, mainTitle, subTitle, coverImage,
                 parseImages(imagesJson));
+        injectIllustrationCover(pages, cardStyle, characterStyle, mainTitle);
         List<PagePlan> previewPages = pages.subList(0, Math.min(2, pages.size()));
         List<String> htmls = templateEngine.render(previewPages, cardStyle);
         List<PageResult> results = renderPipeline.render(htmls, taskId);
@@ -86,18 +94,28 @@ public class CardService {
                                    String subTitle, String coverImage,
                                    String cardStyle, String taskId,
                                    String methodologyName) {
-        return generate(fullContent, mainTitle, subTitle, coverImage, null,
-                cardStyle, taskId, methodologyName);
+        return generate(fullContent, mainTitle, subTitle, coverImage,
+                cardStyle, null, taskId, methodologyName);
     }
 
-    /** 全量生成重载：携带配图 JSON（article.images 字段），支持卡片内联配图 */
+    /** 全量生成重载：携带插画子风格（style=illustration 时封面注入插画图） */
     public List<CardPage> generate(String fullContent, String mainTitle,
                                    String subTitle, String coverImage,
-                                   String imagesJson, String cardStyle, String taskId,
-                                   String methodologyName) {
+                                   String cardStyle, String characterStyle,
+                                   String taskId, String methodologyName) {
+        return generate(fullContent, mainTitle, subTitle, coverImage, null,
+                cardStyle, characterStyle, taskId, methodologyName);
+    }
+
+    /** 全量生成主方法：携带配图 JSON（article.images 字段）与插画子风格 */
+    public List<CardPage> generate(String fullContent, String mainTitle,
+                                   String subTitle, String coverImage,
+                                   String imagesJson, String cardStyle, String characterStyle,
+                                   String taskId, String methodologyName) {
         // 1. 分页（含配图）
         List<PagePlan> pages = planner.plan(fullContent, mainTitle, subTitle, coverImage,
                 parseImages(imagesJson));
+        injectIllustrationCover(pages, cardStyle, characterStyle, mainTitle);
 
         // 2. 文本合规（硬门禁）
         ComplianceReport textReport = complianceChecker.textCheck(pages, mainTitle, methodologyName);
@@ -164,6 +182,24 @@ public class CardService {
     /** 预览 COS key：独立 preview 前缀，防止预览覆盖正式卡片产物 */
     private static String previewCardCosKey(String taskId, int pageNo) {
         return "cards/" + taskId + "/preview/" + pageNo + ".png";
+    }
+
+    /**
+     * illustration 风格封面注入：AI 生成（失败熔断静态素材）的插画 URL 覆写封面页 imageUrl。
+     * 由 {@link CardTemplateEngine} 渲染时经 {@link CardImageResolver} 统一转 base64 内联，
+     * 不在此重复转码。非 illustration 风格直接跳过。
+     */
+    private void injectIllustrationCover(List<PagePlan> pages, String cardStyle,
+                                         String characterStyle, String mainTitle) {
+        if (CardStyle.from(cardStyle) != CardStyle.ILLUSTRATION) {
+            return;
+        }
+        IllustrationCharacterStyle charStyle = IllustrationCharacterStyle.from(characterStyle);
+        String illusUrl = illustrationImageService.generateCoverImage(mainTitle, charStyle);
+        pages.stream()
+                .filter(p -> "COVER".equals(p.getPageType()))
+                .findFirst()
+                .ifPresent(p -> p.setImageUrl(illusUrl));
     }
 
     /**

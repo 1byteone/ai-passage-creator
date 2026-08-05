@@ -26,4 +26,7 @@ public class CardGenerateRequest implements Serializable {
 
     /** 方法论模板名称（默认 default） */
     private String methodologyName;
+
+    /** 插画子风格（healing/cute/doodle/watercolor），仅 cardStyle=illustration 生效 */
+    private String characterStyle;
 }

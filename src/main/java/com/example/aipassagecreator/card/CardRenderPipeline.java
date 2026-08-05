@@ -45,8 +45,16 @@ public class CardRenderPipeline {
     @Value("${playwright.headless:true}")
     private boolean headless;
 
+    /** 是否启用 Playwright 渲染引擎（默认 true）。设 false 跳过初始化，用于无浏览器/网络受限环境避免下载阻塞启动 */
+    @Value("${playwright.enabled:true}")
+    private boolean enabled;
+
     @PostConstruct
     public void init() {
+        if (!enabled) {
+            log.warn("Playwright 渲染引擎已通过 playwright.enabled=false 禁用，卡片渲染不可用");
+            return;
+        }
         try {
             playwright = Playwright.create();
             browser = playwright.chromium().launch(
