@@ -312,6 +312,7 @@
                 v-if="currentStep >= 3 && currentStep <= 5 && totalImages > 0"
                 :total="totalImages"
                 :done-count="imageCount"
+                :image-urls="imageUrls"
                 :phase="imagePhase"
                 :completed="allImagesDone"
               />
@@ -975,6 +976,7 @@ const startCreate = async () => {
   isOutlineStreaming.value = false
   // 重置配图动画态，防止 ERROR 后重试沿用上次的计数/阶段（dirty state 复用）
   imageCount.value = 0
+  imageUrls.value = []
   imagePhase.value = 'analyzing'
   allImagesDone.value = false
   totalImages.value = 5
@@ -1105,6 +1107,9 @@ const handleSSEMessage = (msg: SSEMessage) => {
     case 'IMAGE_COMPLETE':
       // 单张配图完成
       imageCount.value++
+      if (msg.image?.url) {
+        imageUrls.value.push(msg.image.url)
+      }
       addLog(`配图生成中 ${imageCount.value}/${totalImages.value}`, 'info')
       break
 
@@ -1256,6 +1261,7 @@ const resetCreate = () => {
   isOutlineStreaming.value = false
   currentStep.value = 0
   imageCount.value = 0
+  imageUrls.value = []
   imagePhase.value = 'analyzing'
   allImagesDone.value = false
   outlineRaw.value = ''
