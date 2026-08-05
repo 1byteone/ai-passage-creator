@@ -20,7 +20,7 @@
 <script setup lang="ts">
 import { BulbOutlined } from '@ant-design/icons-vue'
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     hits: API.RagHit[]
     loading?: boolean
