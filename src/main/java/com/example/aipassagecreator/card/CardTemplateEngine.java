@@ -21,15 +21,17 @@ public class CardTemplateEngine {
     private static final CardStyle DEFAULT_STYLE = CardStyle.WARM;
 
     private final TemplateEngine templateEngine;
+    private final CardImageResolver imageResolver;
 
-    public CardTemplateEngine(TemplateEngine templateEngine) {
+    public CardTemplateEngine(TemplateEngine templateEngine, CardImageResolver imageResolver) {
         this.templateEngine = templateEngine;
+        this.imageResolver = imageResolver;
     }
 
     /**
      * 将分页方案渲染为 HTML 列表（每页独立 HTML）。
-     * <p>单页渲染：直接向模板上下文注入 {@code title}/{@code content}/{@code pageNo} 三个变量，
-     * 模板以顶层变量取用（模板不遍历 {@code pages} 列表）。</p>
+     * <p>注入变量：{@code title}/{@code content}/{@code contentHtml}/{@code pageNo}/{@code pageType}/
+     * {@code imageDataUrl}（该页配图 base64，无图则为空）。</p>
      *
      * @param pages 分页方案
      * @param style 卡片风格名，未知或 null 由 {@link CardStyle#from} 回退默认
@@ -41,7 +43,11 @@ public class CardTemplateEngine {
             Context ctx = new Context();
             ctx.setVariable("title", page.getTitle());
             ctx.setVariable("content", page.getContentMd());
+            ctx.setVariable("contentHtml", page.getContentHtml());
             ctx.setVariable("pageNo", page.getPageNo());
+            ctx.setVariable("pageType", page.getPageType());
+            // 配图 base64（方案 A：下载内联，避免标准管线禁网导致远程图加载失败）
+            ctx.setVariable("imageDataUrl", imageResolver.toDataUrl(page.getImageUrl()));
             return templateEngine.process(template, ctx);
         }).toList();
     }

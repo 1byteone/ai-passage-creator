@@ -7,19 +7,57 @@
   body {
     font-family: "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
     width: 1080px; height: 1920px; overflow: hidden;
-    background: #FFF5E6; padding: 60px;
+    background: #FDF3E3; padding: 60px;
   }
-  .card-page { width: 960px; height: 1800px; background: #FFFFFF;
-    border-radius: 32px; padding: 60px; box-shadow: 0 8px 32px rgba(0,0,0,0.08); }
-  .card-title { font-size: 48px; font-weight: bold; color: #2D1810; margin-bottom: 24px; }
-  .card-content { font-size: 32px; line-height: 1.8; color: #4A3428; }
-  .card-page-num { position: absolute; bottom: 60px; right: 80px; font-size: 24px; color: #C4A882; }
+  .card-page {
+    position: relative; width: 960px; height: 1800px;
+    background: #FFFDF8; border-radius: 32px; padding: 60px;
+    box-shadow: 0 8px 32px rgba(194, 139, 78, 0.15);
+    display: flex; flex-direction: column;
+  }
+
+  /* ── 封面页 ── */
+  .cover-layout { align-items: center; justify-content: center; text-align: center; padding: 80px 60px; }
+  .cover-badge { display: inline-block; font-size: 24px; letter-spacing: 6px; color: #C08A4E;
+    font-weight: 600; margin-bottom: 40px; text-transform: uppercase; }
+  .cover-image { width: 100%; max-height: 780px; object-fit: cover; border-radius: 24px;
+    margin-bottom: 48px; box-shadow: 0 12px 32px rgba(194, 139, 78, 0.2); }
+  .cover-title { font-size: 88px; font-weight: 800; color: #2D1810; line-height: 1.25;
+    margin-bottom: 32px; letter-spacing: 1px; }
+  .cover-subtitle { font-size: 40px; color: #8A6B52; line-height: 1.6; font-weight: 400; }
+  .cover-hint { margin-top: 64px; font-size: 26px; color: #C4A882; }
+
+  /* ── 内容页 ── */
+  .content-page { overflow: hidden; }
+  .page-title { font-size: 52px; font-weight: 800; color: #2D1810; margin-bottom: 32px;
+    padding-bottom: 20px; border-bottom: 3px solid #E8C79A; }
+  .card-content { flex: 1; font-size: 34px; line-height: 1.85; color: #4A3428; }
+  .card-content h1, .card-content h2 { font-size: 40px; color: #2D1810; margin: 28px 0 16px; }
+  .card-content h3 { font-size: 36px; color: #3D2416; margin: 22px 0 14px; }
+  .card-content p { margin-bottom: 20px; }
+  .card-content ul, .card-content ol { padding-left: 44px; margin-bottom: 20px; }
+  .card-content li { margin-bottom: 10px; }
+  .card-content strong { color: #B0632C; }
+  .page-image { width: 100%; max-height: 520px; object-fit: cover; border-radius: 20px;
+    margin: 24px 0; box-shadow: 0 8px 24px rgba(194, 139, 78, 0.18); }
+  .card-page-num { position: absolute; bottom: 52px; right: 80px; font-size: 26px;
+    color: #C4A882; font-weight: 600; }
 </style>
 </head>
 <body>
-<div class="card-page">
-  <div th:if="${title}" class="card-title" th:text="${title}">标题</div>
-  <div class="card-content" th:text="${content}">内容</div>
+<!-- 封面页：大字标题 + 封面图 + 副标题，海报式居中 -->
+<div th:if="${pageType == 'COVER'}" class="card-page cover-layout">
+  <div class="cover-badge">深度好文</div>
+  <img th:if="${imageDataUrl}" th:src="${imageDataUrl}" class="cover-image" alt="封面" />
+  <div class="cover-title" th:text="${title}">标题</div>
+  <div class="cover-subtitle" th:if="${content}" th:text="${content}">副标题</div>
+  <div class="cover-hint">⬇ 上下滑动阅读</div>
+</div>
+<!-- 内容页：章节标题 + 正文 HTML + 配图 -->
+<div th:if="${pageType == 'CONTENT'}" class="card-page content-page">
+  <div th:if="${title}" class="page-title" th:text="${title}">章节标题</div>
+  <img th:if="${imageDataUrl}" th:src="${imageDataUrl}" class="page-image" alt="配图" />
+  <div class="card-content" th:utext="${contentHtml}">正文</div>
   <div class="card-page-num" th:text="${pageNo}">1</div>
 </div>
 </body>

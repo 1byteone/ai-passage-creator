@@ -54,7 +54,7 @@ public class CardAsyncService {
             sseEmitterManager.send(taskId, GsonUtils.toJson(Map.of("type", "card_progress", "message", "开始分页...")));
 
             cardService.generate(fullContent, article.getMainTitle(),
-                    article.getSubTitle(), article.getCoverImage(),
+                    article.getSubTitle(), article.getCoverImage(), article.getImages(),
                     cardStyle, taskId, methodologyName);
 
             sseEmitterManager.send(taskId, GsonUtils.toJson(Map.of("type", "card_complete", "taskId", taskId)));

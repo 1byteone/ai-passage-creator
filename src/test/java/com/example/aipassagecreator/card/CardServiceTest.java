@@ -65,7 +65,7 @@ class CardServiceTest {
     @DisplayName("预览上传到 preview 前缀，不与正式 key 冲突")
     void preview_usesIsolatedCosKey() {
         List<PagePlan> pages = threePages();
-        when(planner.plan(any(), any(), any(), any())).thenReturn(pages);
+        when(planner.plan(any(), any(), any(), any(), any())).thenReturn(pages);
         when(templateEngine.render(any(), any())).thenReturn(List.of("<h1>1</h1>", "<h1>2</h1>"));
         when(renderPipeline.render(any(), eq(TASK_ID))).thenReturn(List.of(okResult(), okResult()));
         when(cosService.generatePresignedUrl(any())).thenReturn("http://presigned/preview.png");
@@ -82,7 +82,7 @@ class CardServiceTest {
     @DisplayName("正式生成使用基础 key，预览 key 不含 preview 段")
     void generate_usesBaseCosKey() {
         List<PagePlan> pages = threePages();
-        when(planner.plan(any(), any(), any(), any())).thenReturn(pages);
+        when(planner.plan(any(), any(), any(), any(), any())).thenReturn(pages);
         when(templateEngine.render(any(), any())).thenReturn(List.of("<h1>1</h1>", "<h1>2</h1>", "<h1>3</h1>"));
         when(renderPipeline.render(any(), eq(TASK_ID)))
                 .thenReturn(List.of(okResult(), okResult(), okResult()));

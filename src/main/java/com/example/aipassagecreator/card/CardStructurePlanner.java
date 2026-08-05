@@ -20,26 +20,64 @@ public class CardStructurePlanner {
     private static final Pattern PLACEHOLDER_PATTERN =
             Pattern.compile("\\{\\{\\s*(IMAGE|ICON)_PLACEHOLDER_\\d+\\s*\\}\\}");
 
+    /**
+     * 配图最小抽象（position=1 为封面，其余为内容页插图）。
+     * 由调用方提供（如 {@code ArticleState.ImageResult}），planner 不依赖具体类型。
+     */
+    public interface CardImageRef {
+        Integer getPosition();
+        String getUrl();
+    }
+
     private final Parser parser = Parser.builder().build();
     private final HtmlRenderer renderer = HtmlRenderer.builder().build();
 
     /**
-     * 文章正文 → 分页结构。
+     * 文章正文 → 分页结构（无配图）。
      * 纯函数：相同输入 → 相同输出。
      */
     public List<PagePlan> plan(String fullContent, String mainTitle,
                                String subTitle, String coverImage) {
+        return plan(fullContent, mainTitle, subTitle, coverImage, List.of());
+    }
+
+    /**
+     * 文章正文 → 分页结构（含配图）。
+     * 配图按 position 挂到各页（第 1 页为封面），供模板渲染。
+     *
+     * @param images 文章配图列表（position=1 为封面图）
+     */
+    public List<PagePlan> plan(String fullContent, String mainTitle,
+                               String subTitle, String coverImage,
+                               List<? extends CardImageRef> images) {
         if (fullContent == null || fullContent.isBlank()) {
             throw new IllegalArgumentException("文章内容为空，无法生成卡片");
         }
         // 1. 清理残留占位符
         String clean = PLACEHOLDER_PATTERN.matcher(fullContent).replaceAll("");
 
-        // 2. 按 flexmark AST 块级切割
-        List<PagePlan> pages = new ArrayList<>();
-        pages.add(createCoverPage(mainTitle, subTitle, coverImage));
+        // 2. 按 position 建立配图映射（内容页：position>1）
+        java.util.Map<Integer, String> imageByPosition = new java.util.HashMap<>();
+        String cover = coverImage;
+        if (cover == null || cover.isBlank()) {
+            for (CardImageRef img : images) {
+                if (img.getPosition() != null && img.getPosition() == 1 && img.getUrl() != null) {
+                    cover = img.getUrl();
+                    break;
+                }
+            }
+        }
+        for (CardImageRef img : images) {
+            if (img.getPosition() != null && img.getPosition() > 1 && img.getUrl() != null) {
+                imageByPosition.put(img.getPosition(), img.getUrl());
+            }
+        }
 
-        // 3. 按 ## 标题分页
+        // 3. 按 flexmark AST 块级切割
+        List<PagePlan> pages = new ArrayList<>();
+        pages.add(createCoverPage(mainTitle, subTitle, cover));
+
+        // 4. 按 ## 标题分页
         String[] sections = clean.split("(?m)(?=^## )", -1);
         for (String section : sections) {
             if (section.trim().isEmpty()) continue;
@@ -59,14 +97,19 @@ public class CardStructurePlanner {
             }
             // 超长拆页（500 字上限）
             List<String> chunks = splitByLength(body, MAX_CHARS_PER_PAGE);
-            for (String chunk : chunks) {
+            int pageNoBefore = pages.size();
+            for (int i = 0; i < chunks.size(); i++) {
+                String chunk = chunks.get(i);
                 String html = renderer.render(parser.parse(chunk));
+                // 该页对应配图：按页号在整体序列中的位置映射
+                String pageImage = imageByPosition.get(pageNoBefore + i + 1);
                 pages.add(PagePlan.builder()
                         .pageNo(pages.size() + 1)
                         .pageType("CONTENT")
                         .title(title)
                         .contentMd(chunk)
                         .contentHtml(html)
+                        .imageUrl(pageImage)
                         .build());
             }
         }
@@ -88,6 +131,7 @@ public class CardStructurePlanner {
                 .pageNo(1).pageType("COVER")
                 .title(title).contentMd(md)
                 .contentHtml(renderer.render(parser.parse(md)))
+                .imageUrl(coverImage)
                 .build();
     }
 

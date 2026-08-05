@@ -85,7 +85,7 @@ public class CardController {
             List<String> urls = cardService.preview(
                     article.getFullContent() != null ? article.getFullContent() : article.getContent(),
                     article.getMainTitle(), article.getSubTitle(),
-                    article.getCoverImage(), cardStyle, request.getTaskId());
+                    article.getCoverImage(), article.getImages(), cardStyle, request.getTaskId());
             return ResultUtils.success(urls);
         } catch (IllegalArgumentException e) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR, e.getMessage());

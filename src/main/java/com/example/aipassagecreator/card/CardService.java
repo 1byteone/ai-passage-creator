@@ -4,6 +4,7 @@ import com.example.aipassagecreator.card.model.ComplianceReport;
 import com.example.aipassagecreator.card.model.PagePlan;
 import com.example.aipassagecreator.card.model.PageResult;
 import com.example.aipassagecreator.service.CosService;
+import com.example.aipassagecreator.utils.GsonUtils;
 import com.mybatisflex.core.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -50,7 +51,15 @@ public class CardService {
     public List<String> preview(String fullContent, String mainTitle,
                                 String subTitle, String coverImage,
                                 String cardStyle, String taskId) {
-        List<PagePlan> pages = planner.plan(fullContent, mainTitle, subTitle, coverImage);
+        return preview(fullContent, mainTitle, subTitle, coverImage, null, cardStyle, taskId);
+    }
+
+    /** 预览重载：携带配图 JSON（article.images 字段），支持卡片内联配图 */
+    public List<String> preview(String fullContent, String mainTitle,
+                                String subTitle, String coverImage,
+                                String imagesJson, String cardStyle, String taskId) {
+        List<PagePlan> pages = planner.plan(fullContent, mainTitle, subTitle, coverImage,
+                parseImages(imagesJson));
         List<PagePlan> previewPages = pages.subList(0, Math.min(2, pages.size()));
         List<String> htmls = templateEngine.render(previewPages, cardStyle);
         List<PageResult> results = renderPipeline.render(htmls, taskId);
@@ -77,8 +86,18 @@ public class CardService {
                                    String subTitle, String coverImage,
                                    String cardStyle, String taskId,
                                    String methodologyName) {
-        // 1. 分页
-        List<PagePlan> pages = planner.plan(fullContent, mainTitle, subTitle, coverImage);
+        return generate(fullContent, mainTitle, subTitle, coverImage, null,
+                cardStyle, taskId, methodologyName);
+    }
+
+    /** 全量生成重载：携带配图 JSON（article.images 字段），支持卡片内联配图 */
+    public List<CardPage> generate(String fullContent, String mainTitle,
+                                   String subTitle, String coverImage,
+                                   String imagesJson, String cardStyle, String taskId,
+                                   String methodologyName) {
+        // 1. 分页（含配图）
+        List<PagePlan> pages = planner.plan(fullContent, mainTitle, subTitle, coverImage,
+                parseImages(imagesJson));
 
         // 2. 文本合规（硬门禁）
         ComplianceReport textReport = complianceChecker.textCheck(pages, mainTitle, methodologyName);
@@ -145,6 +164,35 @@ public class CardService {
     /** 预览 COS key：独立 preview 前缀，防止预览覆盖正式卡片产物 */
     private static String previewCardCosKey(String taskId, int pageNo) {
         return "cards/" + taskId + "/preview/" + pageNo + ".png";
+    }
+
+    /**
+     * 解析 article.images JSON 为配图引用列表（position/url）。
+     * 非法 JSON 或空返回空列表，不阻断卡片生成（无图卡片）。
+     */
+    private List<CardStructurePlanner.CardImageRef> parseImages(String imagesJson) {
+        if (imagesJson == null || imagesJson.isBlank()) {
+            return List.of();
+        }
+        try {
+            List<CardImageItem> items = GsonUtils.fromJson(imagesJson,
+                    new com.google.gson.reflect.TypeToken<List<CardImageItem>>() {});
+            if (items == null) return List.of();
+            return items.stream()
+                    .filter(i -> i != null && i.url != null && !i.url.isBlank())
+                    .map(i -> (CardStructurePlanner.CardImageRef) i)
+                    .toList();
+        } catch (Exception e) {
+            log.warn("卡片配图 JSON 解析失败，降级为无图: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /** 配图 JSON 元素（对齐 ArticleState.ImageResult 的 position/url 字段） */
+    @lombok.Data
+    private static class CardImageItem implements CardStructurePlanner.CardImageRef {
+        private Integer position;
+        private String url;
     }
 
     private CardPage buildCardPage(String taskId, int pageNo, String style,
