@@ -62,6 +62,20 @@
       <template v-else>
         <ArticleReadingView :article="article" title-id="article-detail-title" />
 
+        <!-- 相关文章 -->
+        <section v-if="hasContent" class="related-panel" aria-labelledby="related-title">
+          <h2 id="related-title" class="related-title">
+            <LinkOutlined />
+            相关文章
+          </h2>
+          <RagHitsPanel
+            :hits="relatedHits"
+            :loading="relatedLoading"
+            empty-text="暂无相关文章"
+            @select="handleOpenRelated"
+          />
+        </section>
+
         <section class="execution-panel" aria-labelledby="execution-title">
           <button
             type="button"
@@ -255,10 +269,13 @@ import {
   RedoOutlined,
   SendOutlined,
   ShareAltOutlined,
+  LinkOutlined,
   SmileOutlined,
 } from '@ant-design/icons-vue'
 import ArticleReadingView from '@/components/ArticleReadingView.vue'
+import RagHitsPanel from '@/components/RagHitsPanel.vue'
 import SkillLauncher from '@/pages/skill/components/SkillLauncher.vue'
+import { useRagSearch } from '@/composables/useRagSearch'
 import { getArticle, getExecutionLogs } from '@/api/articleController'
 import { submitForApproval, approveArticle, rejectArticle, getApprovalHistory } from '@/api/approvalController'
 import { exportAsMarkdown } from '@/utils/article'
@@ -280,6 +297,8 @@ const detoxLauncherOpen = ref(false)
 const seedLauncherOpen = ref(false)
 const hasContent = computed(() => Boolean(article.value?.fullContent || article.value?.content))
 const taskId = computed(() => (typeof route.params.taskId === 'string' ? route.params.taskId : ''))
+// 相关文章：文章加载成功后用标题语义检索（详情页只发一次，无需防抖）
+const { hits: relatedHits, loading: relatedLoading, search: relatedSearch } = useRagSearch({ debounceMs: 0 })
 
 const loadArticle = async () => {
   if (!taskId.value) {
@@ -292,7 +311,10 @@ const loadArticle = async () => {
     const response = await getArticle({ taskId: taskId.value })
     if (response.data.code !== 0) throw new Error(response.data.message || '文章加载失败')
     article.value = response.data.data || null
-    if (article.value) void loadExecutionLogs()
+    if (article.value) {
+      void loadExecutionLogs()
+      loadRelated()
+    }
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '请稍后重试'
   } finally {
@@ -313,6 +335,18 @@ const loadExecutionLogs = async () => {
   } finally {
     logsLoading.value = false
   }
+}
+
+const loadRelated = () => {
+  const a = article.value
+  if (!a) return
+  const query = [a.mainTitle, a.subTitle].filter(Boolean).join(' ')
+  if (!query.trim()) return
+  relatedSearch(query, { type: 'article', topK: 5, excludeRefId: taskId.value })
+}
+
+const handleOpenRelated = (hit: API.RagHit) => {
+  if (hit.refId) router.push(`/article/${encodeURIComponent(hit.refId)}`)
 }
 
 const goBack = () => router.push('/article/list')
@@ -755,6 +789,24 @@ onMounted(loadArticle)
   background: var(--state-error-bg);
   color: var(--state-error-text);
   font-size: 12px;
+}
+
+/* ── 相关文章 ── */
+.related-panel {
+  width: min(760px, 100%);
+  margin: 24px auto 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-default);
+}
+
+.related-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--text-strong);
 }
 
 @media (max-width: 700px) {
