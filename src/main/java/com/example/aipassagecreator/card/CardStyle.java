@@ -8,7 +8,8 @@ public enum CardStyle {
     WARM("warm"),
     MINIMAL("minimal"),
     FREE("free"),
-    HANDWRITING("handwriting");
+    HANDWRITING("handwriting"),
+    ILLUSTRATION("illustration");
 
     private final String name;
 
