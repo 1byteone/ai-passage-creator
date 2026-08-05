@@ -32,13 +32,13 @@ class IllustrationPromptBuilderTest {
 
     @Test
     void resolveCharacterDescription_knowsTopics() {
-        assertEquals("书桌", builder.resolveCharacterDescription("高效学习的方法"));
-        assertEquals("茶", builder.resolveCharacterDescription("春季养生食谱"));
-        assertEquals("城市", builder.resolveCharacterDescription("2025科技趋势"));
+        assertEquals("书桌前的学生", builder.resolveCharacterDescription("高效学习的方法"));
+        assertEquals("品茶的女性", builder.resolveCharacterDescription("春季养生食谱"));
+        assertEquals("用电脑的职场青年", builder.resolveCharacterDescription("2025科技趋势"));
     }
 
     @Test
     void resolveCharacterDescription_unknownTopic_returnsDefault() {
-        assertEquals("笑脸", builder.resolveCharacterDescription("随便一段文字"));
+        assertEquals("笑脸人物", builder.resolveCharacterDescription("随便一段文字"));
     }
 }

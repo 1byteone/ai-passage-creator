@@ -16,16 +16,16 @@ public class IllustrationPromptBuilder {
     /** 主题关键词 → 人物形象描述 */
     private static final Map<String, String> TOPIC_MAP = new LinkedHashMap<>();
     static {
-        TOPIC_MAP.put("学习", "书桌");
-        TOPIC_MAP.put("效率", "书桌");
-        TOPIC_MAP.put("知识", "书桌");
-        TOPIC_MAP.put("读书", "书桌");
-        TOPIC_MAP.put("养生", "茶");
+        TOPIC_MAP.put("学习", "书桌前的学生");
+        TOPIC_MAP.put("效率", "书桌前的学生");
+        TOPIC_MAP.put("知识", "书桌前的学生");
+        TOPIC_MAP.put("读书", "书桌前的学生");
+        TOPIC_MAP.put("养生", "品茶的女性");
         TOPIC_MAP.put("健康", "晨练的年轻人");
         TOPIC_MAP.put("饮食", "做饭的厨师");
         TOPIC_MAP.put("美食", "做饭的厨师");
-        TOPIC_MAP.put("科技", "城市");
-        TOPIC_MAP.put("互联网", "城市");
+        TOPIC_MAP.put("科技", "用电脑的职场青年");
+        TOPIC_MAP.put("互联网", "用电脑的职场青年");
         TOPIC_MAP.put("城市", "漫步城市的路人");
         TOPIC_MAP.put("旅行", "背包旅行者");
         TOPIC_MAP.put("情感", "温柔微笑的人物");
@@ -63,13 +63,13 @@ public class IllustrationPromptBuilder {
      */
     public String resolveCharacterDescription(String mainTitle) {
         if (mainTitle == null || mainTitle.isBlank()) {
-            return "笑脸";
+            return "笑脸人物";
         }
         for (Map.Entry<String, String> e : TOPIC_MAP.entrySet()) {
             if (mainTitle.contains(e.getKey())) {
                 return e.getValue();
             }
         }
-        return "笑脸";
+        return "笑脸人物";
     }
 }
