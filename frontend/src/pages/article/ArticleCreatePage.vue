@@ -293,14 +293,13 @@
                 <span v-if="isStreaming" class="typing-cursor">|</span>
               </div>
 
-              <!-- 配图生成动画（正文完成即显示，覆盖分析+生成+合成前） -->
+              <!-- 配图生成动画（正文完成即显示；保持挂载至 step5 以呈现 AGENT5 成功态，COMPLETED 后随阶段切换移除） -->
               <ImageGenerationAnimation
-                v-if="currentStep >= 3 && currentStep < 5 && totalImages > 0"
+                v-if="currentStep >= 3 && currentStep <= 5 && totalImages > 0"
                 :total="totalImages"
                 :done-count="imageCount"
                 :phase="imagePhase"
                 :completed="allImagesDone"
-                class="image-animation-area"
               />
 
               <!-- 加载占位 -->
@@ -905,7 +904,6 @@ const mainContentRef = ref<HTMLElement | null>(null)
 // 配图进度
 const imageCount = ref(0)
 const totalImages = ref(5)
-const imageProgress = ref(0)
 
 // 配图阶段状态（驱动动画组件）
 const imagePhase = ref<'analyzing' | 'generating' | 'done'>('analyzing')
@@ -956,7 +954,6 @@ const startCreate = async () => {
   article.value.fullContent = ''
   outlineRaw.value = ''
   titleOptions.value = []
-  imageProgress.value = 0
   isStreaming.value = false
   isOutlineStreaming.value = false
   addLog('开始创建文章任务...', 'info')
@@ -1084,7 +1081,6 @@ const handleSSEMessage = (msg: SSEMessage) => {
     case 'IMAGE_COMPLETE':
       // 单张配图完成
       imageCount.value++
-      imageProgress.value = Math.round((imageCount.value / totalImages.value) * 100)
       addLog(`配图生成中 ${imageCount.value}/${totalImages.value}`, 'info')
       break
 
@@ -1235,7 +1231,6 @@ const resetCreate = () => {
   isOutlineStreaming.value = false
   currentStep.value = 0
   imageCount.value = 0
-  imageProgress.value = 0
   imagePhase.value = 'analyzing'
   allImagesDone.value = false
   outlineRaw.value = ''
