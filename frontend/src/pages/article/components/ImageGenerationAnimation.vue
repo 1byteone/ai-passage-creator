@@ -16,14 +16,21 @@
         v-for="(_, index) in total"
         :key="index"
         :class="['image-card', {
-          'card-done': index < doneCount,
+          'card-done': index < doneCount && imageUrls[index],
+          'card-generating': index < doneCount && !imageUrls[index],
           'card-pending': index >= doneCount,
         }]"
       >
-        <div v-if="index < doneCount" class="card-done-content">
-          <PictureOutlined class="card-done-icon" />
-          <CheckCircleOutlined class="card-check-badge" />
-        </div>
+        <!-- 已完成：显示真实图片（渐进模糊） -->
+        <img
+          v-if="index < doneCount && imageUrls[index]"
+          :src="imageUrls[index]"
+          :class="['card-image', { loaded: loadedFlags[index] }]"
+          @load="onImageLoad(index)"
+          @error="onImageLoad(index)"
+          alt="配图"
+        />
+        <!-- 待生成：灰色占位 -->
         <div v-else class="card-pending-content">
           <PictureOutlined class="card-pending-icon" />
           <span class="card-index">{{ index + 1 }}</span>
@@ -42,16 +49,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, reactive } from 'vue'
 import { Progress as AProgress } from 'ant-design-vue'
 import { CheckCircleOutlined, PictureOutlined } from '@ant-design/icons-vue'
 
 const props = defineProps<{
   total: number
   doneCount: number
+  imageUrls: string[]
   phase: 'analyzing' | 'generating' | 'done'
   completed: boolean
 }>()
+
+// 记录每张图片是否已加载完成（触发 blur→clear 过渡）
+const loadedFlags = reactive<Record<number, boolean>>({})
+const onImageLoad = (index: number) => { loadedFlags[index] = true }
 
 // 阶段文案
 const headerText = computed(() => {
@@ -126,10 +138,27 @@ const progressPercent = computed(() => {
       background: rgba(34, 197, 94, 0.1);
       animation: card-appear 0.4s ease-out;
     }
+
+    &.card-generating {
+      background: rgba(34, 197, 94, 0.1);
+    }
   }
 
-  .card-pending-content,
-  .card-done-content {
+  .card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(30px);
+    opacity: 0.7;
+    transition: filter 2s ease-out, opacity 2s ease-out;
+
+    &.loaded {
+      filter: blur(0);
+      opacity: 1;
+    }
+  }
+
+  .card-pending-content {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -150,19 +179,6 @@ const progressPercent = computed(() => {
     font-size: 11px;
     color: var(--color-text-muted);
     font-variant-numeric: tabular-nums;
-  }
-
-  .card-done-icon {
-    font-size: 26px;
-    color: var(--color-primary);
-  }
-
-  .card-check-badge {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    font-size: 14px;
-    color: var(--color-success);
   }
 
   .animation-progress {
