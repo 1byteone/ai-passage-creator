@@ -31,7 +31,7 @@ async function mockRecommendedTopics(page: Page) {
 
 /** Mock RAG 检索：返回自身 + 2 篇相关文章（验证详情页排除自身） */
 async function mockRagSearch(page: Page, selfRefId: string) {
-  await page.route('**/api/rag/search', (route) => {
+  await page.route('**/api/rag/search*', (route) => {
     const body: API.RagHit[] = [
       { refId: selfRefId, title: '这是自身文章', content: '自身摘要', score: 0.95, type: 'article' },
       { refId: 'ref-1', title: 'AI 重塑职场', content: '历史文章摘要', score: 0.9, type: 'article' },
@@ -120,7 +120,7 @@ test.describe('RAG 相关文章 UI', () => {
     // 相关文章区块出现，且排除了自身（'这是自身文章' 不显示）
     await expect(page.getByRole('heading', { level: 2, name: '相关文章' })).toBeVisible()
     await expect(page.getByRole('button', { name: /远程办公指南/ })).toBeVisible({ timeout: 3_000 })
-    await expect(page.getByText('这是自身文章')).not.toBeVisible()
+    await expect(page.locator('.related-panel').getByText('这是自身文章')).not.toBeVisible()
 
     // 点击卡片 → 跳转到该文章详情
     await page.getByRole('button', { name: /远程办公指南/ }).click()

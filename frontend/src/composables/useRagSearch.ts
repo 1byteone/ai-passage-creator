@@ -59,6 +59,8 @@ export function useRagSearch(options: UseRagSearchOptions = {}) {
       const searchFn = options.searchFn ?? (await loadSearchRag())
       const res = await searchFn({ query, type: opts.type, topK: opts.topK })
       if (disposed || seq !== fetchSeq) return
+      // 后端业务/运行时错误走 HTTP 200 + code!=0，失败时不能让空数组冒充"检索成功零命中"
+      if (res.data && res.data.code !== 0) throw new Error(res.data.message || 'RAG 检索失败')
       let list = res.data?.data ?? []
       list = list.filter((h) => h.type === (opts.type ?? 'article'))
       if (opts.excludeRefId) list = list.filter((h) => h.refId !== opts.excludeRefId)
