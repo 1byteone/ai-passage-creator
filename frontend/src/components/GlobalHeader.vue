@@ -157,7 +157,7 @@ const originItems = [
     admin: true,
   },
   {
-    key: '/admin/statistics',
+    key: '/analytics',
     icon: BarChartOutlined,
     label: '数据分析',
     admin: true,
@@ -178,7 +178,6 @@ const dropdownItems = computed(() => {
   const loginUser = loginUserStore.loginUser
   if (loginUser && loginUser.userRole === 'admin') {
     items.push({ key: '/approval', icon: AuditOutlined, label: '审批工作台' })
-    items.push({ key: '/analytics', icon: BarChartOutlined, label: '数据分析' })
   }
   return items
 })
