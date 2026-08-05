@@ -293,15 +293,15 @@
                 <span v-if="isStreaming" class="typing-cursor">|</span>
               </div>
 
-              <!-- 配图进度 -->
-              <div v-if="currentStep === 4 && imageProgress > 0" class="image-progress-box">
-                <div class="progress-header">
-                  <PictureOutlined />
-                  <span>正在生成配图</span>
-                </div>
-                <a-progress :percent="imageProgress" status="active" :stroke-color="{ from: '#22C55E', to: '#16A34A' }" />
-                <p class="progress-hint">{{ imageCount }}/{{ totalImages }} 张图片已完成</p>
-              </div>
+              <!-- 配图生成动画（正文完成即显示，覆盖分析+生成+合成前） -->
+              <ImageGenerationAnimation
+                v-if="currentStep >= 3 && currentStep < 5 && totalImages > 0"
+                :total="totalImages"
+                :done-count="imageCount"
+                :phase="imagePhase"
+                :completed="allImagesDone"
+                class="image-animation-area"
+              />
 
               <!-- 加载占位 -->
               <div v-if="currentStep === 0 && !article.mainTitle" class="loading-placeholder">
@@ -688,7 +688,6 @@ import {
   BarChartOutlined,
   QuestionCircleOutlined,
   MessageOutlined,
-  PictureOutlined,
   WarningOutlined,
   CrownOutlined,
   FileTextOutlined,
@@ -705,6 +704,7 @@ import { markdownToHtml as safeMarkdownToHtml } from '@/utils/markdown'
 import TitleSelectingStage from './components/TitleSelectingStage.vue'
 import OutlineEditingStage from './components/OutlineEditingStage.vue'
 import CompletedState from './components/CompletedState.vue'
+import ImageGenerationAnimation from './components/ImageGenerationAnimation.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -907,6 +907,10 @@ const imageCount = ref(0)
 const totalImages = ref(5)
 const imageProgress = ref(0)
 
+// 配图阶段状态（驱动动画组件）
+const imagePhase = ref<'analyzing' | 'generating' | 'done'>('analyzing')
+const allImagesDone = ref(false)
+
 // 文章数据
 const article = ref<Partial<API.ArticleVO>>({
   mainTitle: '',
@@ -1064,6 +1068,8 @@ const handleSSEMessage = (msg: SSEMessage) => {
       // 正文完成，进入配图分析步骤
       isStreaming.value = false
       currentStep.value = 3
+      imagePhase.value = 'analyzing'
+      allImagesDone.value = false
       addLog('正文生成完成', 'success')
       break
 
@@ -1071,6 +1077,7 @@ const handleSSEMessage = (msg: SSEMessage) => {
       // 配图分析完成，进入配图生成步骤
       currentStep.value = 4
       totalImages.value = msg.imageRequirements?.length || 5
+      imagePhase.value = 'generating'
       addLog(`配图需求分析完成，共 ${totalImages.value} 张`, 'success')
       break
 
@@ -1085,6 +1092,8 @@ const handleSSEMessage = (msg: SSEMessage) => {
       // 所有配图完成，进入图文合成步骤
       currentStep.value = 5
       article.value.images = msg.images
+      allImagesDone.value = true
+      imagePhase.value = 'done'
       addLog('所有配图生成完成', 'success')
       break
 
@@ -1227,6 +1236,8 @@ const resetCreate = () => {
   currentStep.value = 0
   imageCount.value = 0
   imageProgress.value = 0
+  imagePhase.value = 'analyzing'
+  allImagesDone.value = false
   outlineRaw.value = ''
   confirmLoading.value = false
   realtimeLogs.value = []
@@ -1847,31 +1858,6 @@ onBeforeUnmount(() => {
   color: var(--color-primary);
   font-weight: bold;
   font-size: 18px;
-}
-
-.image-progress-box {
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  margin-top: 24px;
-  text-align: center;
-
-  .progress-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 16px;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--color-text);
-  }
-
-  .progress-hint {
-    margin: 12px 0 0;
-    font-size: 13px;
-    color: var(--color-text-muted);
-  }
 }
 
 .loading-placeholder {
