@@ -319,4 +319,51 @@ test.describe('创作模块全流程', () => {
     // 连接失败后应弹出全局错误提示
     await expect(page.getByText('连接失败,请重试')).toBeVisible()
   })
+
+  test('无配图文章 — AGENT4_COMPLETE 空需求时隐藏配图动画', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 960 })
+    await mockAuth(page)
+    await mockArticleApis(page)
+    const sse = await startMockSseServer()
+    await routeSseToMock(page, sse)
+
+    try {
+      await openCreatePage(page)
+      await page.locator('#article-topic-input').fill('无配图测试选题')
+      await page.getByRole('button', { name: /开始创作/ }).click()
+      await sse.waitForConnection()
+
+      // 标题选择 → 确认标题
+      sse.push({ type: 'AGENT1_COMPLETE' })
+      sse.push({
+        type: 'TITLES_GENERATED',
+        titleOptions: [{ mainTitle: '无配图标题', subTitle: '纯文字测试' }],
+      })
+      await expect(page.getByRole('heading', { name: '选择标题方案' })).toBeVisible()
+      await page.getByRole('button', { name: /确认并生成大纲/ }).click()
+
+      // 大纲 → 确认大纲
+      sse.push({ type: 'AGENT2_STREAMING', content: '{"sections":[{"section":1,"title":"正文"}]}' })
+      sse.push({
+        type: 'OUTLINE_GENERATED',
+        outline: [{ section: 1, title: '正文', points: ['要点'] }],
+      })
+      await expect(page.getByRole('button', { name: /确认并生成正文/ })).toBeVisible()
+      await page.getByRole('button', { name: /确认并生成正文/ }).click()
+
+      // 正文完成 → 分析态出现（totalImages 兜底 5）
+      sse.push({ type: 'AGENT3_STREAMING', content: '## 正文\n纯文字内容，无配图。' })
+      sse.push({ type: 'AGENT3_COMPLETE' })
+      await expect(page.getByText('正在分析配图需求')).toBeVisible()
+
+      // 配图需求为空数组 → totalImages=0 → v-if 守卫隐藏动画组件
+      sse.push({ type: 'AGENT4_COMPLETE', imageRequirements: [] })
+
+      await expect(page.locator('.image-gen-animation')).toHaveCount(0)
+      await expect(page.getByText('正在生成配图')).not.toBeVisible()
+      await expect(page.getByText('正在分析配图需求')).not.toBeVisible()
+    } finally {
+      await sse.close()
+    }
+  })
 })
