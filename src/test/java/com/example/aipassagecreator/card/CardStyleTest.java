@@ -11,6 +11,7 @@ class CardStyleTest {
         assertEquals(CardStyle.MINIMAL, CardStyle.from("minimal"));
         assertEquals(CardStyle.FREE, CardStyle.from("free"));
         assertEquals(CardStyle.HANDWRITING, CardStyle.from("handwriting"));
+        assertEquals(CardStyle.ILLUSTRATION, CardStyle.from("illustration"));
     }
 
     @Test

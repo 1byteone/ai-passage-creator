@@ -47,8 +47,8 @@ public class IllustrationImageService {
             }
             log.warn("插画人物 AI 生图返回空，熔断静态素材: style={}", style.getName());
         } catch (Exception e) {
-            log.error("插画人物 AI 生图异常，熔断静态素材: style={}, err={}",
-                    style.getName(), e.getMessage());
+            // 记录完整异常栈便于排查熔断根因
+            log.error("插画人物 AI 生图异常，熔断静态素材: style={}", style.getName(), e);
         }
         return staticLibrary.getUrl(style);
     }
