@@ -10,6 +10,7 @@ import com.example.aipassagecreator.agent.parallel.ParallelImageGenerator;
 import com.example.aipassagecreator.enums.SseMessageTypeEnum;
 import com.example.aipassagecreator.model.dto.article.ArticleState;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,9 @@ import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
 @Service
 @Slf4j
 public class ArticleAgentOrchestrator {
+
+    /** 用于跨 ClassLoader 拷贝对象（DevTools 热重启时 RestartClassLoader 与 app 类不同） */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Resource
     private AgentConfig agentConfig;
@@ -90,9 +94,9 @@ public class ArticleAgentOrchestrator {
             if (result.isPresent()) {
                 OverAllState finalState = result.get();
 
-                @SuppressWarnings("unchecked")
+                // 用泛型拷贝绕开 DevTools 类加载器差异（直接强转会 ClassCastException）
                 List<ArticleState.TitleOption> titleOptions = finalState.value(KEY_TITLE_OPTIONS)
-                        .map(v -> (List<ArticleState.TitleOption>) v)
+                        .map(v -> copyList(v, new TypeReference<List<ArticleState.TitleOption>>() {}))
                         .orElse(null);
 
                 if (titleOptions != null) {
@@ -147,24 +151,18 @@ public class ArticleAgentOrchestrator {
                         outlineObj != null ? outlineObj.getClass().getName() : "null",
                         outlineObj);
 
-                ArticleState.OutlineResult outline = finalState.value(KEY_OUTLINE)
-                        .map(v -> {
-                            log.info("阶段2从value()获取outline, value类型={}", 
-                                    v != null ? v.getClass().getName() : "null");
-                            // 直接尝试强制转换，因为 instanceof 可能因类加载器问题失败
-                            try {
-                                if (v != null && v.getClass().getName().equals(ArticleState.OutlineResult.class.getName())) {
-                                    return (ArticleState.OutlineResult) v;
-                                }
-                            } catch (Exception e) {
-                                log.warn("阶段2 outline转换失败", e);
-                            }
-                            log.warn("阶段2 outline类型不匹配, 期望类型={}, 实际类型={}",
-                                    ArticleState.OutlineResult.class.getName(),
-                                    v != null ? v.getClass().getName() : "null");
-                            return null;
-                        })
-                        .orElse(null);
+                ArticleState.OutlineResult outline = null;
+                if (outlineObj != null) {
+                    // 反射拷贝：绕过 DevTools 不同 ClassLoader 导致的强制转换失败
+                    outline = copyOutlineResult(outlineObj);
+                }
+                if (outline == null) {
+                    // 兜底：尝试 value() 方法
+                    Optional<Object> val = finalState.value(KEY_OUTLINE);
+                    if (val.isPresent()) {
+                        outline = copyOutlineResult(val.get());
+                    }
+                }
 
                 log.info("阶段2最终获取的outline={}", outline);
 
@@ -224,14 +222,13 @@ public class ArticleAgentOrchestrator {
                         .map(Object::toString)
                         .orElse(null);
 
-                @SuppressWarnings("unchecked")
+                // 用泛型拷贝绕开 DevTools 类加载器差异（直接强转会 ClassCastException）
                 List<ArticleState.ImageRequirement> imageRequirements = finalState.value(KEY_IMAGE_REQUIREMENTS)
-                        .map(v -> (List<ArticleState.ImageRequirement>) v)
+                        .map(v -> copyList(v, new TypeReference<List<ArticleState.ImageRequirement>>() {}))
                         .orElse(null);
 
-                @SuppressWarnings("unchecked")
                 List<ArticleState.ImageResult> images = finalState.value(KEY_IMAGES)
-                        .map(v -> (List<ArticleState.ImageResult>) v)
+                        .map(v -> copyList(v, new TypeReference<List<ArticleState.ImageResult>>() {}))
                         .orElse(null);
 
                 String fullContent = finalState.value(KEY_FULL_CONTENT)
@@ -348,6 +345,62 @@ public class ArticleAgentOrchestrator {
             strategies.put(KEY_ENABLED_IMAGE_METHODS, new ReplaceStrategy());
             return strategies;
         };
+    }
+
+    // endregion
+
+    // region 跨 ClassLoader 对象拷贝
+
+    /**
+     * 将 StateGraph 返回的 outline 对象拷贝为当前 ClassLoader 的 OutlineResult。
+     * <p>DevTools 热重启后，StateGraph 内部对象由 RestartClassLoader 加载，与
+     * {@code ArticleState.OutlineResult} 是<strong>同名但不同类</strong>，
+     * 直接 {@code instanceof} / 强制转换会抛 ClassCastException。
+     * 用 Jackson 序列化→反序列化（JSON 字符串中转）彻底绕开类加载器差异。</p>
+     */
+    private ArticleState.OutlineResult copyOutlineResult(Object source) {
+        if (source == null) {
+            return null;
+        }
+        try {
+            return OBJECT_MAPPER.convertValue(source, new TypeReference<ArticleState.OutlineResult>() {});
+        } catch (Exception e) {
+            log.warn("阶段2 outline 跨 ClassLoader 拷贝失败, 类型={}", source.getClass().getName(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 泛型跨 ClassLoader 拷贝：将 StateGraph 返回的任意对象转为当前 ClassLoader 的目标类型。
+     * <p>DevTools 热重启后，StateGraph 内部对象由 RestartClassLoader 加载，
+     * 与项目里的 {@code ArticleState.*} 是<strong>同名但不同类</strong>，
+     * 直接强转抛 ClassCastException。用 Jackson 序列化→反序列化绕开类加载器差异。</p>
+     */
+    private <T> T copyValue(Object source, Class<T> targetClass) {
+        if (source == null) {
+            return null;
+        }
+        try {
+            return OBJECT_MAPPER.convertValue(source, targetClass);
+        } catch (Exception e) {
+            log.warn("跨 ClassLoader 拷贝失败, 类型={}, 目标={}", source.getClass().getName(), targetClass.getName(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 泛型列表跨 ClassLoader 拷贝。
+     */
+    private <T> List<T> copyList(Object source, TypeReference<List<T>> typeRef) {
+        if (source == null) {
+            return null;
+        }
+        try {
+            return OBJECT_MAPPER.convertValue(source, typeRef);
+        } catch (Exception e) {
+            log.warn("列表跨 ClassLoader 拷贝失败, 类型={}, 目标={}", source.getClass().getName(), typeRef.getType().getTypeName(), e);
+            return null;
+        }
     }
 
     // endregion
