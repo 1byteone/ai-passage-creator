@@ -956,6 +956,10 @@ const startCreate = async () => {
   titleOptions.value = []
   isStreaming.value = false
   isOutlineStreaming.value = false
+  // 重置配图动画态，防止 ERROR 后重试沿用上次的计数/阶段（dirty state 复用）
+  imageCount.value = 0
+  imagePhase.value = 'analyzing'
+  allImagesDone.value = false
   addLog('开始创建文章任务...', 'info')
 
   try {
@@ -1073,7 +1077,8 @@ const handleSSEMessage = (msg: SSEMessage) => {
     case 'AGENT4_COMPLETE':
       // 配图分析完成，进入配图生成步骤
       currentStep.value = 4
-      totalImages.value = msg.imageRequirements?.length || 5
+      // 空数组表示无配图文章，此时 totalImages 必须为 0 以隐藏动画；缺失时兜底默认 5
+      totalImages.value = Array.isArray(msg.imageRequirements) ? msg.imageRequirements.length : 5
       imagePhase.value = 'generating'
       addLog(`配图需求分析完成，共 ${totalImages.value} 张`, 'success')
       break
