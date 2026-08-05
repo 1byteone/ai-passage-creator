@@ -38,7 +38,7 @@
     query: string
     type?: string
     topK?: number
-  }) => Promise<API.BaseResponseListRagHit>
+  }) => Promise<{ data: API.BaseResponseListRagHit }>
 
   useRagSearch(options?: {
     debounceMs?: number
@@ -196,7 +196,7 @@
     query: string
     type?: string
     topK?: number
-  }) => Promise<API.BaseResponseListRagHit>
+  }) => Promise<{ data: API.BaseResponseListRagHit }>
 
   interface SearchOptions {
     type?: string
@@ -420,20 +420,20 @@
 
 - [ ] **Step 1: 引入 composable 与组件**
 
-  `ArticleCreatePage.vue` script 内新增 import（第 630 行 `import { ref, onBeforeUnmount, onMounted, nextTick, computed } from 'vue'` 中**补上 `watch`**）：
+  `ArticleCreatePage.vue` script 内新增 import（第 647 行 `import { ref, onBeforeUnmount, onMounted, nextTick, computed } from 'vue'` 中**补上 `watch`**，当前文件无 `watch`）：
 
   ```ts
   import { ref, watch, onBeforeUnmount, onMounted, nextTick, computed } from 'vue'
   ```
 
-  并新增：
+  并在「创作」相关 imports（第 682 行 `@/api/articleController` 之后）新增：
 
   ```ts
   import RagHitsPanel from '@/components/RagHitsPanel.vue'
   import { useRagSearch } from '@/composables/useRagSearch'
   ```
 
-  在 `const loginUserStore = useLoginUserStore()` 之后：
+  在 `const loginUserStore = useLoginUserStore()`（第 693 行）之后：
 
   ```ts
   const { hits: ragHits, loading: ragLoading, search: ragSearch, clear: ragClear } = useRagSearch({ debounceMs: 500 })
@@ -457,7 +457,7 @@
 
 - [ ] **Step 3: 挂载面板到右侧栏**
 
-  在「热门选题」`panel-section` 结束 `</div>` 之后、「创作技巧」`panel-section` 之前插入：
+  在「热门选题」`panel-section` 结束 `</div>` 之后、「创作技巧」`panel-section` 之前插入（当前文件 385 行「推荐选题」区块之后、419 行「创作技巧」注释之前）：
 
   ```vue
   <!-- 历史参考 -->
@@ -478,7 +478,7 @@
 
 - [ ] **Step 4: 点击套用选题 + 图标 + reset 清理**
 
-  图标 import 列表补 `HistoryOutlined`（在 `FileTextOutlined,` 之后）：
+  图标 import 列表补 `HistoryOutlined`（第 679 行 `FileTextOutlined,` 之后）：
 
   ```ts
       FileTextOutlined,
@@ -497,7 +497,7 @@
   }
   ```
 
-  `resetCreate()` 函数体**开头**新增：
+  `resetCreate()` 函数体（第 1184 行）**开头**新增：
 
   ```ts
   ragClear()
