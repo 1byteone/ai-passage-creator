@@ -1,0 +1,1 @@
+ALTER TABLE article ADD COLUMN characterStyle VARCHAR(64) NULL COMMENT '插画子风格（healing/cute/doodle/watercolor）';

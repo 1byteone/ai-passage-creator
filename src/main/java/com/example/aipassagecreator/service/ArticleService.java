@@ -30,8 +30,19 @@ public interface ArticleService extends IService<Article> {
     String createArticleTask(String topic, String style, String methodology,
                              List<String> enabledImageMethods, User loginUser);
 
+    /**
+     * 创建文章任务（含插画子风格）
+     *
+     * @param characterStyle 插画子风格（healing/cute/doodle/watercolor），可为 null
+     */
+    String createArticleTask(String topic, String style, String methodology,
+                             List<String> enabledImageMethods, String characterStyle, User loginUser);
+
     String createArticleTaskWithQuotaCheck(String topic, String style, String methodology,
                                            List<String> enabledImageMethods, User loginUser);
+
+    String createArticleTaskWithQuotaCheck(String topic, String style, String methodology,
+                                           List<String> enabledImageMethods, String characterStyle, User loginUser);
 
     /**
      * 确认标题（用户选择后）

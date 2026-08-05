@@ -103,6 +103,7 @@ public class ArticleController {
                 request.getStyle(),
                 methodology,
                 request.getEnabledImageMethods(),
+                request.getCharacterStyle(),
                 loginUser
         );
 

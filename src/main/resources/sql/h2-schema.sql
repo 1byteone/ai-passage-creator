@@ -31,6 +31,7 @@ create table if not exists article (
     enabledImageMethods longtext null,
     style varchar(50) null,
     methodology varchar(64) default 'default' null,
+    characterStyle varchar(64) default null comment '插画子风格（healing/cute/doodle/watercolor）',
     mainTitle varchar(200) null,
     subTitle varchar(300) null,
     titleOptions longtext null,

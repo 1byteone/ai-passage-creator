@@ -107,6 +107,12 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     public String createArticleTask(String topic, String style, String methodology,
                                     List<String> enabledImageMethods, User loginUser) {
+        return createArticleTask(topic, style, methodology, enabledImageMethods, null, loginUser);
+    }
+
+    @Override
+    public String createArticleTask(String topic, String style, String methodology,
+                                    List<String> enabledImageMethods, String characterStyle, User loginUser) {
         // 处理配图方式：如果用户未选择，给普通用户设置默认的非 VIP 方式
         List<String> finalImageMethods = processImageMethods(enabledImageMethods, loginUser);
 
@@ -125,14 +131,15 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         article.setMethodology(methodology == null || methodology.isBlank() ? "default" : methodology);
         article.setEnabledImageMethods(finalImageMethods != null && !finalImageMethods.isEmpty()
                 ? GsonUtils.toJson(finalImageMethods) : null);
+        article.setCharacterStyle(characterStyle);
         article.setStatus(ArticleStatusEnum.PENDING.getValue());
         article.setPhase(ArticlePhaseEnum.PENDING.getValue());
         article.setCreateTime(LocalDateTime.now());
 
         this.save(article);
 
-        log.info("文章任务已创建, taskId={}, userId={}, style={}, methodology={}",
-                taskId, loginUser.getId(), style, article.getMethodology());
+        log.info("文章任务已创建, taskId={}, userId={}, style={}, methodology={}, characterStyle={}",
+                taskId, loginUser.getId(), style, article.getMethodology(), characterStyle);
         return taskId;
     }
 
@@ -144,6 +151,14 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         //如果任务创建失败，配额会自动回滚
         quotaService.checkAndConsumeQuota(loginUser);
         return createArticleTask(topic, style, methodology, enabledImageMethods, loginUser);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String createArticleTaskWithQuotaCheck(String topic, String style, String methodology,
+                                                  List<String> enabledImageMethods, String characterStyle, User loginUser) {
+        quotaService.checkAndConsumeQuota(loginUser);
+        return createArticleTask(topic, style, methodology, enabledImageMethods, characterStyle, loginUser);
     }
 
     @Override

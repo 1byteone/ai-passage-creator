@@ -70,6 +70,11 @@ public class Article implements Serializable {
     private String methodology;
 
     /**
+     * 插画子风格（healing/cute/doodle/watercolor），用于卡片渲染
+     */
+    private String characterStyle;
+
+    /**
      * 主标题
      */
     private String mainTitle;

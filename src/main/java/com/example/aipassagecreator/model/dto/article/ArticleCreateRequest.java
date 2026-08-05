@@ -36,5 +36,10 @@ public class ArticleCreateRequest implements Serializable {
      */
     private List<String> enabledImageMethods;
 
+    /**
+     * 插画子风格（healing/cute/doodle/watercolor），后端回退 HEALING
+     */
+    private String characterStyle;
+
     private static final long serialVersionUID = 1L;
 }
