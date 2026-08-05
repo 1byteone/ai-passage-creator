@@ -167,6 +167,20 @@
                         <RouterLink to="/vip" class="upgrade-link">立即升级</RouterLink>
                       </div>
                     </section>
+
+                    <!-- 插画角色风格选择 -->
+                    <section class="character-style-section setting-panel">
+                      <div class="section-header">
+                        <div>
+                          <span class="section-title">插画角色风格</span>
+                          <span class="section-tip">选择文章的插画视觉风格，仅卡片风格为插画时生效</span>
+                        </div>
+                      </div>
+                      <CharacterStyleSelector
+                        v-model:value="selectedCharacterStyle"
+                        :disabled="isCreating"
+                      />
+                    </section>
                   </div>
 
                   <div class="create-actions">
@@ -704,6 +718,7 @@ import TitleSelectingStage from './components/TitleSelectingStage.vue'
 import OutlineEditingStage from './components/OutlineEditingStage.vue'
 import CompletedState from './components/CompletedState.vue'
 import ImageGenerationAnimation from './components/ImageGenerationAnimation.vue'
+import CharacterStyleSelector from './components/CharacterStyleSelector.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -784,6 +799,7 @@ const currentPhase = ref<string>('INPUT')  // INPUT, TITLE_SELECTING, OUTLINE_ED
 const topic = ref('')
 const selectedStyle = ref('')  // 选中的文章风格（空字符串表示默认）
 const selectedImageMethods = ref<string[]>([])  // 选中的配图方式（空数组表示全部）
+const selectedCharacterStyle = ref('')  // 选中的插画子风格（空字符串 = 未选）
 const isCreating = ref(false)
 const isCompleted = ref(false)
 const isStreaming = ref(false)
@@ -903,6 +919,7 @@ const mainContentRef = ref<HTMLElement | null>(null)
 
 // 配图进度
 const imageCount = ref(0)
+const imageUrls = ref<string[]>([])
 const totalImages = ref(5)
 
 // 配图阶段状态（驱动动画组件）
@@ -968,7 +985,8 @@ const startCreate = async () => {
     const res = await createArticle({
       topic: topic.value,
       style: selectedStyle.value || undefined,
-      enabledImageMethods: selectedImageMethods.value.length > 0 ? selectedImageMethods.value : undefined
+      enabledImageMethods: selectedImageMethods.value.length > 0 ? selectedImageMethods.value : undefined,
+      characterStyle: selectedCharacterStyle.value || undefined,
     })
     const newTaskId = res.data.data
     if (!newTaskId) {
@@ -1228,6 +1246,7 @@ const resetCreate = () => {
   currentPhase.value = 'INPUT'
   topic.value = ''
   selectedStyle.value = ''
+  selectedCharacterStyle.value = ''
   titleOptions.value = []
   outline.value = []
   isCreating.value = false

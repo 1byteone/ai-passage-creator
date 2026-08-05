@@ -70,6 +70,7 @@ declare namespace API {
     topic?: string
     style?: string
     enabledImageMethods?: string[]
+    characterStyle?: string   // 插画子风格（healing/cute/doodle/watercolor），后端回退 HEALING
   }
 
   type ArticleQueryRequest = {
