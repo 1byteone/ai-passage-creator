@@ -101,6 +101,22 @@ async function mockAuth(
       body: JSON.stringify({ code: 0, data: user }),
     }),
   )
+  // 挂载时自动加载推荐选题，必须 mock，否则真实请求落到后端返回 40100 触发 request.ts 跳登录页
+  await page.route('**/api/topic/recommend*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 0, data: { items: [], hasAi: false } }),
+    }),
+  )
+  // 选题输入触发 RAG 历史参考检索，同样需要 mock，否则后端未登录返回 40100 触发跳转
+  await page.route('**/api/rag/search*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 0, data: [] }),
+    }),
+  )
 }
 
 /** Mock 创作 API（创建任务/确认标题/确认大纲） */
@@ -206,9 +222,31 @@ test.describe('创作模块全流程', () => {
       await page.getByRole('button', { name: /确认并生成正文/ }).click()
       sse.push({ type: 'AGENT3_STREAMING', content: '## 第一章\nAI 正在改变职场的每个角落。' })
       sse.push({ type: 'AGENT3_COMPLETE' })
-      sse.push({ type: 'AGENT4_COMPLETE', imageRequirements: [] })
+
+      // 5.1 正文完成 → 配图动画组件出现（分析态）
+      await expect(page.getByText('正在分析配图需求')).toBeVisible()
+
+      sse.push({ type: 'AGENT4_COMPLETE', imageRequirements: [{ position: 1 }, { position: 2 }, { position: 3 }] })
+      // 5.2 配图分析完成 → 生成态文案 + 3 张卡片
+      await expect(page.getByText('正在生成配图')).toBeVisible()
+      await expect(page.locator('.image-card')).toHaveCount(3)
+
       sse.push({ type: 'IMAGE_COMPLETE', image: { position: 1, url: 'https://img.example.com/1.png' } })
-      sse.push({ type: 'AGENT5_COMPLETE', images: [{ position: 1, url: 'https://img.example.com/1.png' }] })
+      // 5.3 首张完成 → 1 张已完成卡（勾选角标出现）
+      await expect(page.locator('.image-card.card-done')).toHaveCount(1)
+      await expect(page.locator('.image-card.card-pending')).toHaveCount(2)
+
+      sse.push({ type: 'IMAGE_COMPLETE', image: { position: 2, url: 'https://img.example.com/2.png' } })
+      sse.push({ type: 'IMAGE_COMPLETE', image: { position: 3, url: 'https://img.example.com/3.png' } })
+      sse.push({ type: 'AGENT5_COMPLETE', images: [
+        { position: 1, url: 'https://img.example.com/1.png' },
+        { position: 2, url: 'https://img.example.com/2.png' },
+        { position: 3, url: 'https://img.example.com/3.png' },
+      ] })
+
+      // 5.4 全部完成 → 成功态文案
+      await expect(page.getByText('全部配图生成完成')).toBeVisible()
+
       sse.push({ type: 'MERGE_COMPLETE', fullContent: '## 第一章\nAI 正在改变职场的每个角落。' })
       sse.push({ type: 'QUALITY_CHECKED', score: 92, passed: true, detoxed: false, violations: [] })
       sse.push({ type: 'ALL_COMPLETE' })
