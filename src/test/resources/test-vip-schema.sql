@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS article
     userDescription     TEXT,
     enabledImageMethods TEXT,
     style               VARCHAR(64),
+    methodology         VARCHAR(64) DEFAULT 'default',
     mainTitle           VARCHAR(512),
     subTitle            VARCHAR(512),
     titleOptions        TEXT,
