@@ -186,9 +186,24 @@ test.describe('创作模块全流程', () => {
       const createBtn = page.getByRole('button', { name: /开始创作/ })
       await expect(createBtn).toBeDisabled()
       await topicInput.fill('2026年AI如何改变职场')
-      await expect(createBtn).toBeEnabled()
+
+      // 1.1 插画子风格选择器 — 4 张卡片渲染
+      await expect(page.locator('.style-card')).toHaveCount(4)
+
+      // 1.2 选中治愈风格 → 高亮
+      await page.locator('.style-card').first().click()
+      await expect(page.locator('.style-card').first()).toHaveClass(/style-selected/)
+
+      // 1.3 取消选中（再次点击）
+      await page.locator('.style-card').first().click()
+      await expect(page.locator('.style-card').first()).not.toHaveClass(/style-selected/)
+
+      // 1.4 选中第二个（可爱）→ 高亮
+      await page.locator(':nth-match(.style-card, 2)').click()
+      await expect(page.locator('.style-card:nth-child(2)')).toHaveClass(/style-selected/)
 
       // 2. 点击开始创作，等待 SSE 连接建立
+      await expect(createBtn).toBeEnabled()
       await createBtn.click()
       await sse.waitForConnection()
 
