@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, ref, type Ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 // 注意：不能用顶层 import '../api/ragController' —— 该文件内部 `import request from '@/request'`，
 // `@/` 别名在 Node `--experimental-strip-types` 下不解析，单测 import 本 composable 即失败。
 // 默认 searchFn 改为运行时动态 import；测试注入 searchFn 时永远不触发该 import。
@@ -60,7 +60,7 @@ export function useRagSearch(options: UseRagSearchOptions = {}) {
       const res = await searchFn({ query, type: opts.type, topK: opts.topK })
       if (disposed || seq !== fetchSeq) return
       let list = res.data?.data ?? []
-      list = list.filter((h) => h.type === 'article')
+      list = list.filter((h) => h.type === (opts.type ?? 'article'))
       if (opts.excludeRefId) list = list.filter((h) => h.refId !== opts.excludeRefId)
       hits.value = dedupe(list)
     } catch (e) {

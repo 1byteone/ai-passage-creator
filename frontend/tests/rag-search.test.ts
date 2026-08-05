@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { useRagSearch } from '../src/composables/useRagSearch.ts'
 
-const noLifecycle = { onBeforeUnmount: (_cb: () => void) => {} }
+const noLifecycle = { onBeforeUnmount: () => {} }
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const hit = (refId: string, title: string, score: number, type = 'article'): API.RagHit =>
   ({ refId, title, content: `${title} 的摘要`, score, type })
