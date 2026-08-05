@@ -23,6 +23,7 @@ import com.example.aipassagecreator.service.ArticleService;
 import com.example.aipassagecreator.service.ArticleRewriteService;
 import jakarta.validation.Valid;
 import com.example.aipassagecreator.service.ContentQualityService;
+import com.example.aipassagecreator.service.RagService;
 import com.example.aipassagecreator.service.UserService;
 import com.example.aipassagecreator.skill.SkillExecution;
 import com.example.aipassagecreator.skill.SkillExecutionService;

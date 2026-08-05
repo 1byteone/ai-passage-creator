@@ -58,6 +58,9 @@ class ArticleAsyncServiceTest {
     @Mock
     private ContentQualityService contentQualityService;
 
+    @Mock
+    private RagService ragService;
+
     @InjectMocks
     private ArticleAsyncService articleAsyncService;
 

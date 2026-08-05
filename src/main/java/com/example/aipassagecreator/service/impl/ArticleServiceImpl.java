@@ -16,6 +16,7 @@ import com.example.aipassagecreator.model.vo.ArticleVO;
 import com.example.aipassagecreator.service.ArticleAgentService;
 import com.example.aipassagecreator.service.ArticleService;
 import com.example.aipassagecreator.service.QuotaService;
+import com.example.aipassagecreator.service.RagService;
 import com.example.aipassagecreator.utils.GsonUtils;
 import com.google.gson.reflect.TypeToken;
 import com.mybatisflex.core.paginate.Page;
@@ -42,6 +43,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     protected QuotaService quotaService;
     @Autowired
     private ArticleAgentService articleAgentService;
+
+    @Resource
+    private RagService ragService;
 
     /**
      * 校验配图方式权限
@@ -377,7 +381,12 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         checkArticlePermission(article, loginUser);
 
         //逻辑删除
-        return this.removeById( id);
+        boolean result = this.removeById(id);
+        // 同步清理 RAG 向量（异步，失败静默）
+        if (result && article.getTaskId() != null) {
+            ragService.deleteByTaskIdAsync(article.getTaskId());
+        }
+        return result;
     }
 
     @Override

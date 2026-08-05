@@ -11,6 +11,8 @@ server:
 spring:
   application:
     name: ai-passage-creator
+  main:
+    allow-bean-definition-overriding: true
   # MySQL 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -48,6 +50,11 @@ spring:
         options:
           model: agnes-2.5-flash
           temperature: 0.7
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        initialize-schema: true
 
 mybatis-flex:
   mapper-locations: classpath*:/mapper/**/*.xml
@@ -125,6 +132,13 @@ model:
 # LangSearch 搜索 API（research skill 使用）
 langsearch:
   api-key: ${LANGSEARCH_API_KEY:}
+
+# RAG 向量检索（pgvector 配置并入主 spring.ai 块，见上方；此处仅业务开关）
+rag:
+  vectorstore:
+    # auto: 有 SUPABASE_DB_URL 凭据 → pgvector，否则内存 SimpleVectorStore
+    # pgvector / memory / redis: 强制指定
+    active: auto
 
 # Webhook 共享签名密钥（生产必填；留空则 WebhookService 启动失败）
 webhook:

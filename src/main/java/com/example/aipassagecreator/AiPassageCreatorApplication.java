@@ -1,6 +1,7 @@
 package com.example.aipassagecreator;
 
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
@@ -8,7 +9,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableAspectJAutoProxy(exposeProxy = true)
 @EnableScheduling
-@SpringBootApplication
+@SpringBootApplication(exclude = PgVectorStoreAutoConfiguration.class)
 @MapperScan(basePackages = {"com.example.aipassagecreator.mapper",
         "com.example.aipassagecreator.card"})
 public class AiPassageCreatorApplication {

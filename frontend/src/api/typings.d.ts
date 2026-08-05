@@ -620,6 +620,22 @@ declare namespace API {
     message?: string
   }
 
+  // ── RAG 向量检索 ──
+
+  type RagHit = {
+    refId?: string
+    title?: string
+    content?: string
+    score?: number
+    type?: string
+  }
+
+  type BaseResponseListRagHit = {
+    code?: number
+    data?: RagHit[]
+    message?: string
+  }
+
   // ── Workspace 协作空间 ──
 
   type Workspace = {

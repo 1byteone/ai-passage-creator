@@ -47,6 +47,9 @@ public class ArticleAsyncService {
     @Resource
     private ContentQualityService contentQualityService;
 
+    @Resource
+    private RagService ragService;
+
     /**
      * 异步执行文章生成任务
      *
@@ -78,6 +81,12 @@ public class ArticleAsyncService {
 
             //更新状态为完成
             articleService.updateArticleStatus(taskId, ArticleStatusEnum.COMPLETED,null);
+
+            // RAG 向量索引
+            Article savedArticle = articleService.getByTaskId(taskId);
+            if (savedArticle != null) {
+                ragService.indexArticleAsync(savedArticle);
+            }
 
             //推送完成消息
             sendSseMessage(taskId, SseMessageTypeEnum.ALL_COMPLETE, Map.of("taskId",taskId));
@@ -296,6 +305,12 @@ public class ArticleAsyncService {
 
             // 更新状态为已完成（evaluateViral 要求 COMPLETED 状态）
             articleService.updateArticleStatus(taskId, ArticleStatusEnum.COMPLETED, null);
+
+            // RAG 向量索引：文章完成后异步嵌入向量库（失败静默，不影响主流程）
+            Article savedArticle = articleService.getByTaskId(taskId);
+            if (savedArticle != null) {
+                ragService.indexArticleAsync(savedArticle);
+            }
 
             // VIP/管理员专属爆款评分（必须在 COMPLETED 之后）
             BigDecimal viralScore = null;

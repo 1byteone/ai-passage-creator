@@ -15,6 +15,7 @@ import * as publishController from './publishController'
 import * as analyticsController from './analyticsController'
 import * as adminToolboxController from './adminToolboxController'
 import * as workspaceController from './workspaceController'
+import * as ragController from './ragController'
 export default {
   userController,
   paymentController,
@@ -29,4 +30,5 @@ export default {
   analyticsController,
   adminToolboxController,
   workspaceController,
+  ragController,
 }

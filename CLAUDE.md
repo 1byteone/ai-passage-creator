@@ -56,6 +56,142 @@ AI 驱动的全栈文章创作平台：选题→标题→大纲→内容生成�
 | **Markdown/XSS** | marked 17 + DOMPurify 3.4 | — |
 | **测试** | JUnit 5 + Mockito (后端) / Playwright + Node test (前端) | — |
 
+## 前后端架构图
+
+> **每次大的新功能修改后更新此图**，保持与代码行为一致。
+
+### 分层架构
+
+```
+                    ┌──────────────────────────────────────┐
+                    │         Nginx (80) / Vite (5173)     │
+                    │   SPA: Vue 3 + TypeScript + AntDV4   │
+                    │   Pinia (状态) / Vue Router (路由)    │
+                    └──────────────┬───────────────────────┘
+                                   │ HTTP / SSE
+                    ┌──────────────▼───────────────────────┐
+                    │   Spring Boot 3.5 (port 8567)        │
+                    │   context-path: /api                  │
+                    ├───────────────────────────────────────┤
+                    │ Controller 层 (薄, 仅校验+派发)       │
+                    │ Article / Skill / ApiKey / Approval   │
+                    │ Workspace / Publish / Analytics / RAG │
+                    ├───────────────────────────────────────┤
+                    │   Service 层 (业务逻辑+事务)          │
+                    │   ArticleAsyncService (创作流程)      │
+                    │   SkillExecutionService (技能引擎)    │
+                    │   RagService (向量检索)               │
+                    │   ApprovalService / PublishService    │
+                    ├───────────────────────────────────────┤
+                    │   Mapper 层 (MyBatis-Flex)            │
+                    │   ArticleMapper / SkillExecutionMapper│
+                    │   UserMapper / WorkspaceMemberMapper  │
+                    ├───────────────────────────────────────┤
+                    │   外部服务                             │
+                    │   DashScope AI (Qwen + embedding)     │
+                    │   Agnes AI (OpenAI 兼容, 降级)        │
+                    │   LangSearch (联网搜索)               │
+                    │   腾讯云 COS (存储)                   │
+                    │   Stripe (支付)                       │
+                    │   Supabase pgvector (RAG 向量库)      │
+                    └───────────────────────────────────────┘
+```
+
+### 数据流：文章创作全链路
+
+```
+用户输入选题 ─→ Vue ArticleCreatePage ─→ POST /api/article/create
+                    │
+                    ▼
+        ArticleAsyncService (异步)
+          ├─ agent1: 生成标题 → TitleOption[]
+          ├─ agent2: 生成大纲 → OutlineSection[]
+          ├─ agent3: 生成正文 → Markdown content
+          ├─ 质量门检测 (anti-AI-flavor + auto-detox)
+          ├─ saveArticleContent (落库)
+          ├─ updateStatus(COMPLETED)
+          ├─ RAG indexArticleAsync (向量嵌入)
+          ├─ 爆款评分 (VIP/Admin)
+          └─ SSE: QUALITY_CHECKED → ALL_COMPLETE
+                    │
+                    ▼
+        用户 SSE 流式接收 → 前端渲染完成态
+```
+
+### 数据流：Skill 技能引擎
+
+```
+SkillExecutePage (Vue) ─→ POST /skill/{name}/execute
+                    │
+                    ▼
+        SkillExecutionService (异步)
+          ├─ SkillRegistry: skill.yaml → StateGraph
+          ├─ 每阶段: PromptTemplate → ModelRouter → ChatGPTModel
+          │   ├─ 主模型: agnes-2.5-flash (OpenAI 兼容)
+          │   └─ 降级: dashscope (Qwen)
+          ├─ 工具绑定: webSearch → LangSearch API
+          ├─ HITL 确认: 阶段输出确认 → SSE AWAITING_CONFIRMATION
+          ├─ 完成 → RAG indexSkillAsync (向量嵌入)
+          └─ SSE: skill.started → progress → phase_complete → complete
+                    │
+                    ▼
+        前端流式展示进度 + 结果渲染
+```
+
+### 数据流：RAG 向量检索
+
+```
+文章 COMPLETED ──@Async(ragExecutor)──▶ RagService.indexArticle
+                                          │ TokenTextSplitter 分块(800/200)
+                                          │ DashScope embedding
+                                          ▼
+                                 VectorStore (Supabase pgvector / 内存降级)
+                                          ▲
+Skill SUCCESS ──@Async(ragExecutor)──▶ RagService.indexSkill  │
+                                          │                     │
+文章删除 ───────────────────────────▶ RagService.deleteByTaskId
+                                          │
+前端(相关文章/历史参考) ────────────────▶ RagController.search
+```
+
+### 前端路由表
+
+| 路由 | 页面 | 权限 | 说明 |
+|------|------|------|------|
+| `/` | HomePage | 无 | 营销首页 + 快捷入口 |
+| `/create` | ArticleCreatePage | 需登录 | 创作主流程 |
+| `/article/list` | ArticleListPage | 需登录 | 文章历史列表 |
+| `/article/:taskId` | ArticleDetailPage | 需登录 | 文章详情 + 审批 + 相关文章 |
+| `/article/:taskId/cards` | CardPage | 需登录 | 卡片渲染管理 |
+| `/article/:taskId/publish` | PublishPage | 需登录 | 多平台发布排期 |
+| `/skill` | SkillCenterPage | 无 | 技能中心 |
+| `/skill/:name` | SkillExecutePage | 需登录 | 执行技能 |
+| `/skill/history` | SkillExecutionHistoryPage | 需登录 | 技能执行历史 |
+| `/approval` | ApprovalPage | 需登录 | 审批工作台 |
+| `/analytics` | AnalyticsPage | 需登录 | 分析仪表盘 |
+| `/workspace` | WorkspaceListPage | 需登录 | 协作空间列表 |
+| `/workspace/:id` | WorkspaceDetailPage | 需登录 | 空间详情+成员管理 |
+| `/apikey` | ApiKeyPage | 需登录 | API Key 管理 |
+| `/admin/userManage` | UserManagePage | admin | 用户管理 |
+| `/admin/statistics` | StatisticsPage | admin | 数据统计 |
+| `/admin/toolbox` | ToolboxPage | admin | 熔断器+Webhook 测试 |
+| `/user/login` | UserLoginPage | 无 | 登录 |
+| `/user/register` | UserRegisterPage | 无 | 注册 |
+| `/vip` | VipPage | 需登录 | 会员购买 |
+
+### 关键设计决策
+
+| 决策 | 选择 | 理由 |
+|------|------|------|
+| ORM | MyBatis-Flex | 非 MyBatis-Plus，项目已投资 Flex 生态 |
+| 向量库 | Supabase+pgvector | 托管 Postgres 零运维，pgvector 扩展成熟 |
+| 降级向量库 | 内存 SimpleVectorStore | 无 Supabase 凭据时开发不阻塞 |
+| Embedding | DashScope text-embedding | 复用现有 DASHSCOPE_API_KEY，零额外成本 |
+| 模型主备 | agnes 主 / dashscope 降级 | Agnes 延迟更低，Dashscope 更稳定 |
+| AI 框架 | Spring AI Alibaba StateGraph | 多阶段图编排，支持 HITL+工具调用 |
+| 用户隔离 | 普通用户只能检索自己，admin 全站 | 数据隐私 + 管理需求平衡 |
+| 认证 | Session + Redis | 传统 session 简单可靠，Redis 分布在多实例 |
+
 ---
 
 ## 关键命令

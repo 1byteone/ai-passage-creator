@@ -11,6 +11,7 @@ import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.model.vo.ArticleVO;
 import com.example.aipassagecreator.service.ArticleAgentService;
 import com.example.aipassagecreator.service.QuotaService;
+import com.example.aipassagecreator.service.RagService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,9 @@ class ArticleServiceImplTest {
 
     @Mock
     private ArticleAgentService articleAgentService;
+
+    @Mock
+    private RagService ragService;
 
     @InjectMocks
     private ArticleServiceImpl articleService;

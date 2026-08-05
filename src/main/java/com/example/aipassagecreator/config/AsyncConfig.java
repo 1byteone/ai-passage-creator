@@ -78,4 +78,22 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * RAG 向量索引异步线程池（文章/Skill 完成后 embed + 入向量库，不阻塞主流程）
+     * 队列满时由调用线程同步执行，确保索引不丢失（与 articleExecutor/skillExecutor 一致）
+     */
+    @Bean(name = "ragExecutor")
+    public Executor ragExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("rag-embed-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
+        executor.initialize();
+        return executor;
+    }
 }
