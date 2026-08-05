@@ -13,7 +13,7 @@ type SearchRagFn = (params: {
   query: string
   type?: string
   topK?: number
-}) => Promise<API.BaseResponseListRagHit>
+}) => Promise<{ data: API.BaseResponseListRagHit }>
 
 interface SearchOptions {
   type?: string
