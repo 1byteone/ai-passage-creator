@@ -24,9 +24,11 @@ spring:
     timeout: 2592000
   # Flyway 数据库迁移：生产/本地 schema 由迁移文件管理
   # baseline-on-migrate + baseline-version=0 + V1 全幂等 → 既有手工 SQL 库与全新空库收敛到同一 schema
+  # {vendor} 让 MySQL 专属迁移（db/vendor/mysql/V3 补列）在 MySQL 上执行；
+  # 独立 vendor 目录避免被 db/migration 的递归扫描拉到 H2 上误执行
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    locations: classpath:db/migration,classpath:db/vendor/{vendor}
     baseline-on-migrate: true
     baseline-version: 0
   # Redis 配置
