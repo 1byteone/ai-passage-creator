@@ -15,7 +15,7 @@
     "build-only": "vite build",
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "type-check": "vue-tsc --build",
-    "test:skill": "node --experimental-strip-types --test tests/skill-state.test.ts",
+    "test:skill": "node --experimental-strip-types --test tests/skill-state.test.ts tests/rag-search.test.ts",
     "test:ui": "playwright test",
     "test:performance": "node scripts/check-performance.mjs --mode=smoke",
     "test:performance:release": "node scripts/check-performance.mjs --mode=release",
