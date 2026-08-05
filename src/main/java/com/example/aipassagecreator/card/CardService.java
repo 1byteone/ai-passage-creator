@@ -67,9 +67,10 @@ public class CardService {
                                 String taskId) {
         List<PagePlan> pages = planner.plan(fullContent, mainTitle, subTitle, coverImage,
                 parseImages(imagesJson));
-        injectIllustrationCover(pages, cardStyle, characterStyle, mainTitle);
+        // 预览用静态兜底：不调 AI（最长 180s），保证预览秒回（M2）
+        injectIllustrationCover(pages, cardStyle, characterStyle, mainTitle, false);
         List<PagePlan> previewPages = pages.subList(0, Math.min(2, pages.size()));
-        List<String> htmls = templateEngine.render(previewPages, cardStyle);
+        List<String> htmls = templateEngine.render(previewPages, cardStyle, characterStyle);
         List<PageResult> results = renderPipeline.render(htmls, taskId);
         List<String> urls = new ArrayList<>();
         for (int i = 0; i < results.size(); i++) {
@@ -115,7 +116,8 @@ public class CardService {
         // 1. 分页（含配图）
         List<PagePlan> pages = planner.plan(fullContent, mainTitle, subTitle, coverImage,
                 parseImages(imagesJson));
-        injectIllustrationCover(pages, cardStyle, characterStyle, mainTitle);
+        // 正式生成用 AI 主力（失败熔断静态素材）
+        injectIllustrationCover(pages, cardStyle, characterStyle, mainTitle, true);
 
         // 2. 文本合规（硬门禁）
         ComplianceReport textReport = complianceChecker.textCheck(pages, mainTitle, methodologyName);
@@ -129,7 +131,7 @@ public class CardService {
         }
 
         // 3. 渲染
-        List<String> htmls = templateEngine.render(pages, cardStyle);
+        List<String> htmls = templateEngine.render(pages, cardStyle, characterStyle);
         List<PageResult> results = renderPipeline.render(htmls, taskId);
 
         // 4. 上传 + 持久化（幂等：先删旧卡）。用确定性 COS key + 预签名 URL
@@ -185,21 +187,22 @@ public class CardService {
     }
 
     /**
-     * illustration 风格封面注入：AI 生成（失败熔断静态素材）的插画 URL 覆写封面页 imageUrl。
-     * 由 {@link CardTemplateEngine} 渲染时经 {@link CardImageResolver} 统一转 base64 内联，
-     * 不在此重复转码。非 illustration 风格直接跳过。
+     * illustration 风格封面/角标注入：将同一人物插画 URL 覆写所有页 imageUrl —
+     * 封面页作为主视觉大图，内容页作为右上角角标（设计 7.3 复用封面人物图，零额外 AI 调用）。
+     * <p>URL 来源由 {@code useAi} 决定：正式生成走 AI 主力（失败熔断静态素材），
+     * 预览走静态兜底（确定性、秒回）。由 {@link CardTemplateEngine} 渲染时经
+     * {@link CardImageResolver} 统一转 base64 内联，不在此重复转码。非 illustration 风格直接跳过。</p>
      */
     private void injectIllustrationCover(List<PagePlan> pages, String cardStyle,
-                                         String characterStyle, String mainTitle) {
+                                         String characterStyle, String mainTitle, boolean useAi) {
         if (CardStyle.from(cardStyle) != CardStyle.ILLUSTRATION) {
             return;
         }
         IllustrationCharacterStyle charStyle = IllustrationCharacterStyle.from(characterStyle);
-        String illusUrl = illustrationImageService.generateCoverImage(mainTitle, charStyle);
-        pages.stream()
-                .filter(p -> "COVER".equals(p.getPageType()))
-                .findFirst()
-                .ifPresent(p -> p.setImageUrl(illusUrl));
+        String illusUrl = useAi
+                ? illustrationImageService.generateCoverImage(mainTitle, charStyle)
+                : illustrationImageService.getStaticFallbackUrl(charStyle);
+        pages.forEach(p -> p.setImageUrl(illusUrl));
     }
 
     /**

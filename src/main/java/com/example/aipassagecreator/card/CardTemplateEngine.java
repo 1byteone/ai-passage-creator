@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.card;
 
+import com.example.aipassagecreator.card.illustration.IllustrationCharacterStyle;
 import com.example.aipassagecreator.card.model.PagePlan;
 import org.springframework.stereotype.Component;
 import org.thymeleaf.TemplateEngine;
@@ -32,13 +33,31 @@ public class CardTemplateEngine {
      * 将分页方案渲染为 HTML 列表（每页独立 HTML）。
      * <p>注入变量：{@code title}/{@code content}/{@code contentHtml}/{@code pageNo}/{@code pageType}/
      * {@code imageDataUrl}（该页配图 base64，无图则为空）。</p>
+     * <p>此重载以默认子风格 {@code healing} 委托给 {@link #render(List, String, String)}，
+     * 供非插画风格或无需指定子风格的调用方使用。</p>
      *
      * @param pages 分页方案
      * @param style 卡片风格名，未知或 null 由 {@link CardStyle#from} 回退默认
      * @return 每页渲染后的 HTML
      */
     public List<String> render(List<PagePlan> pages, String style) {
+        return render(pages, style, "healing");
+    }
+
+    /**
+     * 将分页方案渲染为 HTML 列表（每页独立 HTML）。
+     * <p>在 {@link #render(List, String)} 基础上额外注入 {@code characterStyle}（插画子风格，
+     * 经 {@link IllustrationCharacterStyle#from} 归一化，未知/null 回退 healing）。
+     * 非插画模板不使用该变量，注入无副作用。</p>
+     *
+     * @param pages 分页方案
+     * @param style 卡片风格名，未知或 null 由 {@link CardStyle#from} 回退默认
+     * @param characterStyle 插画子风格（healing/cute/doodle/watercolor），非插画模板可传 null
+     * @return 每页渲染后的 HTML
+     */
+    public List<String> render(List<PagePlan> pages, String style, String characterStyle) {
         String template = "cards/" + resolveStyle(style).getName();
+        String normalizedCharStyle = IllustrationCharacterStyle.from(characterStyle).getName();
         return pages.stream().map(page -> {
             Context ctx = new Context();
             ctx.setVariable("title", page.getTitle());
@@ -52,6 +71,8 @@ public class CardTemplateEngine {
             ctx.setVariable("contentHtml", html);
             ctx.setVariable("pageNo", page.getPageNo());
             ctx.setVariable("pageType", page.getPageType());
+            // 插画子风格：模板据此切换色板（设计 6.3），归一化后值域为枚举白名单
+            ctx.setVariable("characterStyle", normalizedCharStyle);
             // 配图 base64（方案 A：下载内联，避免标准管线禁网导致远程图加载失败）
             ctx.setVariable("imageDataUrl", imageResolver.toDataUrl(page.getImageUrl()));
             return templateEngine.process(template, ctx);

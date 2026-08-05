@@ -48,4 +48,16 @@ class IllustrationImageServiceTest {
         String url = service.generateCoverImage("标题", IllustrationCharacterStyle.HEALING);
         assertEquals("classpath:illustration/healing/healing-1.png", url);
     }
+
+    @Test
+    void getStaticFallbackUrl_returnsStaticUrl_withoutAiCall() {
+        org.mockito.Mockito.when(staticLib.getUrl(IllustrationCharacterStyle.CUTE))
+                .thenReturn("classpath:illustration/cute/cute-1.png");
+
+        String url = service.getStaticFallbackUrl(IllustrationCharacterStyle.CUTE);
+
+        assertEquals("classpath:illustration/cute/cute-1.png", url);
+        org.mockito.Mockito.verify(agnes, org.mockito.Mockito.never())
+                .searchImage(org.mockito.ArgumentMatchers.anyString());
+    }
 }

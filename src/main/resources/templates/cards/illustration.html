@@ -39,18 +39,59 @@
   .card-content strong { color: #D4956A; }
   .card-page-num { position: absolute; bottom: 52px; right: 80px; font-size: 26px;
     color: #C4A882; font-weight: 600; }
+
+  /* ── 子风格色板（设计 6.3）：healing 为默认，其余子风格覆盖背景/标题/强调色 ── */
+  body.palette-cute       { background: #FFF8F0; }
+  body.palette-doodle     { background: #FFF8F0; }
+  body.palette-watercolor { background: #F5F1E8; }
+
+  .card-page.palette-cute { box-shadow: 0 8px 32px rgba(224, 123, 107, 0.15); }
+  .card-page.palette-cute .cover-title,
+  .card-page.palette-cute .cover-subtitle,
+  .card-page.palette-cute .page-title,
+  .card-page.palette-cute .card-content h1,
+  .card-page.palette-cute .card-content h2,
+  .card-page.palette-cute .card-content h3 { color: #2D2D2D; }
+  .card-page.palette-cute .page-title { border-bottom-color: #E07B6B; }
+  .card-page.palette-cute .card-content strong,
+  .card-page.palette-cute .cover-hint,
+  .card-page.palette-cute .card-page-num { color: #E07B6B; }
+
+  .card-page.palette-doodle { box-shadow: 0 8px 32px rgba(123, 184, 154, 0.15); }
+  .card-page.palette-doodle .cover-title,
+  .card-page.palette-doodle .cover-subtitle,
+  .card-page.palette-doodle .page-title,
+  .card-page.palette-doodle .card-content h1,
+  .card-page.palette-doodle .card-content h2,
+  .card-page.palette-doodle .card-content h3 { color: #2D1F14; }
+  .card-page.palette-doodle .page-title { border-bottom-color: #7BB89A; }
+  .card-page.palette-doodle .card-content strong,
+  .card-page.palette-doodle .cover-hint,
+  .card-page.palette-doodle .card-page-num { color: #7BB89A; }
+
+  .card-page.palette-watercolor { box-shadow: 0 8px 32px rgba(209, 69, 69, 0.15); }
+  .card-page.palette-watercolor .cover-title,
+  .card-page.palette-watercolor .cover-subtitle,
+  .card-page.palette-watercolor .page-title,
+  .card-page.palette-watercolor .card-content h1,
+  .card-page.palette-watercolor .card-content h2,
+  .card-page.palette-watercolor .card-content h3 { color: #1A1A1A; }
+  .card-page.palette-watercolor .page-title { border-bottom-color: #D14545; }
+  .card-page.palette-watercolor .card-content strong,
+  .card-page.palette-watercolor .cover-hint,
+  .card-page.palette-watercolor .card-page-num { color: #D14545; }
 </style>
 </head>
-<body>
+<body th:classappend="${'palette-' + characterStyle}">
 <!-- 封面页：人物插画大图 + 主标题 + 副标题，图下文字叠放 -->
-<div th:if="${pageType == 'COVER'}" class="card-page cover-layout">
+<div th:if="${pageType == 'COVER'}" class="card-page cover-layout" th:classappend="${'palette-' + characterStyle}">
   <img th:if="${imageDataUrl}" th:src="${imageDataUrl}" class="cover-image" alt="封面插画" />
   <div class="cover-title" th:text="${title}">主标题</div>
   <div class="cover-subtitle" th:if="${content}" th:text="${content}">副标题</div>
   <div class="cover-hint">⬇ 上下滑动阅读</div>
 </div>
 <!-- 内容页：右上角人物角标 + 章节标题 + 正文 HTML（pageType 为 null/非 COVER 均按内容页渲染） -->
-<div th:unless="${pageType == 'COVER'}" class="card-page content-page">
+<div th:unless="${pageType == 'COVER'}" class="card-page content-page" th:classappend="${'palette-' + characterStyle}">
   <img th:if="${imageDataUrl}" th:src="${imageDataUrl}" class="content-icon" alt="插画角标" />
   <div th:if="${title}" class="page-title" th:text="${title}">章节标题</div>
   <div class="card-content" th:utext="${contentHtml}">正文</div>

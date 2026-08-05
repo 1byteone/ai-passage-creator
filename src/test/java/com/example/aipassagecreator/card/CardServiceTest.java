@@ -70,7 +70,7 @@ class CardServiceTest {
     void preview_usesIsolatedCosKey() {
         List<PagePlan> pages = threePages();
         when(planner.plan(any(), any(), any(), any(), any())).thenReturn(pages);
-        when(templateEngine.render(any(), any())).thenReturn(List.of("<h1>1</h1>", "<h1>2</h1>"));
+        when(templateEngine.render(any(), any(), any())).thenReturn(List.of("<h1>1</h1>", "<h1>2</h1>"));
         when(renderPipeline.render(any(), eq(TASK_ID))).thenReturn(List.of(okResult(), okResult()));
         when(cosService.generatePresignedUrl(any())).thenReturn("http://presigned/preview.png");
 
@@ -87,7 +87,7 @@ class CardServiceTest {
     void generate_usesBaseCosKey() {
         List<PagePlan> pages = threePages();
         when(planner.plan(any(), any(), any(), any(), any())).thenReturn(pages);
-        when(templateEngine.render(any(), any())).thenReturn(List.of("<h1>1</h1>", "<h1>2</h1>", "<h1>3</h1>"));
+        when(templateEngine.render(any(), any(), any())).thenReturn(List.of("<h1>1</h1>", "<h1>2</h1>", "<h1>3</h1>"));
         when(renderPipeline.render(any(), eq(TASK_ID)))
                 .thenReturn(List.of(okResult(), okResult(), okResult()));
         when(complianceChecker.textCheck(any(), any(), any())).thenReturn(
