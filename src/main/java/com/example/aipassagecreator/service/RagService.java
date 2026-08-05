@@ -132,6 +132,51 @@ public class RagService {
                 .toList();
     }
 
+    /**
+     * 外部文档 → 分块嵌入入向量库（metadata: type=document/title/source）。
+     * <p>全站共享知识库：不存 userId，所有登录用户可检索。按 source 幂等
+     * （重复上传同 source 先清旧向量再插入，避免累积）。</p>
+     */
+    public void indexDocument(String title, String source, String text) {
+        if (text == null || text.isBlank()) {
+            return;
+        }
+        // 幂等：按 source 清旧向量（失败仅告警，不阻断插入）
+        if (source != null && !source.isBlank()) {
+            deleteBySource(source);
+        }
+        if (text.length() > 30000) {
+            text = text.substring(0, 30000);
+        }
+        List<Document> docs = new ArrayList<>();
+        for (Document chunkDoc : splitter.split(new Document(text))) {
+            String chunk = chunkDoc.getText();
+            Map<String, Object> metadata = Map.of(
+                    "type", "document",
+                    "title", title == null ? "" : title,
+                    "source", source == null ? "" : source);
+            docs.add(new Document(chunk, metadata));
+        }
+        if (!docs.isEmpty()) {
+            vectorStore.add(docs);
+            log.info("RAG 已索引文档: title={}, chunks={}", title, docs.size());
+        }
+    }
+
+    /** 按 source 删除文档向量（幂等清理，供文档覆盖/删除用） */
+    public void deleteBySource(String source) {
+        if (source == null || source.isBlank()) {
+            return;
+        }
+        try {
+            Filter.Expression filter = new FilterExpressionBuilder().eq("source", source).build();
+            vectorStore.delete(filter);
+            log.info("RAG 已删除文档向量: source={}", source);
+        } catch (Exception e) {
+            log.warn("RAG 删除文档向量失败: source={}, err={}", source, e.getMessage());
+        }
+    }
+
     /** 异步索引入口（供文章/Skill 完成点调用，失败静默不影响主流程） */
     @Async("ragExecutor")
     public void indexArticleAsync(Article article) {
@@ -187,24 +232,35 @@ public class RagService {
     }
 
     /**
-     * 构建过滤表达式（编程式 FilterExpressionBuilder，避免字符串拼接注入风险）
-     * type 与 userId 均为值传递而非拼接，不受注入影响。
+     * 构建过滤表达式（编程式 FilterExpressionBuilder，避免字符串拼接注入风险）。
+     * <p>隔离语义：
+     * <ul>
+     *   <li>admin（userId=null）：type 指定则只查该类型，否则全站（含 document）</li>
+     *   <li>普通用户：个人内容（userId=me，type 指定则叠加）<b>OR</b> 共享文档（type=document）——
+     *       保证普通用户检索自己的文章时也能命中全站共享知识库</li>
+     * </ul></p>
      */
     private Filter.Expression buildFilter(String type, Long userId) {
         FilterExpressionBuilder b = new FilterExpressionBuilder();
-        FilterExpressionBuilder.Op expr = null;
+        if (userId == null) {
+            // admin：type 指定则过滤 type，否则全站
+            return type != null && !type.isBlank() ? b.eq("type", type).build() : null;
+        }
+        // 普通用户：个人内容（userId=me [且 type 匹配]） OR 共享文档（type=document）
+        FilterExpressionBuilder.Op mine = b.eq("userId", userId);
         if (type != null && !type.isBlank()) {
-            expr = b.eq("type", type);
+            mine = b.and(mine, b.eq("type", type));
         }
-        if (userId != null) {
-            FilterExpressionBuilder.Op uidExpr = b.eq("userId", userId);
-            expr = (expr == null) ? uidExpr : b.and(expr, uidExpr);
-        }
-        return expr == null ? null : expr.build();
+        FilterExpressionBuilder.Op shared = b.eq("type", "document");
+        return b.or(mine, shared).build();
     }
 
     private String refIdOf(Document doc) {
         Object id = doc.getMetadata().getOrDefault("taskId", doc.getMetadata().get("executionId"));
+        // document 类型无 taskId/executionId，用 source 兜底（前端跳转不显示空串）
+        if (id == null) {
+            id = doc.getMetadata().get("source");
+        }
         return id == null ? "" : String.valueOf(id);
     }
 

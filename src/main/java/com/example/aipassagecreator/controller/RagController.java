@@ -39,12 +39,20 @@ public class RagController {
     @Data
     public static class RagSearchRequest {
         private String query;
-        private String type;      // article | skill，可选
+        private String type;      // article | skill | document，可选
         private Integer topK;     // 1-20，默认 5
     }
 
+    /** 文档上传请求（admin 专属，全站共享知识库） */
+    @Data
+    public static class RagDocumentRequest {
+        private String title;     // 文档标题（检索展示）
+        private String source;    // 来源标识（幂等键，重复上传覆盖）
+        private String text;      // 文档正文（≥1 字符，索引前按 30000 截断）
+    }
+
     /** 允许的 type 值（白名单，防注入/跨租户泄漏） */
-    private static final java.util.Set<String> ALLOWED_TYPES = java.util.Set.of("article", "skill");
+    private static final java.util.Set<String> ALLOWED_TYPES = java.util.Set.of("article", "skill", "document");
 
     @PostMapping("/search")
     @Operation(summary = "向量语义检索（文章/Skill）")
@@ -56,8 +64,22 @@ public class RagController {
         boolean isAdmin = UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole());
         Long userId = isAdmin ? null : loginUser.getId();
         int topK = request.getTopK() == null ? 5 : request.getTopK();
-        // type 白名单过滤（非 article/skill 的传参视为 null，由 FilterExpressionBuilder 安全处理）
+        // type 白名单过滤（非 article/skill/document 的传参视为 null，由 FilterExpressionBuilder 安全处理）
         String type = ALLOWED_TYPES.contains(request.getType()) ? request.getType() : null;
         return ResultUtils.success(ragService.search(request.getQuery(), type, userId, topK));
+    }
+
+    /**
+     * 上传文档入知识库（仅 admin）— 全站共享，按 source 幂等
+     */
+    @PostMapping("/document")
+    @Operation(summary = "上传文档到共享知识库（仅管理员）")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<?> uploadDocument(@RequestBody RagDocumentRequest request) {
+        if (request == null || request.getText() == null || request.getText().isBlank()) {
+            return ResultUtils.error(com.example.aipassagecreator.exception.ErrorCode.PARAMS_ERROR, "文档内容不能为空");
+        }
+        ragService.indexDocument(request.getTitle(), request.getSource(), request.getText());
+        return ResultUtils.success(true);
     }
 }
