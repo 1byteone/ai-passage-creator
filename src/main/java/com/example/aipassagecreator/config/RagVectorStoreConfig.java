@@ -86,10 +86,20 @@ public class RagVectorStoreConfig {
     private DataSource buildPostgresDataSource(String url, String user, String password) {
         DriverManagerDataSource ds = new DriverManagerDataSource();
         ds.setDriverClassName(PG_DRIVER);
-        ds.setUrl(url);
+        // prepareThreshold=0: 禁用服务端 prepared statement。
+        // Supabase Supavisor(pooler) transaction mode 不支持服务端 prepared statement 缓存，
+        // 默认阈值 5 会在长连接复用时报 "prepared statement S_1 already exists"，导致批量插入失败。
+        ds.setUrl(appendUrlParam(url, "prepareThreshold", "0"));
         ds.setUsername(user);
         ds.setPassword(password);
         return ds;
+    }
+
+    /** 给 JDBC URL 追加参数（已有 query 用 & 分隔，否则用 ?） */
+    private String appendUrlParam(String url, String key, String value) {
+        if (url == null || url.isBlank()) return url;
+        String sep = url.contains("?") ? "&" : "?";
+        return url + sep + key + "=" + value;
     }
 
     /** 脱敏 URL（隐藏密码/密钥段）便于日志 */

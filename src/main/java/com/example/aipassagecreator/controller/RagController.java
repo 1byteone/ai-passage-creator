@@ -64,8 +64,9 @@ public class RagController {
         boolean isAdmin = UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole());
         Long userId = isAdmin ? null : loginUser.getId();
         int topK = request.getTopK() == null ? 5 : request.getTopK();
-        // type 白名单过滤（非 article/skill/document 的传参视为 null，由 FilterExpressionBuilder 安全处理）
-        String type = ALLOWED_TYPES.contains(request.getType()) ? request.getType() : null;
+        // type 白名单过滤（null/非白名单值视为 null，由 FilterExpressionBuilder 安全处理；
+        // 注意 Set.of().contains(null) 会 NPE，须先判空）
+        String type = request.getType() != null && ALLOWED_TYPES.contains(request.getType()) ? request.getType() : null;
         return ResultUtils.success(ragService.search(request.getQuery(), type, userId, topK));
     }
 
