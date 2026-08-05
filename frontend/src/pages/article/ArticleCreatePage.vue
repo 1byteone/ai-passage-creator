@@ -416,6 +416,21 @@
           </div>
         </div>
 
+        <!-- 历史参考 -->
+        <div v-if="currentPhase === 'INPUT'" class="panel-section">
+          <h4 class="panel-title">
+            <HistoryOutlined />
+            历史参考
+          </h4>
+          <RagHitsPanel
+            :hits="ragHits"
+            :loading="ragLoading"
+            :no-input="!topic.trim()"
+            empty-text="暂无相关历史，换个选题试试"
+            @select="handleSelectReference"
+          />
+        </div>
+
         <!-- 创作技巧 -->
         <div v-if="currentPhase === 'INPUT'" class="panel-section">
           <h4 class="panel-title">
@@ -644,7 +659,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onBeforeUnmount, onMounted, nextTick, computed } from 'vue'
+import { ref, watch, onBeforeUnmount, onMounted, nextTick, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   Alert as AAlert,
@@ -677,9 +692,12 @@ import {
   WarningOutlined,
   CrownOutlined,
   FileTextOutlined,
+  HistoryOutlined,
   ReloadOutlined
 } from '@ant-design/icons-vue'
 import { createArticle, confirmTitle, confirmOutline } from '@/api/articleController'
+import RagHitsPanel from '@/components/RagHitsPanel.vue'
+import { useRagSearch } from '@/composables/useRagSearch'
 import { getRecommendedTopics } from '@/api/topicRecommendController'
 import { connectSSE, closeSSE, type SSEMessage, type SSEConnection } from '@/utils/sse'
 import { isAdmin as checkIsAdmin, isVip as checkIsVip, hasQuota as checkHasQuota } from '@/utils/permission'
@@ -691,6 +709,9 @@ import CompletedState from './components/CompletedState.vue'
 const router = useRouter()
 const route = useRoute()
 const loginUserStore = useLoginUserStore()
+
+// 历史参考：选题实时 RAG 检索（防抖 500ms）
+const { hits: ragHits, loading: ragLoading, search: ragSearch, clear: ragClear } = useRagSearch({ debounceMs: 500 })
 
 // 配额相关计算属性
 const isAdmin = computed(() => checkIsAdmin(loginUserStore.loginUser))
@@ -1180,8 +1201,17 @@ const viewArticle = () => {
   router.push(`/article/${taskId.value}`)
 }
 
+// 历史参考：套用选题（填入选题框，可编辑后走正常流程）
+const handleSelectReference = (hit: API.RagHit) => {
+  if (hit.title) {
+    topic.value = hit.title
+    message.info('已套用历史标题，可编辑后开始创作')
+  }
+}
+
 // 重新创作
 const resetCreate = () => {
+  ragClear()
   closeSSE(eventSource)
   eventSource = null
   currentPhase.value = 'INPUT'
@@ -1208,6 +1238,16 @@ const resetCreate = () => {
     images: [],
   }
 }
+
+// 历史参考：选题输入防抖检索，仅在 INPUT 阶段触发
+watch(topic, (val) => {
+  if (currentPhase.value !== 'INPUT') return
+  if (!val.trim()) {
+    ragClear()
+    return
+  }
+  ragSearch(val, { type: 'article', topK: 5 })
+})
 
 // 组件挂载时检查路由参数
 onMounted(() => {
