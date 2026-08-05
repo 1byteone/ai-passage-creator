@@ -782,4 +782,20 @@ declare namespace API {
     data?: PageApiKeyVO
     message?: string
   }
+
+  type BaseResponseTopicRecommendVO = {
+    code?: number
+    data?: TopicRecommendVO
+    message?: string
+  }
+
+  type TopicRecommendVO = {
+    items?: TopicRecommendItem[]
+    hasAi?: boolean
+  }
+
+  type TopicRecommendItem = {
+    text?: string
+    source?: string
+  }
 }

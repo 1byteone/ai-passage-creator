@@ -381,20 +381,37 @@
           </div>
         </div>
 
-        <!-- 热门选题 -->
+        <!-- 推荐选题（平台热门 + 用户历史 + AI 生成） -->
         <div v-if="currentPhase === 'INPUT'" class="panel-section">
-          <h4 class="panel-title">
-            <BulbOutlined />
-            热门选题
-          </h4>
-          <div class="hot-tags">
+          <div class="panel-header-row">
+            <h4 class="panel-title">
+              <BulbOutlined />
+              推荐选题
+            </h4>
+            <a-button
+              size="small"
+              type="text"
+              :loading="recommendRefreshing"
+              class="refresh-btn"
+              @click="loadRecommendedTopics(true)"
+            >
+              <template #icon><ReloadOutlined /></template>
+              换一批
+            </a-button>
+          </div>
+          <div v-if="recommendLoading && exampleTopics.length === 0" class="hot-tags-loading">
+            <a-spin size="small" />
+            <span>选题加载中...</span>
+          </div>
+          <div v-else class="hot-tags">
             <span
               v-for="example in exampleTopics"
               :key="example"
-              class="hot-tag"
+              :class="['hot-tag', { 'ai-tag': isAiTopic(example) }]"
               @click="topic = example"
             >
               {{ example }}
+              <em v-if="isAiTopic(example)" class="ai-badge">热点</em>
             </span>
           </div>
         </div>
@@ -659,9 +676,11 @@ import {
   PictureOutlined,
   WarningOutlined,
   CrownOutlined,
-  FileTextOutlined
+  FileTextOutlined,
+  ReloadOutlined
 } from '@ant-design/icons-vue'
 import { createArticle, confirmTitle, confirmOutline } from '@/api/articleController'
+import { getRecommendedTopics } from '@/api/topicRecommendController'
 import { connectSSE, closeSSE, type SSEMessage, type SSEConnection } from '@/utils/sse'
 import { isAdmin as checkIsAdmin, isVip as checkIsVip, hasQuota as checkHasQuota } from '@/utils/permission'
 import { markdownToHtml as safeMarkdownToHtml } from '@/utils/markdown'
@@ -689,8 +708,18 @@ const agentSteps = [
   { title: '图文合成', description: '将配图插入正文，完美呈现' },
 ]
 
-// 示例选题
-const exampleTopics = [
+// 推荐选题（动态：平台热门 + 用户历史 + AI 生成）
+const exampleTopics = ref<string[]>([])
+// 推荐选题原始项（含来源标记）
+const recommendItems = ref<API.TopicRecommendItem[]>([])
+// 是否有 AI 生成的新鲜选题
+const hasAiTopics = ref(false)
+// 推荐选题加载中 / 换一批 loading
+const recommendLoading = ref(false)
+const recommendRefreshing = ref(false)
+
+// 静态兜底选题（接口失败时避免空白）
+const FALLBACK_TOPICS = [
   '2026年AI如何改变职场',
   '程序员如何提升竞争力',
   '远程办公的利与弊',
@@ -698,6 +727,35 @@ const exampleTopics = [
   '新能源汽车趋势',
   '健康饮食指南',
 ]
+
+/** 加载推荐选题（refresh=true 触发 AI 动态生成） */
+const loadRecommendedTopics = async (refresh = false) => {
+  const loadingRef = refresh ? recommendRefreshing : recommendLoading
+  loadingRef.value = true
+  try {
+    const res = await getRecommendedTopics({ refresh })
+    const data = res.data?.data
+    const items = data?.items ?? []
+    if (items.length > 0) {
+      recommendItems.value = items
+      exampleTopics.value = items.map((item) => item.text ?? '')
+      hasAiTopics.value = data?.hasAi ?? false
+    }
+  } catch (error) {
+    // 接口失败降级为静态兜底，不阻断创作
+    console.warn('推荐选题加载失败，使用兜底选题:', error)
+    if (recommendItems.value.length === 0) {
+      recommendItems.value = FALLBACK_TOPICS.map((text) => ({ text, source: 'hot' }))
+      exampleTopics.value = [...FALLBACK_TOPICS]
+    }
+  } finally {
+    loadingRef.value = false
+  }
+}
+
+// 判断某选题是否 AI 生成（用于徽标）
+const isAiTopic = (text: string) =>
+  recommendItems.value.find((item) => item.text === text)?.source === 'ai'
 
 // 阶段状态
 const currentPhase = ref<string>('INPUT')  // INPUT, TITLE_SELECTING, OUTLINE_EDITING, CONTENT_GENERATING, COMPLETED
@@ -1156,6 +1214,8 @@ onMounted(() => {
   if (route.query.topic) {
     topic.value = route.query.topic as string
   }
+  // 进入创作页自动加载推荐选题（不触发 AI，零成本）
+  loadRecommendedTopics(false)
 })
 
 // 组件卸载前关闭 SSE
@@ -1920,7 +1980,9 @@ onBeforeUnmount(() => {
 }
 
 .hot-tag {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 8px 12px;
   background: var(--color-background-secondary);
   border: 1px solid var(--color-border);
@@ -1936,6 +1998,52 @@ onBeforeUnmount(() => {
     background: rgba(34, 197, 94, 0.05);
     transform: translateY(-1px);
   }
+}
+
+/* AI 生成选题高亮 */
+.hot-tag.ai-tag {
+  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.ai-badge {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  color: #fff;
+}
+
+/* 面板标题行（标题 + 换一批按钮） */
+.panel-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+
+  .panel-title {
+    margin-bottom: 0;
+  }
+}
+
+.refresh-btn {
+  color: var(--color-text-muted);
+
+  &:hover {
+    color: var(--color-primary);
+  }
+}
+
+.hot-tags-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
 /* 创作技巧 */
