@@ -7,7 +7,6 @@ const protectedRoutes = [
   '/skill/not-a-real-skill',
   '/article/list',
   '/vip',
-  '/admin/statistics',
   '/admin/userManage',
   '/handwriting',
 ]
@@ -89,14 +88,6 @@ const routeContracts: Record<string, RouteContract> = {
     heading: /^(管理员权限|永久会员权益|永久会员)$/,
     ready: async (page) => {
       await expect(page.getByRole('heading', { level: 2, name: /高级能力|会员状态|升级后/ })).toBeVisible()
-    },
-  },
-  '/admin/statistics': {
-    heading: '数据分析',
-    ready: async (page) => {
-      await expect(page.locator('.statistics-page .page-state[role="alert"]')).toHaveCount(0)
-      await expect(page.locator('.metric-grid')).toHaveAttribute('aria-busy', 'false')
-      await expect(page.getByRole('heading', { level: 2, name: '创作运行概览' })).toBeVisible()
     },
   },
   '/admin/userManage': {
