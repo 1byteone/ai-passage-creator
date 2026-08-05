@@ -101,11 +101,6 @@ const router = createRouter({
       component: () => import('@/pages/admin/UserManagePage.vue'),
     },
     {
-      path: '/admin/statistics',
-      name: '数据分析',
-      component: () => import('@/pages/admin/StatisticsPage.vue'),
-    },
-    {
       path: '/admin/toolbox',
       name: '系统工具箱',
       component: () => import('@/pages/admin/ToolboxPage.vue'),
