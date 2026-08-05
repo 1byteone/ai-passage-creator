@@ -54,8 +54,8 @@
   <div class="cover-title" th:text="${title}">标题</div>
   <div class="cover-subtitle" th:if="${content}" th:text="${content}">副标题</div>
 </div>
-<!-- 内容页：章节标题（左色条）+ 正文 HTML + 配图 -->
-<div th:if="${pageType == 'CONTENT'}" class="card-page content-page">
+<!-- 内容页：章节标题（左色条）+ 正文 HTML + 配图（pageType 为 null/非 COVER 均按内容页渲染） -->
+<div th:unless="${pageType == 'COVER'}" class="card-page content-page">
   <div th:if="${title}" class="page-title" th:text="${title}">章节标题</div>
   <img th:if="${imageDataUrl}" th:src="${imageDataUrl}" class="page-image" alt="配图" />
   <div class="card-content" th:utext="${contentHtml}">正文</div>

@@ -43,7 +43,13 @@ public class CardTemplateEngine {
             Context ctx = new Context();
             ctx.setVariable("title", page.getTitle());
             ctx.setVariable("content", page.getContentMd());
-            ctx.setVariable("contentHtml", page.getContentHtml());
+            // 优先 flexmark HTML；为空则回退为纯文本段落，保证模板总能渲染出正文
+            String html = (page.getContentHtml() != null && !page.getContentHtml().isBlank())
+                    ? page.getContentHtml()
+                    : (page.getContentMd() != null
+                        ? "<p>" + escapeHtml(page.getContentMd()).replace("\n", "<br/>") + "</p>"
+                        : "");
+            ctx.setVariable("contentHtml", html);
             ctx.setVariable("pageNo", page.getPageNo());
             ctx.setVariable("pageType", page.getPageType());
             // 配图 base64（方案 A：下载内联，避免标准管线禁网导致远程图加载失败）
@@ -57,5 +63,14 @@ public class CardTemplateEngine {
      */
     private CardStyle resolveStyle(String style) {
         return CardStyle.from(style);
+    }
+
+    /** HTML 转义（用于 contentHtml 为空时的纯文本回退，防 XSS） */
+    private static String escapeHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 }
