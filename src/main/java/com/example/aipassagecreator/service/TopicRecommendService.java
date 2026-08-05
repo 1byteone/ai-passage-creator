@@ -87,7 +87,8 @@ public class TopicRecommendService {
             }
         }
 
-        // 去重（保序） + 截断
+        // 归一化（统一长短） + 去重（保序）
+        items.forEach(i -> i.setText(normalizeTopic(i.getText())));
         List<TopicRecommendVO.Item> deduped = dedupe(items);
 
         return new TopicRecommendVO(deduped, hasAi);
@@ -209,5 +210,53 @@ public class TopicRecommendService {
             }
         }
         return result;
+    }
+
+    /** 推荐选题文本上限（code point 数）。短选题原样保留，长标题截到语义断点。 */
+    private static final int TOPIC_MAX_LEN = 20;
+
+    /** 中文语义断点标点（按优先级），命中处截断语义最完整 */
+    private static final String CN_PUNCT = "。；，、！？…：";
+    /** 西文语义断点标点（按优先级） */
+    private static final String EN_PUNCT = ".,;!? ";
+
+    /**
+     * 归一化选题文本：空白折叠 + 超长按语义断点截断（加省略号）。
+     * <p>三个来源（热门/历史/AI）文本长短差异大，前端标签按内容撑开导致参差不齐；
+     * 统一在此归一化，保证 API 层即输出长度一致的短选题。截断不硬切词——在
+     * [3/4max, max] 区间找标点断点，找不到才兜底硬切。全程按 code point 处理，
+     * 避免截断 emoji/surrogate pair。</p>
+     */
+    private String normalizeTopic(String s) {
+        if (s == null) return "";
+        // 空白折叠：trim + 内部连续空白压缩为单空格（AI 输出可能带换行/缩进）
+        String text = s.trim().replaceAll("\\s+", " ");
+        int count = text.codePointCount(0, text.length());
+        if (count <= TOPIC_MAX_LEN) {
+            return text;
+        }
+        int[] cps = text.codePoints().toArray();
+        int cut = findBreakPoint(cps);
+        return new String(cps, 0, cut) + "…";
+    }
+
+    /**
+     * 在 [3/4*max, max] 区间内找最后一个语义断点（code point 索引）。
+     * 优先中文标点（句读更接近语义边界），其次西文标点/空格。找不到返回 max（兜底硬切）。
+     */
+    private int findBreakPoint(int[] cps) {
+        int max = TOPIC_MAX_LEN;
+        int floor = max * 3 / 4;
+        for (int i = max - 1; i >= floor; i--) {
+            if (CN_PUNCT.indexOf(cps[i]) >= 0) {
+                return i + 1; // 保留标点本身
+            }
+        }
+        for (int i = max - 1; i >= floor; i--) {
+            if (EN_PUNCT.indexOf(cps[i]) >= 0) {
+                return i + 1;
+            }
+        }
+        return max;
     }
 }

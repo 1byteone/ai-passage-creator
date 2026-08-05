@@ -168,4 +168,69 @@ class TopicRecommendServiceTest {
         long count = vo.getItems().stream().filter(i -> "重复选题".equals(i.getText())).count();
         assertEquals(1, count, "重复 topic 应去重");
     }
+
+    // ── 语义截断归一化 ──
+
+    /** 反射调用私有 normalizeTopic（单测语义截断边界，无需走完整 recommend） */
+    private String normalize(String s) {
+        return (String) ReflectionTestUtils.invokeMethod(service, "normalizeTopic", s);
+    }
+
+    @Test
+    @DisplayName("归一化 — 短选题原样保留（含折叠内部空白）")
+    void normalizeTopic_shortText_unchanged() {
+        assertEquals("AI 改变职场", normalize("  AI 改变职场  "));
+        assertEquals("程序员 如何提升竞争力", normalize("程序员\n如何提升竞争力"), "换行应折叠为单空格");
+    }
+
+    @Test
+    @DisplayName("归一化 — 长标题在语义断点截断 + 省略号")
+    void normalizeTopic_longText_cutsAtPunctuation() {
+        // 20 字内没有标点 → 应在 15-20 区间找断点，无标点则兜底 20 处硬切
+        String longNoPunct = "没有标点的一段超长中文标题用来验证兜底硬切";
+        String result = normalize(longNoPunct);
+        assertEquals(20, result.codePointCount(0, result.length() - 1), "省略号前应为 20 个字符");
+        assertTrue(result.endsWith("…"), "超长应加省略号");
+
+        // 含中文标点 → 应保留到最后一个标点
+        String withPunct = "2026年AI如何改变职场，以及程序员应该如何应对，深度思考指南";
+        String r2 = normalize(withPunct);
+        assertTrue(r2.contains("，"), "应保留中文标点断点");
+        assertTrue(r2.endsWith("…"));
+        assertTrue(r2.codePointCount(0, r2.length() - 1) <= 20, "截断后不超过 20 字");
+    }
+
+    @Test
+    @DisplayName("归一化 — emoji 不拆分（code point 边界安全）")
+    void normalizeTopic_emoji_doesNotSplit() {
+        // emoji 是 4 字节 surrogate pair，硬切 UTF-16 会截半 → 应整体保留或整体丢弃，不产生乱码
+        String withEmoji = "AI🚀改变职场提升生产力效率的完整指南与深度思考";
+        String result = normalize(withEmoji);
+        assertFalse(result.contains("�"), "不应出现替换符乱码");
+        assertTrue(result.endsWith("…"), "超长应截断");
+    }
+
+    @Test
+    @DisplayName("归一化 — 三来源长文本都截到 ≤20 字")
+    void recommend_longSources_allNormalized() {
+        String longHot = "一个特别特别长的平台热门选题话题用于测试归一化逻辑";
+        String longHistory = "用户历史中非常长的文章标题讲的是深度思考与长期主义";
+        String longAi = "AI生成的一个完整长标题：2026年如何用大模型提升程序员核心竞争力";
+        when(articleMapper.countTopicsByPopularity(anyInt()))
+                .thenReturn(List.of(hotRow(longHot, 9L)));
+        when(ragService.search(anyString(), eq("article"), any(), anyInt()))
+                .thenReturn(List.of(new RagService.RagHit("t1", longHistory, "c", 0.9, "article")));
+        SkillExecution mockExec = mock(SkillExecution.class);
+        when(skillRegistry.createExecution(eq("topic-gen"), any())).thenReturn(mockExec);
+        when(mockExec.getPersistedOutput())
+                .thenReturn(Map.of("topicOptions", List.of(Map.of("title", longAi))));
+
+        TopicRecommendVO vo = service.recommend(true, normalUser());
+
+        assertFalse(vo.getItems().isEmpty());
+        for (TopicRecommendVO.Item item : vo.getItems()) {
+            assertTrue(item.getText().codePointCount(0, item.getText().length()) <= 21,
+                    "来源 " + item.getSource() + " 截断后不应超过 20 字 + 省略号: " + item.getText());
+        }
+    }
 }
