@@ -7,6 +7,7 @@ import okhttp3.Response;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
+import java.io.InputStream;
 import java.util.Base64;
 
 /**
@@ -84,7 +85,11 @@ public class CardImageResolver {
                 log.warn("卡片配图 classpath 资源不存在: path={}", path);
                 return null;
             }
-            byte[] body = resource.getInputStream().readAllBytes();
+            // try-with-resources: 流用完即关，避免 classpath 兜底每次泄漏一个流直到 GC
+            byte[] body;
+            try (InputStream in = resource.getInputStream()) {
+                body = in.readAllBytes();
+            }
             if (body.length == 0 || body.length > MAX_IMAGE_BYTES) {
                 log.warn("卡片配图大小不合法: path={}, bytes={}", path, body.length);
                 return null;
