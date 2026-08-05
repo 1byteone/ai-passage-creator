@@ -17,7 +17,7 @@
 - 组件：`<script setup lang="ts">`，无 `export default {}`
 - `frontend/src/composables/` 目录尚不存在，Task 1 随文件创建
 - 后端零改动：`/api/rag/search` 已就绪，前端 `searchRag` 已封装，两者均不修改
-- composable 内**必须用相对路径** `../api/ragController` 导入 `searchRag`（`@/` 别名在 Node `--experimental-strip-types` 下不解析，而 composable 需被 node:test 直接 import）
+- composable 内**禁止顶层 import** `../api/ragController`（该文件内部 `import request from '@/request'`，`@/` 别名在 Node `--experimental-strip-types` 下不解析）。默认 `searchFn` 用**运行时 `await import('../api/ragController')`** 惰性加载；测试一律注入 `searchFn` mock，永不触发该 import
 - 提交用 Conventional Commits + `Co-Authored-By: Claude <noreply@anthropic.com>`
 - 前次遗留的 `ArticleAgentOrchestrator.java` 改动**不提交**（不属本计划范围）
 
@@ -31,12 +31,18 @@
 - Modify: `frontend/package.json`（`test:skill` 脚本加入新测试）
 
 **Interfaces:**
-- Consumes: `searchRag` from `../api/ragController`，类型 `API.BaseResponseListRagHit` / `API.RagHit`
+- Consumes: `searchRag` from `../api/ragController`（**运行时动态 import**），返回 `API.BaseResponseListRagHit`（内含 `API.RagHit[]`）
 - Produces:
   ```ts
+  type SearchRagFn = (params: {
+    query: string
+    type?: string
+    topK?: number
+  }) => Promise<API.BaseResponseListRagHit>
+
   useRagSearch(options?: {
     debounceMs?: number
-    searchFn?: typeof searchRag                  // 测试注入 mock，默认真实 searchRag
+    searchFn?: SearchRagFn                              // 测试注入 mock，默认运行时 loadSearchRag()
     lifecycle?: { onBeforeUnmount: (cb: () => void) => void }   // 测试注入空钩子
   }): {
     hits: Ref<API.RagHit[]>       // 已按 refId 去重、降序
@@ -176,20 +182,35 @@
 
   ```ts
   import { computed, onBeforeUnmount, ref, type Ref } from 'vue'
-  // 相对路径导入：Node `--experimental-strip-types` 单测不解析 `@/` 别名，
-  // 而本 composable 需被 node:test 直接 import；Vite 构建同样支持相对路径。
-  import { searchRag as defaultSearchRag } from '../api/ragController'
+  // 注意：不能用顶层 import '../api/ragController' —— 该文件内部 `import request from '@/request'`，
+  // `@/` 别名在 Node `--experimental-strip-types` 下不解析，单测 import 本 composable 即失败。
+  // 默认 searchFn 改为运行时动态 import；测试注入 searchFn 时永远不触发该 import。
 
   interface UseRagSearchOptions {
     debounceMs?: number
-    searchFn?: typeof defaultSearchRag
+    searchFn?: SearchRagFn
     lifecycle?: { onBeforeUnmount: (cb: () => void) => void }
   }
+
+  type SearchRagFn = (params: {
+    query: string
+    type?: string
+    topK?: number
+  }) => Promise<API.BaseResponseListRagHit>
 
   interface SearchOptions {
     type?: string
     topK?: number
     excludeRefId?: string
+  }
+
+  let cachedSearchRag: SearchRagFn | null = null
+  const loadSearchRag = async (): Promise<SearchRagFn> => {
+    if (!cachedSearchRag) {
+      const mod = await import('../api/ragController')
+      cachedSearchRag = mod.searchRag
+    }
+    return cachedSearchRag
   }
 
   const dedupe = (hits: API.RagHit[]): API.RagHit[] => {
@@ -204,7 +225,6 @@
 
   export function useRagSearch(options: UseRagSearchOptions = {}) {
     const debounceMs = options.debounceMs ?? 500
-    const searchFn = options.searchFn ?? defaultSearchRag
     const unmountCb = options.lifecycle?.onBeforeUnmount ?? onBeforeUnmount
 
     const hits = ref<API.RagHit[]>([])
@@ -219,6 +239,7 @@
       const seq = ++fetchSeq
       loading.value = true
       try {
+        const searchFn = options.searchFn ?? (await loadSearchRag())
         const res = await searchFn({ query, type: opts.type, topK: opts.topK })
         if (disposed || seq !== fetchSeq) return
         let list = res.data?.data ?? []
