@@ -9,6 +9,8 @@ export interface SSEMessage {
   fullContent?: string
   imageRequirements?: unknown[]
   images?: API.ImageItem[]
+  // 单张配图完成事件携带的图片数据（后端 ImageResult）
+  image?: { position?: number; url?: string; method?: string; keywords?: string; sectionTitle?: string; description?: string }
   message?: string
   outline?: Array<{
     section: number
