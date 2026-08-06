@@ -16,6 +16,8 @@ import {
   ShareAltOutlined
 } from '@ant-design/icons-vue'
 import { getSkillUiConfig } from '@/config/skill'
+import heroWriting from '@/assets/illustration/hero-writing.png'
+import heroPlants from '@/assets/illustration/hero-plants.png'
 
 const router = useRouter()
 const loginUserStore = useLoginUserStore()
@@ -179,6 +181,19 @@ onBeforeUnmount(() => {
     <!-- Hero Section -->
     <section class="hero-section">
       <div class="hero-bg"></div>
+      <!-- undraw 插画装饰（绿色治愈系） -->
+      <img
+        :src="heroWriting"
+        alt=""
+        aria-hidden="true"
+        class="hero-writing-decoration"
+      />
+      <img
+        :src="heroPlants"
+        alt=""
+        aria-hidden="true"
+        class="hero-plants-decoration"
+      />
       <div class="container">
         <div class="hero-shell">
           <div class="hero-copy">
@@ -455,6 +470,31 @@ onBeforeUnmount(() => {
   bottom: 0;
   background: var(--gradient-hero);
   z-index: 0;
+}
+
+/* undraw 插画装饰（绿色治愈系） */
+.hero-writing-decoration {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  height: 240px;
+  object-fit: contain;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero-plants-decoration {
+  position: absolute;
+  left: -40px;
+  bottom: -60px;
+  width: 260px;
+  height: 260px;
+  object-fit: contain;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .container {
@@ -1391,6 +1431,18 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .hero-section {
     padding: 48px 16px 44px;
+  }
+
+  /* 移动端：隐藏主插画，缩小副插画 */
+  .hero-writing-decoration {
+    display: none;
+  }
+
+  .hero-plants-decoration {
+    width: 140px;
+    height: 140px;
+    left: -30px;
+    bottom: -40px;
   }
 
   .hero-title {

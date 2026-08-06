@@ -88,15 +88,16 @@
         </div>
 
         <div v-else-if="!visibleRecords.length" class="page-state">
-          <a-empty :description="emptyDescription">
+          <IllustrationEmpty :description="emptyDescription">
             <a-button v-if="hasFilters" @click="clearFilters">清除筛选</a-button>
             <a-button v-else type="primary" @click="goToCreate">创作第一篇文章</a-button>
-          </a-empty>
+          </IllustrationEmpty>
         </div>
 
         <template v-else>
           <div class="desktop-table">
             <a-table
+              v-page-size-label
               :columns="columns"
               :data-source="visibleRecords"
               :loading="loading"
@@ -138,6 +139,7 @@
             </article>
 
             <a-pagination
+              v-page-size-label
               v-model:current="pagination.current"
               :page-size="pagination.pageSize"
               :total="pagination.total"
@@ -178,10 +180,30 @@ import {
 import dayjs, { type Dayjs } from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import StatusBadge from '@/components/StatusBadge.vue'
+import IllustrationEmpty from '@/components/IllustrationEmpty.vue'
 import { deleteArticle as deleteArticleApi, getArticle, listArticle } from '@/api/articleController'
 import { exportAsMarkdown } from '@/utils/article'
 
 dayjs.locale('zh-cn')
+
+// a-table 内置分页 / simple 分页的输入控件（size-changer Select、quick-jumper、simple-pager）无原生
+// aria-label，指令在渲染后补齐，供屏幕阅读器识别（与 UserManagePage 等页面的 v-page-size-label 同模式）
+const labelPaginationControls = (element: HTMLElement) => {
+  element
+    .querySelector<HTMLElement>('.ant-pagination-options-size-changer [role="combobox"]')
+    ?.setAttribute('aria-label', '每页显示数量')
+  element
+    .querySelector<HTMLElement>('.ant-pagination-options-quick-jumper input')
+    ?.setAttribute('aria-label', '跳转到指定页')
+  element
+    .querySelector<HTMLElement>('.ant-pagination-simple-pager input')
+    ?.setAttribute('aria-label', '跳转到指定页')
+}
+
+const vPageSizeLabel = {
+  mounted: labelPaginationControls,
+  updated: labelPaginationControls,
+}
 
 const router = useRouter()
 const searchKeyword = ref('')

@@ -47,7 +47,7 @@
         </template>
       </a-result>
 
-      <a-empty
+      <IllustrationEmpty
         v-else-if="!articles.length"
         class="empty-state"
         :description="activeTab === 'pending' ? '当前没有待审核的文章' : '还没有提交过审批'"
@@ -123,6 +123,7 @@ import { listArticle } from '@/api/articleController'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { formatDateTime } from '@/utils/date'
 import type { OperationNotice } from '@/types/operationNotice'
+import IllustrationEmpty from '@/components/IllustrationEmpty.vue'
 
 const loginUserStore = useLoginUserStore()
 const isAdmin = computed(() => loginUserStore.loginUser.userRole === 'admin')

@@ -136,13 +136,13 @@
         @close="loadError = ''"
       />
 
-      <a-empty
+      <IllustrationEmpty
         v-else-if="!cards.length"
         class="empty-state"
         description="还没有生成卡片"
       >
         <span class="empty-hint">点击「预览」免费查看效果，或「生成全部卡片」开始渲染</span>
-      </a-empty>
+      </IllustrationEmpty>
 
       <template v-else>
         <div class="card-gallery">
@@ -210,6 +210,7 @@ import {
 import { previewCards, generateCards, getCards } from '@/api/cardController'
 import { getArticle } from '@/api/articleController'
 import type { OperationNotice } from '@/types/operationNotice'
+import IllustrationEmpty from '@/components/IllustrationEmpty.vue'
 
 const route = useRoute()
 

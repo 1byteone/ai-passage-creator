@@ -19,12 +19,20 @@
         <li><CheckCircleOutlined /><span>确认文章结构后生成正文</span></li>
         <li><CheckCircleOutlined /><span>自动配图并保留历史成果</span></li>
       </ul>
+      <!-- undraw 插画（绿色治愈系） -->
+      <img
+        :src="authHome"
+        alt="欢迎回来"
+        class="auth-brand-illustration"
+        decoding="async"
+      />
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
 import { CheckCircleOutlined } from '@ant-design/icons-vue'
+import authHome from '@/assets/illustration/auth-home.png'
 </script>
 
 <style scoped>
@@ -116,6 +124,16 @@ import { CheckCircleOutlined } from '@ant-design/icons-vue'
   flex: 0 0 auto;
   color: var(--color-primary-light);
   font-size: 16px;
+}
+
+/* undraw 插画（绿色治愈系） */
+.auth-brand-illustration {
+  width: 100%;
+  max-width: 320px;
+  margin: 24px auto 0;
+  display: block;
+  object-fit: contain;
+  opacity: 0.9;
 }
 
 @media (max-width: 768px) {
