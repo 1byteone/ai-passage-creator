@@ -106,7 +106,18 @@
               @change="handleTableChange"
             >
               <template #bodyCell="{ column, record }">
-                <template v-if="column.key === 'title'">
+                <template v-if="column.key === 'cover'">
+                  <img
+                    v-if="record.coverImage"
+                    :src="record.coverImage"
+                    class="cover-thumb"
+                    alt="封面"
+                  />
+                  <div v-else class="cover-placeholder">
+                    <PictureOutlined />
+                  </div>
+                </template>
+                <template v-else-if="column.key === 'title'">
                   <button class="title-cell" type="button" @click="viewArticle(record)">
                     <strong>{{ record.mainTitle || record.topic || '未命名文章' }}</strong>
                     <span>{{ record.subTitle || record.topic || '暂无副标题' }}</span>
@@ -169,10 +180,12 @@ import {
   message,
 } from 'ant-design-vue'
 import {
+  CopyOutlined,
   DeleteOutlined,
   DownloadOutlined,
   EyeOutlined,
   FilterOutlined,
+  PictureOutlined,
   PlusOutlined,
   RedoOutlined,
   SearchOutlined,
@@ -225,10 +238,11 @@ const pagination = ref({
 })
 
 const columns = [
+  { title: '封面', key: 'cover', width: 110 },
   { title: '文章', key: 'title' },
   { title: '状态', key: 'status', width: 112 },
   { title: '创建时间', key: 'createTime', width: 168 },
-  { title: '操作', key: 'action', width: 250 },
+  { title: '操作', key: 'action', width: 280 },
 ]
 
 const hasLocalFilters = computed(() => Boolean(searchKeyword.value || dateRange.value))
@@ -319,6 +333,23 @@ const clearFilters = () => {
 const viewArticle = (record: API.ArticleVO) => {
   if (record.taskId) router.push(`/article/${record.taskId}`)
 }
+// ArticleVO 类型未声明创作参数列，但列表行可能携带这些字段（与 ArticleCreateRequest 对应）。
+// 这里只传非空项，避免空字符串覆盖创作页的默认值
+type ArticleWithCreateParams = API.ArticleVO & {
+  style?: string
+  methodology?: string
+  characterStyle?: string
+  enabledImageMethods?: string[]
+}
+const recreateArticle = (record: ArticleWithCreateParams) => {
+  const query: Record<string, string> = {}
+  if (record.topic) query.topic = record.topic
+  if (record.style) query.style = record.style
+  if (record.methodology && record.methodology !== 'default') query.methodology = record.methodology
+  if (record.characterStyle) query.characterStyle = record.characterStyle
+  if (record.enabledImageMethods) query.imageMethods = record.enabledImageMethods.join(',')
+  router.push({ path: '/create', query })
+}
 const goToCreate = () => router.push('/create')
 const formatDate = (date?: string) => (date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '时间未知')
 
@@ -381,6 +412,13 @@ const ArticleActions = defineComponent({
           { type: 'link', size: 'small', onClick: () => viewArticle(props.record) },
           { icon: () => h(EyeOutlined), default: () => '查看' },
         ),
+        props.record.status === 'COMPLETED'
+          ? h(
+              Button,
+              { type: 'link', size: 'small', onClick: () => recreateArticle(props.record) },
+              { icon: () => h(CopyOutlined), default: () => '再创作' },
+            )
+          : null,
         props.record.status === 'FAILED'
           ? h(
               Button,
@@ -715,5 +753,25 @@ time {
     align-items: flex-start;
     flex-direction: column;
   }
+}
+
+.cover-thumb {
+  width: 80px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--color-border);
+  display: block;
+}
+
+.cover-placeholder {
+  width: 80px;
+  height: 48px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-background-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-disabled, #d1d5db);
 }
 </style>
