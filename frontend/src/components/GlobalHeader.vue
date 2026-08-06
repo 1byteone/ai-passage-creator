@@ -43,6 +43,8 @@
 
       <!-- 右侧：用户操作区域 -->
       <div class="header-right">
+        <!-- 主题切换 -->
+        <ThemeSwitcher class="header-theme-switcher" />
         <div v-if="loginUserStore.loginUser.id" class="user-dropdown">
           <!-- VIP 标识 -->
           <RouterLink v-if="!isVip" to="/vip" class="upgrade-vip-btn">
@@ -114,6 +116,7 @@ import {
 } from '@ant-design/icons-vue'
 import { isVip as checkIsVip } from '@/utils/permission'
 import { getAvatar } from '@/utils/avatar'
+import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 
 const loginUserStore = useLoginUserStore()
 const router = useRouter()
@@ -421,6 +424,10 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.header-theme-switcher {
+  flex-shrink: 0;
 }
 
 .user-dropdown {

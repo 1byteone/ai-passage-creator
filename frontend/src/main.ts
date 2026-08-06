@@ -6,11 +6,15 @@ import router from './router'
 
 import 'ant-design-vue/dist/reset.css'
 import '@/styles/variables.css'
+import '@/styles/themes/index.css'
 import '@/styles/common.css'
 
 import '@/access'
+import { initTheme } from '@/composables/useTheme'
 
 const app = createApp(App)
+// 应用持久化主题（data-theme 需在组件渲染前设置，避免首帧闪烁）
+initTheme()
 const asyncAntComponents: Record<string, () => Promise<Component>> = {
   AAvatar: () => import('ant-design-vue/es/avatar').then((module) => module.default),
   AButton: () => import('ant-design-vue/es/button').then((module) => module.default),

@@ -1,0 +1,83 @@
+/**
+ * 简约点阵风格（Clean Minimal + Dot Grid）
+ * 暖白底、蓝强调、衬线标题/无衬线正文、淡点阵背景纹理、长文阅读沉浸。
+ * 触发：<html data-theme="clean">
+ */
+[data-theme="clean"] {
+  /* 色彩 — 暖白蓝调 */
+  --surface-canvas: #F9F9F6;        /* 暖白纸 */
+  --surface-page: #FFFFFF;
+  --surface-panel: #FFFFFF;
+  --surface-muted: #F3F3EF;
+  --text-strong: #111111;
+  --text-body: #333333;             /* 护眼深灰非纯黑 */
+  --text-subtle: #555555;
+  --text-muted: #777777;
+  --text-inverse: #FFFFFF;
+  --color-primary: #2563EB;         /* Medium 蓝 */
+  --color-primary-dark: #1D4ED8;
+  --color-primary-light: #60A5FA;
+  --color-cta: #2563EB;
+  --color-success: #16A34A;
+  --color-warning: #D97706;
+  --color-error: #DC2626;
+  --color-info: #3B82F6;
+  --border-default: #E5E7EB;
+  --border-subtle: #F0F1F3;
+  --border-strong: #D1D5DB;
+  --border-focus: #2563EB;
+
+  /* 状态层 */
+  --state-success-bg: #F0FDF4;
+  --state-success-text: #15803D;
+  --state-warning-bg: #FEFCE8;
+  --state-warning-text: #A16207;
+  --state-error-bg: #FEF2F2;
+  --state-error-text: #B91C1C;
+  --state-info-bg: #EFF6FF;
+  --state-info-text: #1D4ED8;
+
+  /* 字体 — 衬线标题 + 无衬线正文 */
+  --font-heading: 'Source Serif 4', 'Georgia', 'Times New Roman', serif;
+  --font-body: 'Inter', 'Source Serif 4', 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+
+  /* 排版 — 阅读字号稍大、宽行长 */
+  --font-size-h1: 42px;
+  --font-size-h2: 28px;
+  --font-size-h3: 20px;
+  --font-size-h4: 16px;
+  --font-size-body: 17px;
+  --font-weight-heading: 700;
+  --letter-spacing-heading: -0.01em;
+  --line-height-heading: 1.25;
+  --line-height-body: 1.75;
+
+  /* 度量 */
+  --spacing-unit: 8px;
+  --measure: 68ch;
+
+  /* 形状 — 温和圆角 + 柔和阴影 */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --shadow-sm: 0 1px 2px rgba(17, 17, 17, 0.04);
+  --shadow-md: 0 2px 8px rgba(17, 17, 17, 0.06);
+  --shadow-lg: 0 8px 24px rgba(17, 17, 17, 0.08);
+  --shadow-xl: 0 16px 40px rgba(17, 17, 17, 0.1);
+  --shadow-card: 0 1px 3px rgba(17, 17, 17, 0.04);
+  --shadow-card-hover: 0 8px 20px rgba(37, 99, 235, 0.1);
+  --shadow-green: 0 4px 14px rgba(37, 99, 235, 0.2);
+  --shadow-subtle: 0 1px 2px rgba(17, 17, 17, 0.03);
+  --shadow-raised: 0 8px 20px rgba(17, 17, 17, 0.06);
+  --shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  --gradient-primary: linear-gradient(135deg, #2563EB, #1D4ED8);
+  --gradient-hero: linear-gradient(180deg, #EFF3FB 0%, #FFFFFF 100%);
+  --gradient-hero-dark: linear-gradient(180deg, #1E3A8A 0%, #1E40AF 100%);
+
+  /* 淡点阵背景 */
+  --dot-bg-color: rgba(37, 99, 235, 0.04);
+  --grid-line-color: rgba(37, 99, 235, 0.05);
+}

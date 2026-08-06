@@ -1,0 +1,83 @@
+/**
+ * 瑞士甲板风格（Swiss / International Typographic Style）
+ * 严谨网格、无衬线字体、黑/白/红高对比、直角、拒绝装饰、留白为材料。
+ * 触发：<html data-theme="swiss">
+ */
+[data-theme="swiss"] {
+  /* 色彩 — 黑/白/红极简高对比 */
+  --surface-canvas: #F5F5F3;        /* 暖白纸 */
+  --surface-page: #FAFAF8;
+  --surface-panel: #FFFFFF;
+  --surface-muted: #EEEEEC;
+  --text-strong: #111111;           /* 近黑 */
+  --text-body: #1A1A1A;
+  --text-subtle: #444444;
+  --text-muted: #6B6B6B;
+  --text-inverse: #FFFFFF;
+  --color-primary: #E63946;         /* 瑞士红强调 */
+  --color-primary-dark: #C1272D;
+  --color-primary-light: #F6A0A6;
+  --color-cta: #E63946;
+  --color-success: #2A9D5A;
+  --color-warning: #D97706;
+  --color-error: #DC2626;
+  --color-info: #2563EB;
+  --border-default: #D9D9D6;        /* 细灰线 */
+  --border-subtle: #E8E8E6;
+  --border-strong: #BBBBBB;
+  --border-focus: #E63946;
+
+  /* 状态层 */
+  --state-success-bg: #F0FDF4;
+  --state-success-text: #15803D;
+  --state-warning-bg: #FEFCE8;
+  --state-warning-text: #A16207;
+  --state-error-bg: #FEF2F2;
+  --state-error-text: #B91C1C;
+  --state-info-bg: #EFF6FF;
+  --state-info-text: #1D4ED8;
+
+  /* 字体 — 无衬线几何 */
+  --font-heading: 'Archivo', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'Inter', 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'JetBrains Mono', Consolas, monospace;
+
+  /* 排版层级 — 超大标题 + 紧排 */
+  --font-size-h1: 44px;
+  --font-size-h2: 28px;
+  --font-size-h3: 20px;
+  --font-size-h4: 16px;
+  --font-size-body: 16px;
+  --font-weight-heading: 700;
+  --letter-spacing-heading: -0.02em;
+  --line-height-heading: 1.15;
+  --line-height-body: 1.7;
+
+  /* 度量 — 8px 网格 + 严谨行长 */
+  --spacing-unit: 8px;
+  --measure: 62ch;
+
+  /* 形状 — 直角、无阴影、无渐变（拒绝装饰） */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-card: none;
+  --shadow-card-hover: none;
+  --shadow-green: none;
+  --shadow-subtle: none;
+  --shadow-raised: none;
+  --shadow-focus: 0 0 0 2px rgba(230, 57, 70, 0.3);
+  --gradient-primary: none;
+  --gradient-hero: none;
+  --gradient-hero-dark: none;
+
+  /* 瑞士强调元素 */
+  --swiss-accent: #E63946;
+  --swiss-border-width: 2px;
+}

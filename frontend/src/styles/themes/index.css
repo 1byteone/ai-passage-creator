@@ -1,0 +1,106 @@
+/**
+ * 主题系统入口 — 引入 3 个主题变量 + 点阵背景 + 组件级适配。
+ * 默认主题（治愈系）在 variables.css :root 中定义，无需 data-theme。
+ * 加载顺序：variables.css → themes/index.css → common.css
+ */
+@import './swiss.css';
+@import './dotmatrix.css';
+@import './clean.css';
+
+/* ==================== 点阵网格背景 ==================== */
+
+/* 点阵终端：明显点阵 + 网格线（科技感背景） */
+[data-theme='dotmatrix'] body {
+  background-image:
+    radial-gradient(circle, var(--dot-bg-color) 1px, transparent 1px),
+    linear-gradient(var(--grid-line-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px);
+  background-size: 24px 24px, 24px 24px, 24px 24px;
+  background-attachment: fixed;
+}
+
+/* 简约点阵：极淡点阵（沉浸阅读不干扰） */
+[data-theme='clean'] body {
+  background-image:
+    radial-gradient(circle, var(--dot-bg-color) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-attachment: fixed;
+}
+
+/* ==================== 组件级适配 ==================== */
+
+/* 瑞士甲板：主按钮直角 + 粗边 + 大写 + 无阴影 */
+[data-theme='swiss'] .ant-btn-primary {
+  border-radius: 0 !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border: var(--swiss-border-width) solid var(--swiss-accent) !important;
+  background: var(--swiss-accent) !important;
+  box-shadow: none !important;
+}
+
+[data-theme='swiss'] .ant-card,
+[data-theme='swiss'] .ant-modal-content,
+[data-theme='swiss'] .ant-input {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 瑞士甲板：正文标题左对齐 + 红下划线 */
+[data-theme='swiss'] .article-content :deep(h2) {
+  border-bottom: var(--swiss-border-width) solid var(--swiss-accent);
+  padding-bottom: 8px;
+}
+
+/* 点阵终端：卡片/面板霓虹边框发光 */
+[data-theme='dotmatrix'] .ant-card,
+[data-theme='dotmatrix'] .ant-modal-content,
+[data-theme='dotmatrix'] .ant-panel {
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.1) !important;
+  border-color: var(--border-strong) !important;
+}
+
+[data-theme='dotmatrix'] .ant-input {
+  background: var(--surface-muted) !important;
+  color: var(--text-body) !important;
+  border-color: var(--border-default) !important;
+}
+
+/* 点阵终端：文字选区霓虹 */
+[data-theme='dotmatrix'] ::selection {
+  background: rgba(0, 240, 255, 0.25);
+}
+
+/* 简约点阵：柔和卡片阴影 */
+[data-theme='clean'] .ant-card {
+  box-shadow: var(--shadow-md) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+/* ==================== 主题切换器 ==================== */
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.theme-check {
+  color: var(--color-primary);
+  margin-left: auto;
+}
