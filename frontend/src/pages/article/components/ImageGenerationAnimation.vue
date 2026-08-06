@@ -140,7 +140,9 @@ const progressPercent = computed(() => {
     }
 
     &.card-generating {
-      background: rgba(34, 197, 94, 0.1);
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 25%, #a5b4fc 50%, #c7d2fe 75%, #ddd6fe 100%);
+      background-size: 200% 200%;
+      animation: gradient-shift 3s ease infinite;
     }
   }
 
@@ -150,12 +152,20 @@ const progressPercent = computed(() => {
     object-fit: cover;
     filter: blur(30px);
     opacity: 0.7;
-    transition: filter 2s ease-out, opacity 2s ease-out;
+    transform: scale(1.1);
+    transition: filter 1.5s ease-out, opacity 1.5s ease-out, transform 1.5s ease-out;
 
     &.loaded {
       filter: blur(0);
       opacity: 1;
+      transform: scale(1);
     }
+  }
+
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
 
   .card-pending-content {

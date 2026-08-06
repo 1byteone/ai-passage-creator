@@ -56,8 +56,9 @@
               <img
                 v-if="item.url"
                 :src="item.url"
-                :class="['preview-image', { loaded: true }]"
+                class="preview-image blur-loading"
                 alt="配图"
+                @load="(e) => { (e.target as HTMLImageElement).classList.replace('blur-loading', 'loaded') }"
               />
               <div v-else class="preview-placeholder">
                 <PictureOutlined class="placeholder-icon" />
@@ -1473,6 +1474,19 @@ onBeforeUnmount(() => {
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: filter 1.5s ease-out, opacity 1.5s ease-out;
+
+  &.blur-loading {
+    filter: blur(30px);
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+
+  &.loaded {
+    filter: blur(0);
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .preview-placeholder {
