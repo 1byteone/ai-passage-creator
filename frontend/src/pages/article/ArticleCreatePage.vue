@@ -37,6 +37,55 @@
 
       </aside>
 
+      <!-- 左侧栏配图预览（创作流程下方） -->
+      <aside v-if="currentStep >= 3 && totalImages > 0" class="image-preview-sidebar">
+        <div class="preview-header">
+          <span class="preview-title">配图预览</span>
+          <span class="preview-count">{{ imageCount }}/{{ totalImages }}</span>
+        </div>
+        <div class="preview-list">
+          <div
+            v-for="(item, index) in imageItems"
+            :key="index"
+            :class="['preview-card', {
+              'card-complete': index < imageCount,
+              'card-rendering': false,
+            }]"
+          >
+            <div class="preview-image-wrap">
+              <img
+                v-if="item.url"
+                :src="item.url"
+                :class="['preview-image', { loaded: true }]"
+                alt="配图"
+              />
+              <div v-else class="preview-placeholder">
+                <PictureOutlined class="placeholder-icon" />
+              </div>
+            </div>
+            <div class="preview-info">
+              <span class="preview-label">{{ item.title }}</span>
+              <span class="preview-tag">{{ item.type === 'cover' ? '封面' : '配图' }}</span>
+            </div>
+          </div>
+          <!-- 待生成占位 -->
+          <div
+            v-for="n in Math.max(0, totalImages - imageItems.length)"
+            :key="'pending-' + n"
+            class="preview-card card-pending"
+          >
+            <div class="preview-image-wrap">
+              <div class="preview-placeholder">
+                <PictureOutlined class="placeholder-icon" />
+              </div>
+            </div>
+            <div class="preview-info">
+              <span class="preview-label pending">等待配图生成</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
       <section class="mobile-support-panels" aria-label="创作辅助信息" aria-live="polite">
         <div class="mobile-progress-card">
           <div class="mobile-progress-header">
@@ -923,6 +972,14 @@ const imageCount = ref(0)
 const imageUrls = ref<string[]>([])
 const totalImages = ref(5)
 
+// 配图列表（含标题说明，用于左侧栏预览）
+interface ImagePreviewItem {
+  url: string
+  title: string
+  type: string // 'cover' | 'content'
+}
+const imageItems = ref<ImagePreviewItem[]>([])
+
 // 配图阶段状态（驱动动画组件）
 const imagePhase = ref<'analyzing' | 'generating' | 'done'>('analyzing')
 const allImagesDone = ref(false)
@@ -977,6 +1034,7 @@ const startCreate = async () => {
   // 重置配图动画态，防止 ERROR 后重试沿用上次的计数/阶段（dirty state 复用）
   imageCount.value = 0
   imageUrls.value = []
+  imageItems.value = []
   imagePhase.value = 'analyzing'
   allImagesDone.value = false
   totalImages.value = 5
@@ -1109,6 +1167,11 @@ const handleSSEMessage = (msg: SSEMessage) => {
       imageCount.value++
       if (msg.image?.url) {
         imageUrls.value.push(msg.image.url)
+        imageItems.value.push({
+          url: msg.image.url,
+          title: msg.image.sectionTitle || msg.image.keywords || msg.image.description || `配图 ${imageCount.value}`,
+          type: imageCount.value === 1 ? 'cover' : 'content',
+        })
       }
       addLog(`配图生成中 ${imageCount.value}/${totalImages.value}`, 'info')
       break
@@ -1349,6 +1412,120 @@ onBeforeUnmount(() => {
 
 .flow-timeline {
   flex: 1;
+}
+
+/* 左侧栏配图预览 */
+.image-preview-sidebar {
+  border-top: 1px solid var(--color-border-light);
+  padding: 16px 0 0;
+  margin-top: 8px;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.preview-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.preview-count {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.preview-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color 0.3s;
+
+  &.card-complete {
+    border-color: var(--color-success, #22c55e);
+  }
+  &.card-pending {
+    border-color: var(--color-border);
+    opacity: 0.6;
+  }
+}
+
+.preview-image-wrap {
+  aspect-ratio: 16 / 9;
+  background: var(--color-background-secondary);
+  overflow: hidden;
+  position: relative;
+}
+
+.preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.preview-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-icon {
+  font-size: 24px;
+  color: var(--color-text-disabled, #d1d5db);
+}
+
+.preview-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  background: white;
+}
+
+.preview-label {
+  font-size: 11px;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  line-height: 1.3;
+
+  &.pending {
+    color: var(--color-text-disabled, #d1d5db);
+  }
+}
+
+.preview-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-full, 10px);
+  background: var(--color-background-secondary);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+// 响应式：窄屏下隐藏左侧栏配图预览
+@media (max-width: 900px) {
+  .image-preview-sidebar {
+    display: none;
+  }
 }
 
 .flow-item {
