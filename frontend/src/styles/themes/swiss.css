@@ -37,10 +37,10 @@
   --state-info-bg: #EFF6FF;
   --state-info-text: #1D4ED8;
 
-  /* 字体 — 无衬线几何 */
-  --font-heading: 'Archivo', 'Inter', 'Helvetica Neue', Arial, sans-serif;
-  --font-body: 'Inter', 'Archivo', 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: 'IBM Plex Mono', 'JetBrains Mono', Consolas, monospace;
+  /* 字体 — 无衬线几何（fontsource 本地加载，中文系统 fallback） */
+  --font-heading: 'Archivo', 'Inter', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-body: 'Inter', 'Archivo', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'JetBrains Mono', Consolas, 'PingFang SC', monospace;
 
   /* 排版层级 — 超大标题 + 紧排 */
   --font-size-h1: 44px;

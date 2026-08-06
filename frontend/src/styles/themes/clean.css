@@ -37,10 +37,10 @@
   --state-info-bg: #EFF6FF;
   --state-info-text: #1D4ED8;
 
-  /* 字体 — 衬线标题 + 无衬线正文 */
-  --font-heading: 'Source Serif 4', 'Georgia', 'Times New Roman', serif;
-  --font-body: 'Inter', 'Source Serif 4', 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+  /* 字体 — 衬线标题 + 无衬线正文（fontsource 本地加载，中文系统 fallback） */
+  --font-heading: 'Source Serif 4', 'Georgia', 'Songti SC', 'SimSun', 'PingFang SC', serif;
+  --font-body: 'Inter', 'Source Serif 4', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'PingFang SC', monospace;
 
   /* 排版 — 阅读字号稍大、宽行长 */
   --font-size-h1: 42px;

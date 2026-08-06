@@ -4,6 +4,18 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
+// 主题字体（fontsource 本地包，离线可用；中文用系统 fallback）
+import '@fontsource/inter/400.css'
+import '@fontsource/inter/500.css'
+import '@fontsource/inter/600.css'
+import '@fontsource/inter/700.css'
+import '@fontsource/archivo/600.css'
+import '@fontsource/archivo/700.css'
+import '@fontsource/jetbrains-mono/400.css'
+import '@fontsource/jetbrains-mono/700.css'
+import '@fontsource/source-serif-4/600.css'
+import '@fontsource/source-serif-4/700.css'
+
 import 'ant-design-vue/dist/reset.css'
 import '@/styles/variables.css'
 import '@/styles/themes/index.css'

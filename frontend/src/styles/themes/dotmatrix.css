@@ -37,10 +37,10 @@
   --state-info-bg: rgba(88, 166, 255, 0.1);
   --state-info-text: #58A6FF;
 
-  /* 字体 — 等宽终端 */
-  --font-heading: 'JetBrains Mono', 'IBM Plex Mono', Consolas, monospace;
-  --font-body: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  /* 字体 — 等宽终端（fontsource 本地加载，中文系统 fallback） */
+  --font-heading: 'JetBrains Mono', 'IBM Plex Mono', Consolas, 'PingFang SC', 'Microsoft YaHei', monospace;
+  --font-body: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'PingFang SC', 'Microsoft YaHei', monospace;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'PingFang SC', monospace;
 
   /* 排版 */
   --font-size-h1: 40px;
