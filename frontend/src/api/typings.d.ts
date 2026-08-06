@@ -694,6 +694,7 @@ declare namespace API {
     taskId?: string
     cardStyle?: string
     methodologyName?: string
+    characterStyle?: string
   }
 
   type CardPage = {

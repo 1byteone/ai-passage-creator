@@ -33,6 +33,30 @@
       </div>
     </header>
 
+    <!-- 卡片风格与插画子风格选择 -->
+    <div class="card-style-bar">
+      <div class="style-select-row">
+        <span class="style-label">卡片风格</span>
+        <a-radio-group v-model:value="cardStyle" size="small">
+          <a-radio value="">默认</a-radio>
+          <a-radio value="warm">温暖</a-radio>
+          <a-radio value="minimal">极简</a-radio>
+          <a-radio value="free">自由</a-radio>
+          <a-radio value="handwriting">手写</a-radio>
+          <a-radio value="illustration">插画</a-radio>
+        </a-radio-group>
+      </div>
+      <div v-if="cardStyle === 'illustration'" class="style-select-row">
+        <span class="style-label">子风格</span>
+        <a-radio-group v-model:value="characterStyle" size="small">
+          <a-radio value="healing">治愈</a-ratio>
+          <a-radio value="cute">可爱</a-radio>
+          <a-radio value="doodle">涂鸦</a-radio>
+          <a-radio value="watercolor">水彩</a-radio>
+        </a-radio-group>
+      </div>
+    </div>
+
     <!-- 预览结果 -->
     <div v-if="previewUrls.length" class="preview-section">
       <div class="section-heading">
@@ -238,6 +262,8 @@ const doPreview = async () => {
 // ── 生成 ──
 
 const generating = ref(false)
+const cardStyle = ref('')
+const characterStyle = ref('')
 
 const operationNotice = ref<OperationNotice | null>(null)
 
@@ -246,7 +272,11 @@ const doGenerate = async () => {
   generating.value = true
   operationNotice.value = null
   try {
-    const res = await generateCards({ taskId: taskId.value })
+    const res = await generateCards({
+      taskId: taskId.value,
+      cardStyle: cardStyle.value || undefined,
+      characterStyle: characterStyle.value || undefined,
+    })
     if (res.data.code === 0 && res.data.data) {
       operationNotice.value = {
         type: 'success',

@@ -134,6 +134,11 @@ public class ArticleAsyncService {
             state.setTopic(topic);
             state.setStyle(style);
             state.setMethodology(methodology != null ? methodology : "default");
+            // executePhase1 时文章可能尚未持久化（测试场景），从 DB 读 characterStyle
+            Article phase1Article = articleService.getByTaskId(taskId);
+            if (phase1Article != null) {
+                state.setCharacterStyle(phase1Article.getCharacterStyle());
+            }
 
             //执行阶段1：生成标题方案
             if(orchestratorEnabled){
@@ -197,6 +202,7 @@ public class ArticleAsyncService {
             title.setMainTitle(article.getMainTitle());
             title.setSubTitle(article.getSubTitle());
             state.setTitle(title);
+            state.setCharacterStyle(article.getCharacterStyle());
 
             //执行阶段2：生成大纲
             if(orchestratorEnabled){
@@ -284,6 +290,7 @@ public class ArticleAsyncService {
             ArticleState.OutlineResult outlineResult = new ArticleState.OutlineResult();
             outlineResult.setSections(outlineSections);
             state.setOutline(outlineResult);
+            state.setCharacterStyle(article.getCharacterStyle());
 
             // 执行阶段3：生成正文+配图
             if (orchestratorEnabled) {

@@ -3,6 +3,8 @@ package com.example.aipassagecreator.service;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.example.aipassagecreator.annotation.AgentExecution;
 import com.example.aipassagecreator.constant.PromptConstant;
+import com.example.aipassagecreator.card.illustration.IllustrationCharacterStyle;
+import com.example.aipassagecreator.card.illustration.IllustrationPromptBuilder;
 import com.example.aipassagecreator.enums.ArticleStyleEnum;
 import com.example.aipassagecreator.enums.ImageMethodEnum;
 import com.example.aipassagecreator.enums.SseMessageTypeEnum;
@@ -46,6 +48,9 @@ public class ArticleAgentService {
 
     @Resource
     private MethodologyPromptAssembler methodologyPromptAssembler;
+
+    @Resource
+    private IllustrationPromptBuilder illustrationPromptBuilder;
 
     /**
      * 获取当前类的代理对象
@@ -318,13 +323,26 @@ public class ArticleAgentService {
     public void agent5GenerateImages(ArticleState state, Consumer<String> streamHandler) {
         List<ArticleState.ImageResult> imageResults = new ArrayList<>();
 
+        // 读取插画子风格，用于配图提示词风格化
+        String characterStyle = state.getCharacterStyle();
+        IllustrationCharacterStyle charStyle = characterStyle != null && !characterStyle.isBlank()
+                ? IllustrationCharacterStyle.from(characterStyle)
+                : null;
+
         for (ArticleState.ImageRequirement requirement : state.getImageRequirements()) {
             String imageSource = requirement.getImageSource();
             log.info("智能体5：开始检索配图，position={},imageSource={},keywords={}", requirement.getPosition(),imageSource, requirement.getKeywords());
 
+            // 如有子风格，用风格化提示词覆盖原关键词
+            String keywords = requirement.getKeywords();
+            if (charStyle != null) {
+                keywords = illustrationPromptBuilder.build(requirement.getKeywords(), charStyle);
+                log.info("智能体5：子风格配图提示词，style={},keywords={}", charStyle.getName(), keywords);
+            }
+
             //构建图片请求对象
             ImageRequest request = ImageRequest.builder()
-                    .keywords(requirement.getKeywords())
+                    .keywords(keywords)
                     .prompt(requirement.getPrompt())
                     .position(requirement.getPosition())
                     .type(requirement.getType())
@@ -346,29 +364,6 @@ public class ArticleAgentService {
 
             log.info("智能体5：生成配图成功，position={},method={},cosUrl={}", requirement.getPosition(),method.getValue(),cosUrl);
 
-           /* //调用图片检索服务
-            String imageUrl = imageSearchService.searchImage(requirement.getKeywords());
-
-            //降级策略
-            ImageMethodEnum method = imageSearchService.getMethod();
-            if(imageUrl == null){
-                imageUrl = imageSearchService.getFallbackImage(requirement.getPosition());
-                method = ImageMethodEnum.PICSUM;
-                log.warn("智能体5：图片检索失败，使用降级策略，position={}", requirement.getPosition());
-            }
-
-            //使用图片直接URL(MVP阶段不上传到 COS ,简化流程)
-            String finalImageUrl = cosService.useDirectUrl(imageUrl);
-
-            //创建配图结果
-            ArticleState.ImageResult imageResult = buildImageResult(requirement, finalImageUrl, method);
-            imageResults.add(imageResult);
-
-            //推送单张配图成功
-            String imageCompleteMessage = SseMessageTypeEnum.IMAGE_COMPLETE.getStreamingPrefix()+GsonUtils.toJson(imageResult);
-            streamHandler.accept(imageCompleteMessage);
-
-            log.info("智能体5：生成配图成功，position={},url={}", requirement.getPosition(), finalImageUrl);*/
         }
         state.setImages(imageResults);
         log.info("智能体5：生成配图完成，count={}", imageResults.size());

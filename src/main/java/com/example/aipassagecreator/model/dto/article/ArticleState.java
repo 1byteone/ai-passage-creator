@@ -39,6 +39,11 @@ public class ArticleState implements Serializable {
     private String methodology;
 
     /**
+     * 插画子风格（healing/cute/doodle/watercolor），用于配图提示词和卡片渲染
+     */
+    private String characterStyle;
+
+    /**
      * 当前阶段
      */
     private String phase;
