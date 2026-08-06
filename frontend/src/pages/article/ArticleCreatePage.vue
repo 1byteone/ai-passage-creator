@@ -328,6 +328,8 @@
             <CompletedState
               v-else-if="currentPhase === 'COMPLETED'"
               :article="article"
+              :task-id="taskId"
+              :character-style="selectedCharacterStyle"
             />
           </div>
         </Transition>
@@ -2326,9 +2328,6 @@ onBeforeUnmount(() => {
 /* 换一批按钮 */
 .refresh-btn {
   font-size: 12px;
-}
-  background: linear-gradient(135deg, #3B82F6, #2563EB);
-  color: #fff;
 }
 
 /* 面板标题行（标题 + 换一批按钮） */
