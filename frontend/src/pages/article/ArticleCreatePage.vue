@@ -135,6 +135,22 @@
                       </a-radio-group>
                     </section>
 
+                    <!-- 创作方法论文档选择 -->
+                    <section class="methodology-section setting-panel">
+                      <div class="section-header">
+                        <div>
+                          <span class="section-title">创作方法论文档</span>
+                          <span class="section-tip">决定内容生成框架，默认通用文档</span>
+                        </div>
+                      </div>
+                      <a-radio-group v-model:value="selectedMethodology" class="methodology-group">
+                        <a-radio value="default">通用</a-radio>
+                        <a-radio value="douyin">抖音爆款</a-radio>
+                        <a-radio value="xiaohongshu">小红书种草</a-radio>
+                        <a-radio value="wechat">公众号长文</a-radio>
+                      </a-radio-group>
+                    </section>
+
                     <!-- 配图方式选择 -->
                     <section class="image-methods-section setting-panel">
                       <div class="section-header">
@@ -864,6 +880,7 @@ const currentPhase = ref<string>('INPUT')  // INPUT, TITLE_SELECTING, OUTLINE_ED
 // 状态
 const topic = ref('')
 const selectedStyle = ref('')  // 选中的文章风格（空字符串表示默认）
+const selectedMethodology = ref('default')  // 方法论文档（默认 default）
 const selectedImageMethods = ref<string[]>([])  // 选中的配图方式（空数组表示全部）
 const selectedCharacterStyle = ref('')  // 选中的插画子风格（空字符串 = 未选）
 const isCreating = ref(false)
@@ -1061,6 +1078,7 @@ const startCreate = async () => {
     const res = await createArticle({
       topic: topic.value,
       style: selectedStyle.value || undefined,
+      methodology: selectedMethodology.value === 'default' ? undefined : selectedMethodology.value,
       enabledImageMethods: selectedImageMethods.value.length > 0 ? selectedImageMethods.value : undefined,
       characterStyle: selectedCharacterStyle.value || undefined,
     })
@@ -1367,8 +1385,12 @@ watch(topic, (val) => {
 
 // 组件挂载时检查路由参数
 onMounted(() => {
-  if (route.query.topic) {
-    topic.value = route.query.topic as string
+  if (route.query.topic) topic.value = route.query.topic as string
+  if (route.query.style) selectedStyle.value = route.query.style as string
+  if (route.query.methodology) selectedMethodology.value = route.query.methodology as string
+  if (route.query.characterStyle) selectedCharacterStyle.value = route.query.characterStyle as string
+  if (route.query.imageMethods) {
+    selectedImageMethods.value = (route.query.imageMethods as string).split(',')
   }
   // 进入创作页自动加载推荐选题（不触发 AI，零成本）
   loadRecommendedTopics(false)
@@ -1744,6 +1766,12 @@ onBeforeUnmount(() => {
 
 /* 配图方式选择 */
 .image-methods-section {
+}
+
+.methodology-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
 }
 
 .section-header {
