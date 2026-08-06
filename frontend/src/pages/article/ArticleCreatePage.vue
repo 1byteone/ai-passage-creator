@@ -143,7 +143,25 @@
                           <span class="section-tip">决定内容生成框架，默认通用文档</span>
                         </div>
                       </div>
-                      <a-radio-group v-model:value="selectedMethodology" class="methodology-group">
+                      <!-- 模板卡片选择器（加载失败回退静态单选） -->
+                      <div v-if="methodologyTemplates.length" class="methodology-cards">
+                        <div
+                          v-for="tpl in methodologyTemplates"
+                          :key="tpl.name"
+                          :class="['methodology-card', { selected: selectedMethodology === tpl.name }]"
+                          @click="selectedMethodology = tpl.name || 'default'"
+                        >
+                          <div class="methodology-card-head">
+                            <span class="methodology-card-name">{{ tpl.platformName || tpl.name }}</span>
+                            <span v-if="tpl.minChars" class="methodology-card-range">{{ tpl.minChars }}~{{ tpl.maxChars }}字</span>
+                          </div>
+                          <p class="methodology-card-desc">{{ tpl.description }}</p>
+                          <div v-if="tpl.dimensionNames?.length" class="methodology-card-tags">
+                            <span v-for="dim in tpl.dimensionNames.slice(0, 3)" :key="dim" class="methodology-card-tag">{{ dim }}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <a-radio-group v-else v-model:value="selectedMethodology" class="methodology-group">
                         <a-radio value="default">通用</a-radio>
                         <a-radio value="douyin">抖音爆款</a-radio>
                         <a-radio value="xiaohongshu">小红书种草</a-radio>
@@ -791,6 +809,7 @@ import { createArticle, confirmTitle, confirmOutline } from '@/api/articleContro
 import RagHitsPanel from '@/components/RagHitsPanel.vue'
 import { useRagSearch } from '@/composables/useRagSearch'
 import { getRecommendedTopics } from '@/api/topicRecommendController'
+import { getMethodologyList } from '@/api/methodologyController'
 import { connectSSE, closeSSE, type SSEMessage, type SSEConnection } from '@/utils/sse'
 import { isAdmin as checkIsAdmin, isVip as checkIsVip, hasQuota as checkHasQuota } from '@/utils/permission'
 import { markdownToHtml as safeMarkdownToHtml } from '@/utils/markdown'
@@ -880,6 +899,19 @@ const currentPhase = ref<string>('INPUT')  // INPUT, TITLE_SELECTING, OUTLINE_ED
 const topic = ref('')
 const selectedStyle = ref('')  // 选中的文章风格（空字符串表示默认）
 const selectedMethodology = ref('default')  // 方法论文档（默认 default）
+const methodologyTemplates = ref<API.MethodologyVO[]>([])
+
+// 加载方法论模板列表（失败静默，回退静态单选）
+const loadMethodologyTemplates = async () => {
+  try {
+    const res = await getMethodologyList()
+    if (res.data.code === 0 && res.data.data) {
+      methodologyTemplates.value = res.data.data
+    }
+  } catch {
+    // 接口失败保持静态单选
+  }
+}
 const selectedImageMethods = ref<string[]>([])  // 选中的配图方式（空数组表示全部）
 const selectedCharacterStyle = ref('')  // 选中的插画子风格（空字符串 = 未选）
 const isCreating = ref(false)
@@ -1393,6 +1425,8 @@ onMounted(() => {
   }
   // 进入创作页自动加载推荐选题（不触发 AI，零成本）
   loadRecommendedTopics(false)
+  // 加载方法论模板列表（卡片式选择器）
+  void loadMethodologyTemplates()
 })
 
 // 组件卸载前关闭 SSE
@@ -1771,6 +1805,84 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
+}
+
+/* 方法论模板卡片选择器 */
+.methodology-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.methodology-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+
+  &:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+  }
+
+  &.selected {
+    border-color: var(--color-primary);
+    background: rgba(34, 197, 94, 0.04);
+    box-shadow: 0 0 0 1px var(--color-primary);
+  }
+}
+
+.methodology-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.methodology-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.methodology-card-range {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.methodology-card-desc {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  margin: 0 0 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.methodology-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.methodology-card-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-full, 10px);
+  background: var(--color-background-secondary);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 900px) {
+  .methodology-cards {
+    grid-template-columns: 1fr;
+  }
 }
 
 .section-header {

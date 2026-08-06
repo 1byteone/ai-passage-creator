@@ -132,6 +132,23 @@ declare namespace API {
     message?: string
   }
 
+  type MethodologyVO = {
+    name?: string
+    description?: string
+    platformName?: string
+    audience?: string
+    minChars?: number
+    maxChars?: number
+    cardStyle?: string
+    dimensionNames?: string[]
+  }
+
+  type BaseResponseListMethodologyVO = {
+    code?: number
+    data?: MethodologyVO[]
+    message?: string
+  }
+
   type BaseResponseListPaymentRecord = {
     code?: number
     data?: PaymentRecord[]
