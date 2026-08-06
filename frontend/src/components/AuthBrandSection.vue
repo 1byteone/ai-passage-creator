@@ -129,11 +129,26 @@ import authHome from '@/assets/illustration/auth-home.png'
 /* undraw 插画（绿色治愈系） */
 .auth-brand-illustration {
   width: 100%;
-  max-width: 320px;
+  max-width: 340px;
   margin: 24px auto 0;
   display: block;
   object-fit: contain;
   opacity: 0.9;
+
+  /* 玻璃拟态容器：融入深色品牌区 */
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-2xl);
+
+  /* 微浮动 */
+  animation: auth-float 5s ease-in-out infinite;
+}
+
+@keyframes auth-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
 
 @media (max-width: 768px) {

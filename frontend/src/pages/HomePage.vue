@@ -18,6 +18,7 @@ import {
 import { getSkillUiConfig } from '@/config/skill'
 import heroWriting from '@/assets/illustration/hero-writing.png'
 import heroPlants from '@/assets/illustration/hero-plants.png'
+import BrandLoader from '@/components/BrandLoader.vue'
 
 const router = useRouter()
 const loginUserStore = useLoginUserStore()
@@ -285,9 +286,11 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="recent-content" :aria-busy="loadingArticles">
-          <p v-if="loadingArticles && !recentArticles.length" class="recent-loading" role="status">
-            正在加载最近创作…
-          </p>
+          <BrandLoader
+            v-if="loadingArticles && !recentArticles.length"
+            text="正在加载最近创作…"
+            class="recent-loading"
+          />
           <div v-else-if="recentArticles.length" class="articles-grid">
             <div
               v-for="article in recentArticles"
@@ -475,26 +478,50 @@ onBeforeUnmount(() => {
 /* undraw 插画装饰（绿色治愈系） */
 .hero-writing-decoration {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 320px;
-  height: 240px;
+  right: 24px;
+  bottom: 20px;
+  width: 340px;
+  height: 260px;
   object-fit: contain;
-  opacity: 0.15;
+  opacity: 0.9;
   pointer-events: none;
   z-index: 1;
+
+  /* 玻璃拟态容器：浅绿渐变圆角托底 + 微模糊（容器融色） */
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-2xl);
+
+  /* 漂浮动效 */
+  animation: hero-float 6s ease-in-out infinite;
+}
+
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
 }
 
 .hero-plants-decoration {
   position: absolute;
-  left: -40px;
-  bottom: -60px;
-  width: 260px;
-  height: 260px;
+  left: -30px;
+  bottom: -40px;
+  width: 240px;
+  height: 240px;
   object-fit: contain;
-  opacity: 0.6;
+  opacity: 0.7;
   pointer-events: none;
   z-index: 1;
+  transform-origin: bottom center;
+
+  /* 摇摆动效 */
+  animation: hero-sway 8s ease-in-out infinite;
+}
+
+@keyframes hero-sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
 }
 
 .container {

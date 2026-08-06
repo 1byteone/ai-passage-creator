@@ -232,9 +232,7 @@
 
             <!-- 标题生成中 -->
             <div v-else-if="currentPhase === 'TITLE_GENERATING'" class="loading-stage">
-              <a-spin size="large" />
-              <h3>AI 正在生成标题方案...</h3>
-              <p>稍等片刻，即将为您呈现多个精彩标题</p>
+              <BrandLoader text="AI 正在生成标题方案，即将为您呈现多个精彩标题..." />
             </div>
 
             <!-- 标题选择阶段 -->
@@ -801,6 +799,7 @@ import OutlineEditingStage from './components/OutlineEditingStage.vue'
 import CompletedState from './components/CompletedState.vue'
 import ImageGenerationAnimation from './components/ImageGenerationAnimation.vue'
 import CharacterStyleSelector from './components/CharacterStyleSelector.vue'
+import BrandLoader from '@/components/BrandLoader.vue'
 
 const router = useRouter()
 const route = useRoute()

@@ -140,9 +140,8 @@
         v-else-if="!cards.length"
         class="empty-state"
         description="还没有生成卡片"
-      >
-        <span class="empty-hint">点击「预览」免费查看效果，或「生成全部卡片」开始渲染</span>
-      </IllustrationEmpty>
+        hint="预览免费查看效果，或生成全部卡片开始渲染"
+      />
 
       <template v-else>
         <div class="card-gallery">

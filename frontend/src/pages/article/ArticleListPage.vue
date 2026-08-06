@@ -88,7 +88,10 @@
         </div>
 
         <div v-else-if="!visibleRecords.length" class="page-state">
-          <IllustrationEmpty :description="emptyDescription">
+          <IllustrationEmpty
+            :description="emptyDescription"
+            hint="创作属于你的第一篇文章，从选题开始"
+          >
             <a-button v-if="hasFilters" @click="clearFilters">清除筛选</a-button>
             <a-button v-else type="primary" @click="goToCreate">创作第一篇文章</a-button>
           </IllustrationEmpty>

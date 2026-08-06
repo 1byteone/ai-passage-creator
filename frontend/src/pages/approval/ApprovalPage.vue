@@ -51,6 +51,7 @@
         v-else-if="!articles.length"
         class="empty-state"
         :description="activeTab === 'pending' ? '当前没有待审核的文章' : '还没有提交过审批'"
+        :hint="activeTab === 'pending' ? '新的提交会出现在这里' : '提交文章后可在此跟踪审批进度'"
       />
 
       <template v-else>
