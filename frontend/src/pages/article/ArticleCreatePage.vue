@@ -37,56 +37,6 @@
 
       </aside>
 
-      <!-- 左侧栏配图预览（创作流程下方） -->
-      <aside v-if="currentStep >= 3 && totalImages > 0" class="image-preview-sidebar">
-        <div class="preview-header">
-          <span class="preview-title">配图预览</span>
-          <span class="preview-count">{{ imageCount }}/{{ totalImages }}</span>
-        </div>
-        <div class="preview-list">
-          <div
-            v-for="(item, index) in imageItems"
-            :key="index"
-            :class="['preview-card', {
-              'card-complete': index < imageCount,
-              'card-rendering': false,
-            }]"
-          >
-            <div class="preview-image-wrap">
-              <img
-                v-if="item.url"
-                :src="item.url"
-                class="preview-image blur-loading"
-                alt="配图"
-                @load="(e) => { (e.target as HTMLImageElement).classList.replace('blur-loading', 'loaded') }"
-              />
-              <div v-else class="preview-placeholder">
-                <PictureOutlined class="placeholder-icon" />
-              </div>
-            </div>
-            <div class="preview-info">
-              <span class="preview-label">{{ item.title }}</span>
-              <span class="preview-tag">{{ item.type === 'cover' ? '封面' : '配图' }}</span>
-            </div>
-          </div>
-          <!-- 待生成占位 -->
-          <div
-            v-for="n in Math.max(0, totalImages - imageItems.length)"
-            :key="'pending-' + n"
-            class="preview-card card-pending"
-          >
-            <div class="preview-image-wrap">
-              <div class="preview-placeholder">
-                <PictureOutlined class="placeholder-icon" />
-              </div>
-            </div>
-            <div class="preview-info">
-              <span class="preview-label pending">等待配图生成</span>
-            </div>
-          </div>
-        </div>
-      </aside>
-
       <section class="mobile-support-panels" aria-label="创作辅助信息" aria-live="polite">
         <div class="mobile-progress-card">
           <div class="mobile-progress-header">
@@ -477,6 +427,58 @@
               {{ example }}
               <em v-if="isAiTopic(example)" class="ai-badge">热点</em>
             </span>
+          </div>
+        </div>
+
+        <!-- 配图预览（仅配图生成阶段显示） -->
+        <div v-if="currentStep >= 3 && totalImages > 0" class="panel-section">
+          <div class="panel-header-row">
+            <h4 class="panel-title">
+              <PictureOutlined />
+              配图预览
+            </h4>
+            <span v-if="totalImages > 0" class="preview-count">{{ imageCount }}/{{ totalImages }}</span>
+          </div>
+          <div class="image-preview-list">
+            <div
+              v-for="(item, index) in imageItems"
+              :key="index"
+              :class="['preview-card', {
+                'card-complete': index < imageCount,
+              }]"
+            >
+              <div class="preview-image-wrap">
+                <img
+                  v-if="item.url"
+                  :src="item.url"
+                  class="preview-image blur-loading"
+                  alt="配图"
+                  @load="(e) => { (e.target as HTMLImageElement).classList.replace('blur-loading', 'loaded') }"
+                />
+                <div v-else class="preview-placeholder">
+                  <PictureOutlined class="placeholder-icon" />
+                </div>
+              </div>
+              <div class="preview-info">
+                <span class="preview-label">{{ item.title }}</span>
+                <span class="preview-tag">{{ item.type === 'cover' ? '封面' : '配图' }}</span>
+              </div>
+            </div>
+            <!-- 待生成占位 -->
+            <div
+              v-for="n in Math.max(0, totalImages - imageItems.length)"
+              :key="'pending-' + n"
+              class="preview-card card-pending"
+            >
+              <div class="preview-image-wrap">
+                <div class="preview-placeholder">
+                  <PictureOutlined class="placeholder-icon" />
+                </div>
+              </div>
+              <div class="preview-info">
+                <span class="preview-label pending">等待配图生成</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1416,175 +1418,6 @@ onBeforeUnmount(() => {
 }
 
 /* 左侧栏配图预览 */
-.image-preview-sidebar {
-  border-top: 1px solid var(--color-border-light);
-  padding: 16px 0 0;
-  margin-top: 8px;
-}
-
-.preview-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.preview-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.preview-count {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.preview-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.preview-card {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  transition: border-color 0.3s;
-
-  &.card-complete {
-    border-color: var(--color-success, #22c55e);
-  }
-  &.card-pending {
-    border-color: var(--color-border);
-    opacity: 0.6;
-  }
-}
-
-.preview-image-wrap {
-  aspect-ratio: 16 / 9;
-  background: var(--color-background-secondary);
-  overflow: hidden;
-  position: relative;
-}
-
-.preview-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  position: relative;
-  z-index: 1;
-  // 多层过渡：blur + brightness + contrast + scale 组合
-  // 模仿 GPT 官方从模糊色块到清晰图片的渐进效果
-  transition: filter 1.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1), transform 1.8s cubic-bezier(0.4, 0, 0.2, 1);
-
-  &.blur-loading {
-    filter: blur(40px) brightness(1.3) contrast(0.85);
-    opacity: 0.6;
-    transform: scale(1.15);
-  }
-
-  &.loaded {
-    filter: blur(0) brightness(1) contrast(1);
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-// 图片包裹层 — 加载中的 shimmer 光泽扫光效果
-.preview-image-wrap {
-  aspect-ratio: 16 / 9;
-  background: var(--color-background-secondary, #f3f4f6);
-  overflow: hidden;
-  position: relative;
-
-  // shimmer 扫光伪元素
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    background: linear-gradient(
-      105deg,
-      transparent 30%,
-      rgba(255, 255, 255, 0.25) 45%,
-      rgba(255, 255, 255, 0.4) 50%,
-      rgba(255, 255, 255, 0.25) 55%,
-      transparent 70%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 2.5s ease-in-out infinite;
-    pointer-events: none;
-  }
-
-  // 图片加载完成后停止 shimmer
-  &:has(.loaded)::after {
-    animation: none;
-    opacity: 0;
-    transition: opacity 0.5s;
-  }
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.preview-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.placeholder-icon {
-  font-size: 24px;
-  color: var(--color-text-disabled, #d1d5db);
-}
-
-.preview-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 6px 8px;
-  background: white;
-}
-
-.preview-label {
-  font-size: 11px;
-  color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 160px;
-  line-height: 1.3;
-
-  &.pending {
-    color: var(--color-text-disabled, #d1d5db);
-  }
-}
-
-.preview-tag {
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: var(--radius-full, 10px);
-  background: var(--color-background-secondary);
-  color: var(--color-text-muted);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-// 响应式：窄屏下隐藏左侧栏配图预览
-@media (max-width: 900px) {
-  .image-preview-sidebar {
-    display: none;
-  }
-}
-
 .flow-item {
   display: flex;
   gap: 14px;
@@ -2178,6 +2011,128 @@ onBeforeUnmount(() => {
   font-weight: 600;
   color: var(--color-text);
   margin: 0 0 16px;
+}
+
+/* 右侧栏配图预览 */
+.panel-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.image-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preview-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color 0.3s;
+
+  &.card-complete {
+    border-color: var(--color-success, #22c55e);
+  }
+  &.card-pending {
+    border-color: var(--color-border);
+    opacity: 0.6;
+  }
+}
+
+.preview-image-wrap {
+  aspect-ratio: 16 / 9;
+  background: var(--color-background-secondary, #f3f4f6);
+  overflow: hidden;
+  position: relative;
+
+  // shimmer 扫光
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.25) 55%, transparent 70%);
+    background-size: 200% 100%;
+    animation: shimmer 2.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  &:has(.loaded)::after {
+    animation: none;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+}
+
+.preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  position: relative;
+  z-index: 1;
+  transition: filter 1.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1), transform 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.blur-loading {
+    filter: blur(40px) brightness(1.3) contrast(0.85);
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
+  &.loaded {
+    filter: blur(0) brightness(1) contrast(1);
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.preview-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-icon {
+  font-size: 24px;
+  color: var(--color-text-disabled, #d1d5db);
+}
+
+.preview-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  background: white;
+}
+
+.preview-label {
+  font-size: 11px;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  line-height: 1.3;
+  &.pending { color: var(--color-text-disabled, #d1d5db); }
+}
+
+.preview-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-full, 10px);
+  background: var(--color-background-secondary);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* 配额信息样式 */
