@@ -49,7 +49,7 @@
       <div v-if="cardStyle === 'illustration'" class="style-select-row">
         <span class="style-label">子风格</span>
         <a-radio-group v-model:value="characterStyle" size="small">
-          <a-radio value="healing">治愈</a-ratio>
+          <a-radio value="healing">治愈</a-radio>
           <a-radio value="cute">可爱</a-radio>
           <a-radio value="doodle">涂鸦</a-radio>
           <a-radio value="watercolor">水彩</a-radio>
