@@ -30,6 +30,14 @@
             生成全部卡片
           </a-button>
         </a-popconfirm>
+        <a-button
+          :loading="exporting"
+          :disabled="!cards.some((c) => c.status === 'COMPLETED' && c.imageUrl)"
+          @click="exportAllCards"
+        >
+          <template #icon><DownloadOutlined /></template>
+          全部导出
+        </a-button>
       </div>
     </header>
 
@@ -421,6 +429,53 @@ const downloadImage = (url: string, filename: string) => {
   setTimeout(() => {
     document.body.removeChild(a)
   }, 100)
+}
+
+// ── 批量导出（打包全部卡片 PNG 为 zip）──
+
+const exporting = ref(false)
+
+const exportAllCards = async () => {
+  const completed = cards.value.filter((c) => c.status === 'COMPLETED' && c.imageUrl)
+  if (!completed.length) {
+    const { default: msg } = await import('ant-design-vue/es/message')
+    msg.info('没有已完成的卡片可导出')
+    return
+  }
+  exporting.value = true
+  try {
+    // 动态 import，避免影响首屏 bundle
+    const [{ default: JSZip }, { saveAs }] = await Promise.all([
+      import('jszip'),
+      import('file-saver'),
+    ])
+    const zip = new JSZip()
+    const folder = zip.folder('cards')
+    let exported = 0
+    for (const card of completed) {
+      try {
+        const resp = await fetch(card.imageUrl!)
+        if (!resp.ok) continue
+        const blob = await resp.blob()
+        const name = card.pageType === 'COVER' ? 'cover' : `card-${card.pageNo}`
+        folder?.file(`${name}.png`, blob)
+        exported++
+      } catch {
+        // COS 未开 CORS 时 fetch 失败，跳过该卡
+        console.warn(`卡片 ${card.pageNo} 下载失败，跳过`)
+      }
+    }
+    const { default: msg } = await import('ant-design-vue/es/message')
+    if (exported === 0) {
+      msg.error('导出失败：无法下载卡片图片（可能需要配置存储 CORS）')
+      return
+    }
+    const blob = await zip.generateAsync({ type: 'blob' })
+    saveAs(blob, `${articleTitle.value || 'cards'}-卡片.zip`)
+    msg.success(`已导出 ${exported}/${completed.length} 张卡片`)
+  } finally {
+    exporting.value = false
+  }
 }
 
 // ── 生命周期 ──
