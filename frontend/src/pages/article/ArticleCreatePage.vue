@@ -417,16 +417,26 @@
             <a-spin size="small" />
             <span>选题加载中...</span>
           </div>
-          <div v-else class="hot-tags">
-            <span
+          <div v-else class="topic-card-list">
+            <div
               v-for="example in exampleTopics"
               :key="example"
-              :class="['hot-tag', { 'ai-tag': isAiTopic(example) }]"
+              :class="['topic-card', { 'topic-card-selected': topic === example }]"
               @click="topic = example"
             >
-              {{ example }}
-              <em v-if="isAiTopic(example)" class="ai-badge">热点</em>
-            </span>
+              <div class="topic-card-icon">
+                <Flame v-if="isAiTopic(example)" :size="16" class="icon-ai" />
+                <Sparkles v-else-if="isAiTopic(example)" :size="16" class="icon-ai" />
+                <BookOpen v-else :size="16" class="icon-history" />
+              </div>
+              <div class="topic-card-body">
+                <span class="topic-card-title">{{ example }}</span>
+                <span class="topic-card-tag">{{ isAiTopic(example) ? 'AI 推荐' : '热门' }}</span>
+              </div>
+              <div class="topic-card-action">
+                <Plus :size="14" />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -760,6 +770,7 @@ import {
   HistoryOutlined,
   ReloadOutlined
 } from '@ant-design/icons-vue'
+import { Flame, Sparkles, BookOpen, Plus } from 'lucide-vue-next'
 import { createArticle, confirmTitle, confirmOutline } from '@/api/articleController'
 import RagHitsPanel from '@/components/RagHitsPanel.vue'
 import { useRagSearch } from '@/composables/useRagSearch'
@@ -2214,46 +2225,108 @@ onBeforeUnmount(() => {
 }
 
 /* 热门选题 */
-.hot-tags {
+.topic-card-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
 }
 
-.hot-tag {
-  display: inline-flex;
+.topic-card {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 12px;
-  background: var(--color-background-secondary);
+  gap: 10px;
+  padding: 8px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  font-size: 12px;
-  color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
+  background: white;
 
   &:hover {
     border-color: var(--color-primary);
-    color: var(--color-primary);
-    background: rgba(34, 197, 94, 0.05);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     transform: translateY(-1px);
   }
 }
 
-/* AI 生成选题高亮 */
-.hot-tag.ai-tag {
-  border-color: rgba(59, 130, 246, 0.4);
-  background: rgba(59, 130, 246, 0.06);
+.topic-card-selected {
+  border-color: var(--color-primary);
+  background: rgba(34, 197, 94, 0.04);
+  box-shadow: 0 0 0 1px var(--color-primary);
 }
 
-.ai-badge {
-  font-style: normal;
-  font-size: 10px;
+.topic-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--color-background-secondary);
+}
+
+.icon-ai {
+  color: #3b82f6;
+}
+
+.icon-history {
+  color: #f59e0b;
+}
+
+.topic-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.topic-card-title {
+  font-size: 13px;
   font-weight: 600;
-  line-height: 1;
-  padding: 2px 5px;
-  border-radius: var(--radius-full);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.topic-card-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-full, 10px);
+  background: var(--color-background-secondary);
+  color: var(--color-text-muted);
+  align-self: flex-start;
+}
+
+.topic-card-action {
+  color: var(--color-text-disabled, #d1d5db);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.topic-card:hover .topic-card-action {
+  color: var(--color-primary);
+}
+
+/* 加载状态 */
+.hot-tags-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+/* 换一批按钮 */
+.refresh-btn {
+  font-size: 12px;
+}
   background: linear-gradient(135deg, #3B82F6, #2563EB);
   color: #fff;
 }
