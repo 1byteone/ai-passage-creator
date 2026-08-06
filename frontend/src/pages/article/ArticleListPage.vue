@@ -339,7 +339,7 @@ type ArticleWithCreateParams = API.ArticleVO & {
   style?: string
   methodology?: string
   characterStyle?: string
-  enabledImageMethods?: string[]
+  enabledImageMethods?: string
 }
 const recreateArticle = (record: ArticleWithCreateParams) => {
   const query: Record<string, string> = {}
@@ -347,7 +347,17 @@ const recreateArticle = (record: ArticleWithCreateParams) => {
   if (record.style) query.style = record.style
   if (record.methodology && record.methodology !== 'default') query.methodology = record.methodology
   if (record.characterStyle) query.characterStyle = record.characterStyle
-  if (record.enabledImageMethods) query.imageMethods = record.enabledImageMethods.join(',')
+  // enabledImageMethods 是 JSON 字符串（如 ["PEXELS","ICONIFY"]），解析为逗号分隔
+  if (record.enabledImageMethods) {
+    try {
+      const methods = JSON.parse(record.enabledImageMethods) as string[]
+      if (Array.isArray(methods) && methods.length > 0) {
+        query.imageMethods = methods.join(',')
+      }
+    } catch {
+      // 非法 JSON 则忽略，不阻断再创作
+    }
+  }
   router.push({ path: '/create', query })
 }
 const goToCreate = () => router.push('/create')

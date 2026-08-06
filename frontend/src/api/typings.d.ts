@@ -95,6 +95,10 @@ declare namespace API {
     outline?: OutlineItem[]
     content?: string
     fullContent?: string
+    style?: string
+    methodology?: string
+    characterStyle?: string
+    enabledImageMethods?: string
     coverImage?: string
     images?: ImageItem[]
     status?: string
