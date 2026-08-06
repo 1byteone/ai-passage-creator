@@ -1474,19 +1474,62 @@ onBeforeUnmount(() => {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: filter 1.5s ease-out, opacity 1.5s ease-out;
+  position: relative;
+  z-index: 1;
+  // 多层过渡：blur + brightness + contrast + scale 组合
+  // 模仿 GPT 官方从模糊色块到清晰图片的渐进效果
+  transition: filter 1.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1), transform 1.8s cubic-bezier(0.4, 0, 0.2, 1);
 
   &.blur-loading {
-    filter: blur(30px);
-    opacity: 0.7;
-    transform: scale(1.1);
+    filter: blur(40px) brightness(1.3) contrast(0.85);
+    opacity: 0.6;
+    transform: scale(1.15);
   }
 
   &.loaded {
-    filter: blur(0);
+    filter: blur(0) brightness(1) contrast(1);
     opacity: 1;
     transform: scale(1);
   }
+}
+
+// 图片包裹层 — 加载中的 shimmer 光泽扫光效果
+.preview-image-wrap {
+  aspect-ratio: 16 / 9;
+  background: var(--color-background-secondary, #f3f4f6);
+  overflow: hidden;
+  position: relative;
+
+  // shimmer 扫光伪元素
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.25) 45%,
+      rgba(255, 255, 255, 0.4) 50%,
+      rgba(255, 255, 255, 0.25) 55%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  // 图片加载完成后停止 shimmer
+  &:has(.loaded)::after {
+    animation: none;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .preview-placeholder {

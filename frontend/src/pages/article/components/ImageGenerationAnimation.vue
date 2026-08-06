@@ -140,9 +140,28 @@ const progressPercent = computed(() => {
     }
 
     &.card-generating {
+      // 彩色渐变占位，模拟 BlurHash 效果
       background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 25%, #a5b4fc 50%, #c7d2fe 75%, #ddd6fe 100%);
       background-size: 200% 200%;
       animation: gradient-shift 3s ease infinite;
+      // shimmer 光泽扫光伪元素
+      position: relative;
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          105deg,
+          transparent 30%,
+          rgba(255, 255, 255, 0.3) 45%,
+          rgba(255, 255, 255, 0.5) 50%,
+          rgba(255, 255, 255, 0.3) 55%,
+          transparent 70%
+        );
+        background-size: 200% 100%;
+        animation: shimmer 2.5s ease-in-out infinite;
+        pointer-events: none;
+      }
     }
   }
 
@@ -150,22 +169,42 @@ const progressPercent = computed(() => {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    filter: blur(30px);
-    opacity: 0.7;
-    transform: scale(1.1);
-    transition: filter 1.5s ease-out, opacity 1.5s ease-out, transform 1.5s ease-out;
+    position: relative;
+    z-index: 1;
+    // 多层过渡：blur + brightness + contrast + scale
+    transition: filter 1.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1), transform 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+
+    // 未加载时：强模糊 + 高亮度 + 低对比度
+    filter: blur(40px) brightness(1.3) contrast(0.85);
+    opacity: 0.6;
+    transform: scale(1.15);
 
     &.loaded {
-      filter: blur(0);
+      filter: blur(0) brightness(1) contrast(1);
       opacity: 1;
       transform: scale(1);
     }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
 
   @keyframes gradient-shift {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
+  }
+
+  @keyframes pulse-skeleton {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  @keyframes card-appear {
+    from { opacity: 0; transform: translateY(12px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
 
   .card-pending-content {
@@ -195,24 +234,6 @@ const progressPercent = computed(() => {
     :deep(.ant-progress-inner) {
       background: var(--color-background-tertiary);
     }
-  }
-}
-
-/* 骨架脉动 */
-@keyframes pulse-skeleton {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-/* 卡片浮现 */
-@keyframes card-appear {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
