@@ -69,6 +69,7 @@ declare namespace API {
   type ArticleCreateRequest = {
     topic?: string
     style?: string
+    methodology?: string   // 方法论文档（default/douyin/xiaohongshu/wechat），后端回退 default
     enabledImageMethods?: string[]
     characterStyle?: string   // 插画子风格（healing/cute/doodle/watercolor），后端回退 HEALING
   }
