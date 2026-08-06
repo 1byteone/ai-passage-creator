@@ -487,14 +487,14 @@ onBeforeUnmount(() => {
   pointer-events: none;
   z-index: 1;
 
-  /* 玻璃拟态容器：浅绿渐变圆角托底 + 微模糊（容器融色） */
+  /* 玻璃拟态容器：品牌浅绿背景 + 绿色阴影 + 微模糊（容器融色） */
   padding: 20px;
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: var(--state-success-bg);
+  box-shadow: var(--shadow-green);
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-2xl);
 
-  /* 漂浮动效 */
+  /* 漂浮动效（全局 prefers-reduced-motion 自动降级） */
   animation: hero-float 6s ease-in-out infinite;
 }
 

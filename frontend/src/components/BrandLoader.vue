@@ -30,15 +30,20 @@ defineProps<{
   width: 120px;
   height: 120px;
 
-  // 旋转光圈（品牌色）
+  /* 双色渐变光圈（品牌绿 → 浅绿），mask 细环 */
   &::before {
     content: '';
     position: absolute;
     inset: -12px;
     border-radius: 50%;
-    border: 3px solid transparent;
-    border-top-color: var(--color-primary);
+    background: conic-gradient(
+      transparent 0%,
+      var(--color-primary) 25%,
+      var(--color-primary-light) 50%,
+      transparent 75%
+    );
     animation: ring-spin 1.5s linear infinite;
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
   }
 
   .loader-illustration {

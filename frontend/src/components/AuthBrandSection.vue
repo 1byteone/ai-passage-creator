@@ -141,6 +141,7 @@ import authHome from '@/assets/illustration/auth-home.png'
   backdrop-filter: blur(6px);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-2xl);
+  box-shadow: 0 8px 32px rgba(34, 197, 94, 0.12);
 
   /* 微浮动 */
   animation: auth-float 5s ease-in-out infinite;
