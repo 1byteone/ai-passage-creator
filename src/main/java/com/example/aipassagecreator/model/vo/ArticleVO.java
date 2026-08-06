@@ -74,6 +74,26 @@ public class ArticleVO implements Serializable {
     private String fullContent;
 
     /**
+     * 文章风格（tech/emotional/educational/humorous 等）
+     */
+    private String style;
+
+    /**
+     * 创作方法论文档（default/douyin/xiaohongshu/wechat）
+     */
+    private String methodology;
+
+    /**
+     * 插画子风格（healing/cute/doodle/watercolor）
+     */
+    private String characterStyle;
+
+    /**
+     * 配图方式 JSON 数组（PEXELS/NANO_BANANA/MERMAID/ICONIFY/EMOJI_PACK/SVG_DIAGRAM）
+     */
+    private String enabledImageMethods;
+
+    /**
      * 封面图 URL
      */
     private String coverImage;
