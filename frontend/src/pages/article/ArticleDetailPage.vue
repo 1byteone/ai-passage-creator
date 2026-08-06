@@ -12,6 +12,9 @@
         <a-button v-if="hasContent" @click="skillLauncherOpen = true">
           <template #icon><ShareAltOutlined /></template>转为社交文案
         </a-button>
+        <a-button v-if="hasContent" @click="seoLauncherOpen = true">
+          <template #icon><SearchOutlined /></template>SEO 优化
+        </a-button>
         <a-button v-if="article?.status === 'FAILED'" danger @click="handleRetry">
           <template #icon><RedoOutlined /></template>重新创建
         </a-button>
@@ -250,6 +253,12 @@
       skill-name="article-to-x"
       :initial-inputs="{ articleContent: article.fullContent || article.content || '' }"
     />
+    <SkillLauncher
+      v-if="article"
+      v-model:open="seoLauncherOpen"
+      skill-name="seo-optimizer"
+      :initial-inputs="{ articleContent: article.fullContent || article.content || '', primaryKeyword: article.topic || '' }"
+    />
   </section>
 </template>
 
@@ -271,6 +280,7 @@ import {
   ShareAltOutlined,
   LinkOutlined,
   SmileOutlined,
+  SearchOutlined,
 } from '@ant-design/icons-vue'
 import ArticleReadingView from '@/components/ArticleReadingView.vue'
 import RagHitsPanel from '@/components/RagHitsPanel.vue'
@@ -293,6 +303,7 @@ const logsLoading = ref(false)
 const logsError = ref('')
 const showExecutionLogs = ref(false)
 const skillLauncherOpen = ref(false)
+const seoLauncherOpen = ref(false)
 const detoxLauncherOpen = ref(false)
 const seedLauncherOpen = ref(false)
 const hasContent = computed(() => Boolean(article.value?.fullContent || article.value?.content))
