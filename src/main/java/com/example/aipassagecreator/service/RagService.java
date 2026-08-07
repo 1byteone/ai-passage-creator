@@ -266,6 +266,11 @@ public class RagService {
         }
     }
 
+    /** 供 RagDocumentStore 入库前清洗（P2 知识库正文同策略） */
+    public String sanitizeForIndexPublic(String text) {
+        return sanitizeForIndex(text);
+    }
+
     /** 按 source 删除文档向量（幂等清理，供文档覆盖/删除用） */
     public void deleteBySource(String source) {
         if (source == null || source.isBlank()) {

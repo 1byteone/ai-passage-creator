@@ -23,19 +23,5 @@ create table if not exists agent_message (
     is_delete       tinyint default 0
 );
 
--- MySQL 不支持 CREATE INDEX IF NOT EXISTS，用存储过程探测 information_schema 幂等建索引
-DROP PROCEDURE IF EXISTS ensure_agent_msg_idx;
-
-DELIMITER //
-CREATE PROCEDURE ensure_agent_msg_idx()
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.statistics
-                   WHERE table_schema = DATABASE() AND table_name = 'agent_message'
-                     AND index_name = 'idx_agent_msg_conv') THEN
-        CREATE INDEX idx_agent_msg_conv ON agent_message(conversation_id, create_time);
-    END IF;
-END //
-DELIMITER ;
-
-CALL ensure_agent_msg_idx();
-DROP PROCEDURE ensure_agent_msg_idx;
+-- idx_agent_msg_conv 复合索引：MySQL 专属（CREATE INDEX IF NOT EXISTS 不兼容）
+-- 由 db/vendor/mysql/V8__ensure_agent_msg_idx.sql 存储过程幂等创建

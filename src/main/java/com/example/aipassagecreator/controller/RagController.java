@@ -7,12 +7,15 @@ import com.example.aipassagecreator.constant.UserConstant;
 import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.exception.ThrowUtils;
 import com.example.aipassagecreator.model.po.Article;
+import com.example.aipassagecreator.model.po.RagDocument;
 import com.example.aipassagecreator.model.po.RagReference;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.service.ArticleService;
+import com.example.aipassagecreator.service.RagDocumentStore;
 import com.example.aipassagecreator.service.RagReferenceStore;
 import com.example.aipassagecreator.service.RagService;
 import com.example.aipassagecreator.service.UserService;
+import com.mybatisflex.core.paginate.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -24,11 +27,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -53,6 +58,9 @@ public class RagController {
 
     @Resource
     private RagReferenceStore ragReferenceStore;
+
+    @Resource
+    private RagDocumentStore ragDocumentStore;
 
     /** 检索请求 */
     @Data
@@ -103,9 +111,30 @@ public class RagController {
     @PostMapping("/document")
     @Operation(summary = "上传文档到共享知识库（仅管理员）")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<?> uploadDocument(@Valid @RequestBody RagDocumentRequest request) {
-        ragService.indexDocument(request.getTitle(), request.getSource(), request.getText());
+    public BaseResponse<?> uploadDocument(@Valid @RequestBody RagDocumentRequest request,
+                                          HttpServletRequest httpRequest) {
+        User loginUser = userService.getLoginUser(httpRequest);
+        ragDocumentStore.upsert(request.getTitle(), request.getSource(), request.getText(), loginUser.getId());
         return ResultUtils.success(true);
+    }
+
+    /** 知识库文档列表（仅 admin） */
+    @GetMapping("/documents")
+    @Operation(summary = "知识库文档列表（仅管理员）")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Page<RagDocument>> documents(
+            @RequestParam(defaultValue = "1") long pageNum,
+            @RequestParam(defaultValue = "20") long pageSize,
+            @RequestParam(required = false) String keyword) {
+        return ResultUtils.success(ragDocumentStore.page(pageNum, pageSize, keyword));
+    }
+
+    /** 删除知识库文档（仅 admin）— 删表行 + 清向量 */
+    @DeleteMapping("/document/{id}")
+    @Operation(summary = "删除知识库文档（仅管理员）")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> deleteDocument(@PathVariable Long id) {
+        return ResultUtils.success(ragDocumentStore.deleteById(id));
     }
 
     /**

@@ -288,3 +288,15 @@ create table if not exists agent_message (
     is_delete tinyint default 0
 );
 create index if not exists idx_agent_msg_conv on agent_message(conversation_id, create_time);
+
+-- RAG 知识库文档表（与 V7__add_rag_document.sql 同步维护）
+create table if not exists rag_document (
+    id bigint auto_increment primary key,
+    title varchar(200) null,
+    source varchar(512) not null,
+    text longtext null,
+    user_id bigint null,
+    create_time datetime default CURRENT_TIMESTAMP not null,
+    update_time datetime default CURRENT_TIMESTAMP not null,
+    constraint uq_rag_doc_source unique (source)
+);
