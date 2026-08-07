@@ -10,6 +10,7 @@ import com.example.aipassagecreator.enums.ArticleStyleEnum;
 import com.example.aipassagecreator.methodology.MethodologyPromptAssembler;
 import com.example.aipassagecreator.enums.SseMessageTypeEnum;
 import com.example.aipassagecreator.model.dto.article.ArticleState;
+import com.example.aipassagecreator.service.RagAugmentationService;
 import com.example.aipassagecreator.utils.GsonUtils;
 import com.google.gson.reflect.TypeToken;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -34,13 +36,17 @@ public class OutlineGeneratorAgent implements NodeAction {
 
     private final DashScopeChatModel chatModel;
     private final MethodologyPromptAssembler methodologyPromptAssembler;
+    private final RagAugmentationService ragAugmentationService;
 
     public static final String INPUT_MAIN_TITLE = "mainTitle";
     public static final String INPUT_SUB_TITLE = "subTitle";
     public static final String INPUT_USER_DESCRIPTION = "userDescription";
     public static final String INPUT_STYLE = "style";
     public static final String INPUT_METHODOLOGY = "methodology";
+    public static final String INPUT_USER_ID = "userId";
     public static final String OUTPUT_OUTLINE = "outline";
+    /** RAG 参考：把注入的参考列表写入 graph state，供编排器收集存库/SSE */
+    public static final String KEY_RAG_REFERENCES = "ragReferences";
 
 
     @Override
@@ -79,6 +85,14 @@ public class OutlineGeneratorAgent implements NodeAction {
                 .replace("{descriptionSection}", descriptionSection)
                 +getStylePrompt(style)
                 +methodologyPromptAssembler.buildContentGuidance(methodology);
+
+        // P3：大纲阶段以主标题+副标题作 query 检索参考（软参考，失败/空命中不阻断）
+        Long userId = state.value(INPUT_USER_ID).map(v -> Long.valueOf(v.toString())).orElse(null);
+        String ragQuery = mainTitle + (subTitle == null || subTitle.isBlank() ? "" : " " + subTitle);
+        RagAugmentationService.AugmentedResult augmented = ragAugmentationService.augment(ragQuery, userId);
+        if (!augmented.isEmpty()) {
+            prompt += augmented.promptBlock();
+        }
 
        //获取流式处理器
         Consumer<String > streamHandler = StreamHandlerContext.get();
@@ -143,9 +157,13 @@ public class OutlineGeneratorAgent implements NodeAction {
         log.info("OutlineGeneratorAgent 执行完成: 生成了{}个章节", 
                 outlineResult.getSections() != null ? outlineResult.getSections().size() : 0);
 
-        Map<String, Object> result = Map.of(OUTPUT_OUTLINE, outlineResult);
-        log.info("OutlineGeneratorAgent 返回结果: key={}, value类型={}", 
-                OUTPUT_OUTLINE, 
+        Map<String, Object> result = new HashMap<>();
+        result.put(OUTPUT_OUTLINE, outlineResult);
+        if (!augmented.isEmpty()) {
+            result.put(KEY_RAG_REFERENCES, augmented.references());
+        }
+        log.info("OutlineGeneratorAgent 返回结果: key={}, value类型={}",
+                OUTPUT_OUTLINE,
                 outlineResult != null ? outlineResult.getClass().getName() : "null");
         return result;
     }

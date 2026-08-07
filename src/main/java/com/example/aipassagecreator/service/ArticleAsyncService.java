@@ -162,6 +162,13 @@ public class ArticleAsyncService {
             //更新阶段为等待选择标题
             articleService.updatePhase(taskId, ArticlePhaseEnum.TITLE_SELECTING);
 
+            // P3：标题阶段 RAG 参考溯源存库 + SSE
+            if (state.getRagReferences() != null && !state.getRagReferences().isEmpty()) {
+                ragReferenceStore.saveStage(taskId, "title", state.getRagReferences());
+                sendSseMessage(taskId, SseMessageTypeEnum.RAG_REFERENCE_FOUND, Map.of(
+                        "taskId", taskId, "stage", "title", "count", state.getRagReferences().size()));
+            }
+
             //推送标题方案生成完成消息
             Map<String, Object> data = new HashMap<>();
             data.put("titleOptions",state.getTitleOptions());
@@ -229,6 +236,13 @@ public class ArticleAsyncService {
 
             //更新阶段为等待编辑大纲
             articleService.updatePhase(taskId, ArticlePhaseEnum.OUTLINE_EDITING);
+
+            // P3：大纲阶段 RAG 参考溯源存库 + SSE
+            if (state.getRagReferences() != null && !state.getRagReferences().isEmpty()) {
+                ragReferenceStore.saveStage(taskId, "outline", state.getRagReferences());
+                sendSseMessage(taskId, SseMessageTypeEnum.RAG_REFERENCE_FOUND, Map.of(
+                        "taskId", taskId, "stage", "outline", "count", state.getRagReferences().size()));
+            }
 
             //推送大纲生成完成消息
             Map<String, Object> data = new HashMap<>();

@@ -105,6 +105,10 @@ public class ArticleAgentOrchestrator {
 
                 if (titleOptions != null) {
                     state.setTitleOptions(titleOptions);
+                    // P3：收集标题阶段注入的 RAG 参考（跨 ClassLoader 拷贝）
+                    finalState.value(KEY_RAG_REFERENCES)
+                            .map(v -> copyList(v, new TypeReference<List<com.example.aipassagecreator.service.RagAugmentationService.Reference>>() {}))
+                            .ifPresent(state::setRagReferences);
                     streamHandler.accept(SseMessageTypeEnum.AGENT1_COMPLETE.getValue());
                     log.info("阶段1（多智能体编排）：标题方案生成完成, 数量={}", titleOptions.size());
                 } else {
@@ -173,6 +177,10 @@ public class ArticleAgentOrchestrator {
 
                 if (outline != null) {
                     state.setOutline(outline);
+                    // P3：收集大纲阶段注入的 RAG 参考（跨 ClassLoader 拷贝）
+                    finalState.value(KEY_RAG_REFERENCES)
+                            .map(v -> copyList(v, new TypeReference<List<com.example.aipassagecreator.service.RagAugmentationService.Reference>>() {}))
+                            .ifPresent(state::setRagReferences);
                     streamHandler.accept(SseMessageTypeEnum.AGENT2_COMPLETE.getValue());
                     log.info("阶段2（多智能体编排）：大纲生成完成, 章节数={}", outline.getSections().size());
                 } else {

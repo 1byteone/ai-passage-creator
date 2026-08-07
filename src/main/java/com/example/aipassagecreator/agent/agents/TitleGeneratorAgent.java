@@ -7,6 +7,7 @@ import com.example.aipassagecreator.constant.PromptConstant;
 import com.example.aipassagecreator.enums.ArticleStyleEnum;
 import com.example.aipassagecreator.methodology.MethodologyPromptAssembler;
 import com.example.aipassagecreator.model.dto.article.ArticleState;
+import com.example.aipassagecreator.service.RagAugmentationService;
 import com.example.aipassagecreator.utils.GsonUtils;
 import com.google.gson.reflect.TypeToken;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,11 +33,15 @@ public class TitleGeneratorAgent implements NodeAction {
 
     private final DashScopeChatModel chatModel;
     private final MethodologyPromptAssembler methodologyPromptAssembler;
+    private final RagAugmentationService ragAugmentationService;
 
     public static final String INPUT_TOPIC = "topic";
     public static final String INPUT_METHODOLOGY = "methodology";
     private static final String INPUT_STYLE = "style";
+    private static final String INPUT_USER_ID = "userId";
     private static final String OUTPUT_TITLE_OPTIONS = "titleOptions";
+    /** RAG 参考：把注入的参考列表写入 graph state，供编排器收集存库/SSE */
+    private static final String KEY_RAG_REFERENCES = "ragReferences";
 
 
     @Override
@@ -57,6 +63,13 @@ public class TitleGeneratorAgent implements NodeAction {
                 +getStylePrompt(style)
                 +methodologyPromptAssembler.buildTitleGuidance(methodology);
 
+        // P3：标题阶段以选题作 query 检索参考（软参考，失败/空命中不阻断）
+        Long userId = state.value(INPUT_USER_ID).map(v -> Long.valueOf(v.toString())).orElse(null);
+        RagAugmentationService.AugmentedResult augmented = ragAugmentationService.augment(topic, userId);
+        if (!augmented.isEmpty()) {
+            prompt += augmented.promptBlock();
+        }
+
         //调用 LLM
         ChatResponse response = chatModel.call(new Prompt(new UserMessage(prompt)));
         String content = response.getResult().getOutput().getText();
@@ -66,7 +79,12 @@ public class TitleGeneratorAgent implements NodeAction {
 
         log.info("TitleGeneratorAgent 执行完成, 生成了{}个标题方案", titleOptions.size());
 
-        return Map.of(OUTPUT_TITLE_OPTIONS, titleOptions);
+        Map<String, Object> result = new HashMap<>();
+        result.put(OUTPUT_TITLE_OPTIONS, titleOptions);
+        if (!augmented.isEmpty()) {
+            result.put(KEY_RAG_REFERENCES, augmented.references());
+        }
+        return result;
     }
 
     /**
