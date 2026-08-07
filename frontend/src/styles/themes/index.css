@@ -61,9 +61,32 @@
 
 [data-theme='swiss'] .ant-card,
 [data-theme='swiss'] .ant-modal-content,
-[data-theme='swiss'] .ant-input {
+[data-theme='swiss'] .ant-input,
+[data-theme='swiss'] .ant-table,
+[data-theme='swiss'] .ant-dropdown-menu,
+[data-theme='swiss'] .ant-select-dropdown,
+[data-theme='swiss'] .ant-popover-inner {
   border-radius: 0 !important;
   box-shadow: none !important;
+}
+
+/* 瑞士甲板：卡片/表格细灰边框 + 无阴影，表头红强调 */
+[data-theme='swiss'] .ant-card,
+[data-theme='swiss'] .ant-table,
+[data-theme='swiss'] .ant-table-container {
+  border-color: var(--border-default) !important;
+  background-color: var(--surface-panel) !important;
+}
+
+[data-theme='swiss'] .ant-table-thead > tr > th {
+  background: var(--surface-muted) !important;
+  color: var(--text-subtle) !important;
+  font-weight: 700 !important;
+  border-bottom: var(--swiss-border-width) solid var(--swiss-accent) !important;
+}
+
+[data-theme='swiss'] .ant-table-tbody > tr > td {
+  border-color: var(--border-default) !important;
 }
 
 /* 瑞士甲板：正文标题左对齐 + 红下划线 */
@@ -126,10 +149,32 @@
   border-color: var(--border-default) !important;
 }
 
-/* 简约点阵：柔和卡片阴影 */
+/* 简约点阵：柔和卡片阴影 + 温和圆角 */
 [data-theme='clean'] .ant-card {
   box-shadow: var(--shadow-md) !important;
   border-radius: var(--radius-lg) !important;
+  border-color: var(--border-subtle) !important;
+}
+
+/* 简约点阵：表格/下拉/弹窗统一浅色 + 柔和边框 */
+[data-theme='clean'] .ant-table,
+[data-theme='clean'] .ant-dropdown-menu,
+[data-theme='clean'] .ant-select-dropdown,
+[data-theme='clean'] .ant-popover-inner {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-sm) !important;
+  border-color: var(--border-default) !important;
+  background-color: var(--surface-panel) !important;
+}
+
+[data-theme='clean'] .ant-table-thead > tr > th {
+  background: var(--surface-muted) !important;
+  color: var(--text-subtle) !important;
+  font-weight: 600 !important;
+}
+
+[data-theme='clean'] .ant-table-tbody > tr > td {
+  border-color: var(--border-subtle) !important;
 }
 
 /* ==================== 主题切换器 ==================== */
