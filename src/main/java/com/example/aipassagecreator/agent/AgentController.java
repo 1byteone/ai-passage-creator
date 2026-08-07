@@ -34,6 +34,7 @@ public class AgentController {
     private final UserService userService;
     private final AgentSseEmitterManager sseManager;
     private final AgentRequestRegistry requestRegistry;
+    private final GuestRateLimiter guestRateLimiter;
 
     /** 发送消息：登录用户 / 游客均支持（游客仅纯对话，受 GuestRateLimiter 限流） */
     @PostMapping("/chat")
@@ -43,6 +44,9 @@ public class AgentController {
         LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
         Long userId = loginUser == null ? null : loginUser.getId();
         String guestId = userId == null ? requireGuestId(request.getGuestId()) : null;
+        if (userId == null && !guestRateLimiter.tryAcquire(guestId)) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "请求过于频繁，请稍后再试");
+        }
 
         AgentChatResponse response = conversationService.chat(request, userId, guestId);
         return ResultUtils.success(Map.of(

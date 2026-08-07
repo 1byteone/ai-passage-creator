@@ -28,6 +28,7 @@ class AgentControllerTest {
     private UserService userService;
     private AgentSseEmitterManager sseManager;
     private AgentRequestRegistry registry;
+    private GuestRateLimiter guestRateLimiter;
 
     @BeforeEach
     void setUp() {
@@ -35,7 +36,8 @@ class AgentControllerTest {
         userService = mock(UserService.class);
         sseManager = mock(AgentSseEmitterManager.class);
         registry = new AgentRequestRegistry();
-        controller = new AgentController(service, userService, sseManager, registry);
+        guestRateLimiter = new GuestRateLimiter(5);
+        controller = new AgentController(service, userService, sseManager, registry, guestRateLimiter);
     }
 
     @Test
