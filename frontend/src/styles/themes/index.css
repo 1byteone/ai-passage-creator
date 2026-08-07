@@ -119,7 +119,35 @@ html[data-theme='dotmatrix'] .nav-item:hover {
 }
 html[data-theme='dotmatrix'] .nav-item.active {
   color: var(--color-primary);
-  background: rgba(0, 240, 255, 0.1);
+  background: rgba(0,240,255,0.1);
+}
+
+/* 点阵终端：radio/checkbox 控件深色适配 */
+[data-theme='dotmatrix'] .ant-radio-inner,
+[data-theme='dotmatrix'] .ant-checkbox-inner {
+  background-color: var(--surface-muted) !important;
+  border-color: var(--border-default) !important;
+}
+[data-theme='dotmatrix'] .ant-radio-inner::after,
+[data-theme='dotmatrix'] .ant-checkbox-inner::after {
+  border-color: var(--color-primary) !important;
+}
+[data-theme='dotmatrix'] .ant-radio-checked .ant-radio-inner {
+  border-color: var(--color-primary) !important;
+}
+[data-theme='dotmatrix'] .ant-radio-checked .ant-radio-inner::after {
+  background-color: var(--color-primary) !important;
+}
+[data-theme='dotmatrix'] .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+[data-theme='dotmatrix'] .ant-checkbox-checked .ant-checkbox-inner::after {
+  border-color: var(--surface-panel) !important;
+}
+[data-theme='dotmatrix'] .ant-radio-wrapper,
+[data-theme='dotmatrix'] .ant-checkbox-wrapper {
+  color: var(--text-body) !important;
 }
 
 /* 点阵终端：下拉菜单分隔线 + 箭头深色 */
