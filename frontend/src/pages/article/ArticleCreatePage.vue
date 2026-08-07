@@ -2434,7 +2434,7 @@ onBeforeUnmount(() => {
 }
 
 .icon-ai {
-  color: #3b82f6;
+  color: var(--color-info);
 }
 
 .icon-history {

@@ -661,7 +661,7 @@ time {
   gap: 16px;
   margin-bottom: 16px;
   padding: 12px 16px;
-  border: 1px solid #fde68a;
+  border: 1px solid var(--color-warning);
   border-radius: var(--radius-md);
   background: var(--state-warning-bg);
   color: var(--state-warning-text);

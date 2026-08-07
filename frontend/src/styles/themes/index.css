@@ -203,3 +203,29 @@
   color: var(--color-primary);
   margin-left: auto;
 }
+
+/* 深色点阵主题：滚动条深色适配（浅色主题用浏览器默认滚动条） */
+[data-theme='dotmatrix'],
+[data-theme='clean'] {
+  scrollbar-color: var(--border-default) var(--surface-canvas);
+  scrollbar-width: thin;
+}
+[data-theme='dotmatrix'] ::-webkit-scrollbar,
+[data-theme='clean'] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+[data-theme='dotmatrix'] ::-webkit-scrollbar-track,
+[data-theme='clean'] ::-webkit-scrollbar-track {
+  background: var(--surface-canvas);
+}
+[data-theme='dotmatrix'] ::-webkit-scrollbar-thumb,
+[data-theme='clean'] ::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 5px;
+  border: 2px solid var(--surface-canvas);
+}
+[data-theme='dotmatrix'] ::-webkit-scrollbar-thumb:hover,
+[data-theme='clean'] ::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
