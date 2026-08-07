@@ -142,16 +142,24 @@ SkillExecutePage (Vue) ─→ POST /skill/{name}/execute
 
 ```
 文章 COMPLETED ──@Async(ragExecutor)──▶ RagService.indexArticle
-                                          │ TokenTextSplitter 分块(800/200)
+                                          │ 入库清洗(去HTML/指令行) + TokenTextSplitter(800/200)
                                           │ DashScope embedding
                                           ▼
                                  VectorStore (Supabase pgvector / 内存降级)
                                           ▲
-Skill SUCCESS ──@Async(ragExecutor)──▶ RagService.indexSkill  │
+Skill SUCCESS ──@Async(ragExecutor)──▶ RagService.indexSkill  │   (索引接线见阶段二)
                                           │                     │
-文章删除 ───────────────────────────▶ RagService.deleteByTaskId
+文章删除 ───────────────────────────▶ RagService.deleteByTaskId (条纹锁+isDelete守卫)
                                           │
-前端(相关文章/历史参考) ────────────────▶ RagController.search
+前端(相关文章/历史参考) ────────────────▶ RagController.search (相似度阈值+分数归一化)
+                                          │
+创作 Agent(标题/大纲/正文) ──────────▶ RagAugmentationService.augment
+                                          │ searchChunks(15) → DashScopeRerankModel 重排 → top5
+                                          ▼
+                                   「【参考资料】软参考块」注入 prompt
+                                          │
+                                    rag_reference 表存库 + SSE RAG_REFERENCE_FOUND
+                                    → 详情页 GET /rag/references/{taskId} 溯源
 ```
 
 ### 前端路由表
@@ -185,8 +193,9 @@ Skill SUCCESS ──@Async(ragExecutor)──▶ RagService.indexSkill  │
 |------|------|------|
 | ORM | MyBatis-Flex | 非 MyBatis-Plus，项目已投资 Flex 生态 |
 | 向量库 | Supabase+pgvector | 托管 Postgres 零运维，pgvector 扩展成熟 |
-| 降级向量库 | 内存 SimpleVectorStore | 无 Supabase 凭据时开发不阻塞 |
+| 降级向量库 | 内存 SimpleVectorStore | 无 Supabase 凭据时开发不阻塞（`FilterSupportSimpleVectorStore` 补过滤删除） |
 | Embedding | DashScope text-embedding | 复用现有 DASHSCOPE_API_KEY，零额外成本 |
+| 重排 | DashScope gte-rerank（RerankModel） | RAG 最高 ROI 改进，检索 top15 → 重排 → top5 |
 | 模型主备 | agnes 主 / dashscope 降级 | Agnes 延迟更低，Dashscope 更稳定 |
 | AI 框架 | Spring AI Alibaba StateGraph | 多阶段图编排，支持 HITL+工具调用 |
 | 用户隔离 | 普通用户只能检索自己，admin 全站 | 数据隐私 + 管理需求平衡 |

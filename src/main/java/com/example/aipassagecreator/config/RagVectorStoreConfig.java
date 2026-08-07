@@ -8,6 +8,9 @@ import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.web.client.ClientHttpRequestFactories;
+import org.springframework.boot.web.client.ClientHttpRequestFactorySettings;
+import org.springframework.boot.web.client.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -15,6 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import javax.sql.DataSource;
+import java.time.Duration;
 
 /**
  * RAG 向量存储配置 — Supabase + pgvector 主 / 内存 SimpleVectorStore 降级
@@ -34,6 +38,24 @@ import javax.sql.DataSource;
 public class RagVectorStoreConfig {
 
     private static final String PG_DRIVER = "org.postgresql.Driver";
+
+    /**
+     * 给 Spring 管理的 RestClient.Builder 统一设置连接/读取超时。
+     * <p>DashScope auto-config 通过 {@code ObjectProvider<RestClient.Builder>} 注入
+     * Spring 管理的 builder，因此这里的 customizer 会让 embedding / rerank / chat
+     * 全部 HTTP 调用继承超时，避免外部 AI 服务半开挂起时线程被永久占用
+     * （此前无任何超时配置，read 默认无限）。</p>
+     */
+    @Bean
+    @ConditionalOnMissingBean(RestClientCustomizer.class)
+    public RestClientCustomizer ragRestClientTimeout(
+            @Value("${rag.http.connect-timeout:10s}") Duration connectTimeout,
+            @Value("${rag.http.read-timeout:120s}") Duration readTimeout) {
+        ClientHttpRequestFactorySettings settings = ClientHttpRequestFactorySettings.DEFAULTS
+                .withConnectTimeout(connectTimeout)
+                .withReadTimeout(readTimeout);
+        return builder -> builder.requestFactory(ClientHttpRequestFactories.get(settings));
+    }
 
     @Bean
     @Primary
@@ -59,7 +81,7 @@ public class RagVectorStoreConfig {
             }
         }
         log.warn("RAG 向量存储启用内存 SimpleVectorStore（未配置 Supabase 凭据/连接失败/主动降级，重启后数据丢失）");
-        return SimpleVectorStore.builder(embeddingModel).build();
+        return new FilterSupportSimpleVectorStore(SimpleVectorStore.builder(embeddingModel));
     }
 
     /** 构建指向 Supabase Postgres 的 PgVectorStore（HNSW + 余弦距离，自动建表） */
@@ -74,12 +96,17 @@ public class RagVectorStoreConfig {
             dims = 1536;
         }
         log.info("PgVectorStore 初始化: dimensions={}, index=HNSW, distance=COSINE", dims);
-        return PgVectorStore.builder(jdbcTemplate, embeddingModel)
+        PgVectorStore store = PgVectorStore.builder(jdbcTemplate, embeddingModel)
                 .dimensions(dims)
                 .indexType(PgVectorStore.PgIndexType.HNSW)
                 .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
                 .initializeSchema(true)
                 .build();
+        // 主动验证连接：initializeSchema 在 afterPropertiesSet 才执行（@Bean 方法返回之后由
+        // Spring 调用），若连接失败发生在那个阶段，vectorStore() 的 try-catch 捕不到，降级失效。
+        // 这里先发一个轻量查询，让连接失败在 try-catch 内暴露，从而正确回落到内存模式。
+        jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+        return store;
     }
 
     /** 独立的 Postgres DataSource，不碰主 MySQL 数据源 */

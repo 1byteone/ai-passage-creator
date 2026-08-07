@@ -659,6 +659,24 @@ declare namespace API {
     message?: string
   }
 
+  /** RAG 参考溯源（创作各阶段注入的检索参考） */
+  type RagReference = {
+    id?: number
+    taskId?: string
+    stage?: string
+    refId?: string
+    refType?: string
+    refTitle?: string
+    score?: number
+    createTime?: string
+  }
+
+  type BaseResponseListRagReference = {
+    code?: number
+    data?: RagReference[]
+    message?: string
+  }
+
   // ── Workspace 协作空间 ──
 
   type Workspace = {

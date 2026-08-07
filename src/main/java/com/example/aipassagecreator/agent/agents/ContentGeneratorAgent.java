@@ -9,6 +9,7 @@ import com.example.aipassagecreator.enums.ArticleStyleEnum;
 import com.example.aipassagecreator.methodology.MethodologyPromptAssembler;
 import com.example.aipassagecreator.enums.SseMessageTypeEnum;
 import com.example.aipassagecreator.model.dto.article.ArticleState;
+import com.example.aipassagecreator.service.RagAugmentationService;
 import com.example.aipassagecreator.utils.GsonUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,7 @@ import reactor.core.publisher.Flux;
 
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * 正文生成 Agent
@@ -31,13 +33,17 @@ import java.util.function.Consumer;
 public class ContentGeneratorAgent implements NodeAction {
     private final DashScopeChatModel chatModel;
     private final MethodologyPromptAssembler methodologyPromptAssembler;
+    private final RagAugmentationService ragAugmentationService;
 
     public static final String INPUT_MAIN_TITLE = "mainTitle";
     public static final String INPUT_SUB_TITLE = "subTitle";
     public static final String INPUT_OUTLINE = "outline";
     public static final String INPUT_STYLE = "style";
     public static final String INPUT_METHODOLOGY = "methodology";
+    public static final String INPUT_USER_ID = "userId";
     public static final String OUTPUT_CONTENT = "content";
+    /** RAG 参考溯源：把注入的参考列表写入 graph state，供编排器收集存库/SSE */
+    public static final String KEY_RAG_REFERENCES = "ragReferences";
 
 
     @Override
@@ -73,8 +79,18 @@ public class ContentGeneratorAgent implements NodeAction {
                 .replace("{mainTitle}", mainTitle)
                 .replace("{subTitle}", subTitle)
                 .replace("{outlineText}", outlineText)
-                +getStylePrompt(style)
-                +methodologyPromptAssembler.buildContentGuidance(methodology);
+                + getStylePrompt(style)
+                + methodologyPromptAssembler.buildContentGuidance(methodology);
+
+        // RAG 参考增强：以主标题+大纲章节作 query，检索该用户历史文章/共享文档作软参考
+        Long userId = state.value(INPUT_USER_ID).map(v -> Long.valueOf(v.toString())).orElse(null);
+        String ragQuery = mainTitle + (subTitle == null || subTitle.isBlank() ? "" : " " + subTitle)
+                + " " + outlineTitles(outlineResult);
+        RagAugmentationService.AugmentedResult augmented = ragAugmentationService.augment(ragQuery, userId);
+        if (!augmented.isEmpty()) {
+            log.info("ContentGeneratorAgent 注入 RAG 参考 {} 条, taskId={}", augmented.references().size(), userId);
+            prompt += augmented.promptBlock();
+        }
 
         //获取流式处理器
         Consumer<String > streamHandler = StreamHandlerContext.get();
@@ -84,7 +100,23 @@ public class ContentGeneratorAgent implements NodeAction {
 
         log.info("ContentGeneratorAgent 执行完成, 正文长度={}", content.length());
 
-        return Map.of(OUTPUT_CONTENT, content);
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put(OUTPUT_CONTENT, content);
+        if (!augmented.isEmpty()) {
+            result.put(KEY_RAG_REFERENCES, augmented.references());
+        }
+        return result;
+    }
+
+    /** 汇总大纲各章节标题，作为正文阶段 RAG 检索 query 的一部分 */
+    private String outlineTitles(ArticleState.OutlineResult outline) {
+        if (outline == null || outline.getSections() == null || outline.getSections().isEmpty()) {
+            return "";
+        }
+        return outline.getSections().stream()
+                .map(ArticleState.OutlineSection::getTitle)
+                .filter(t -> t != null && !t.isBlank())
+                .collect(Collectors.joining(" "));
     }
 
     /**

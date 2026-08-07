@@ -62,7 +62,8 @@ export function useRagSearch(options: UseRagSearchOptions = {}) {
       // 后端业务/运行时错误走 HTTP 200 + code!=0，失败时不能让空数组冒充"检索成功零命中"
       if (res.data && res.data.code !== 0) throw new Error(res.data.message || 'RAG 检索失败')
       let list = res.data?.data ?? []
-      list = list.filter((h) => h.type === (opts.type ?? 'article'))
+      // 不再前端二次过滤 type：后端 buildFilter 已按 type 契约返回（type=article 只回个人文章，
+      // 未指定 type 回个人+共享文档），前端过滤会掩盖契约不一致且丢弃共享文档命中。
       if (opts.excludeRefId) list = list.filter((h) => h.refId !== opts.excludeRefId)
       hits.value = dedupe(list)
     } catch (e) {

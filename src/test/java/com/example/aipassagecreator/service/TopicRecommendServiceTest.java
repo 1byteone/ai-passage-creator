@@ -1,6 +1,7 @@
 package com.example.aipassagecreator.service;
 
 import com.example.aipassagecreator.mapper.ArticleMapper;
+import com.example.aipassagecreator.model.po.Article;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.model.vo.TopicRecommendVO;
 import com.example.aipassagecreator.skill.SkillExecution;
@@ -54,6 +55,16 @@ class TopicRecommendServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(service, "aiEnabled", true);
+        // M3 修复后 history 来源先取用户最近一篇已完成文章作检索 query，默认给一篇
+        // （lenient：仅部分测试走 recommend，strict stubbing 会误判多余 stub）
+        Article recent = Article.builder()
+                .taskId("recent-task")
+                .userId(USER_ID)
+                .status("COMPLETED")
+                .mainTitle("最近完成文章")
+                .topic("最近选题")
+                .build();
+        lenient().when(articleMapper.selectOneByQuery(any())).thenReturn(recent);
     }
 
     private User normalUser() {

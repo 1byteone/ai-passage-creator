@@ -79,6 +79,22 @@
           />
         </section>
 
+        <!-- 参考来源：创作时注入的 RAG 参考溯源 -->
+        <section v-if="ragReferences.length" class="related-panel" aria-labelledby="references-title">
+          <h2 id="references-title" class="related-title">
+            <ReadOutlined />
+            参考来源
+          </h2>
+          <div v-if="referencesLoading" class="references-loading">加载中…</div>
+          <ul v-else class="references-list">
+            <li v-for="ref in ragReferences" :key="ref.id" class="reference-item">
+              <span class="reference-stage">{{ stageLabel(ref.stage) }}</span>
+              <span class="reference-title">{{ ref.refTitle }}</span>
+              <span class="reference-score">{{ ref.score != null ? ref.score.toFixed(2) : '' }}</span>
+            </li>
+          </ul>
+        </section>
+
         <section class="execution-panel" aria-labelledby="execution-title">
           <button
             type="button"
@@ -279,6 +295,7 @@ import {
   SendOutlined,
   ShareAltOutlined,
   LinkOutlined,
+  ReadOutlined,
   SmileOutlined,
   SearchOutlined,
 } from '@ant-design/icons-vue'
@@ -286,6 +303,7 @@ import ArticleReadingView from '@/components/ArticleReadingView.vue'
 import RagHitsPanel from '@/components/RagHitsPanel.vue'
 import SkillLauncher from '@/pages/skill/components/SkillLauncher.vue'
 import { useRagSearch } from '@/composables/useRagSearch'
+import { getRagReferences } from '@/api/ragController'
 import { getArticle, getExecutionLogs } from '@/api/articleController'
 import { submitForApproval, approveArticle, rejectArticle, getApprovalHistory } from '@/api/approvalController'
 import { exportAsMarkdown } from '@/utils/article'
@@ -311,6 +329,26 @@ const taskId = computed(() => (typeof route.params.taskId === 'string' ? route.p
 // 相关文章：文章加载成功后用标题语义检索（详情页只发一次，无需防抖）
 const { hits: relatedHits, loading: relatedLoading, search: relatedSearch } = useRagSearch({ debounceMs: 0 })
 
+// 参考来源：创作时注入的 RAG 参考溯源
+const ragReferences = ref<API.RagReference[]>([])
+const referencesLoading = ref(false)
+const loadReferences = async () => {
+  if (!taskId.value) return
+  referencesLoading.value = true
+  try {
+    const res = await getRagReferences(taskId.value)
+    if (res.data.code !== 0) throw new Error(res.data.message || '参考溯源加载失败')
+    ragReferences.value = res.data.data ?? []
+  } catch (e) {
+    console.error('参考溯源加载失败（静默）:', e)
+  } finally {
+    referencesLoading.value = false
+  }
+}
+
+const stageLabel = (stage?: string) =>
+  stage === 'title' ? '标题' : stage === 'outline' ? '大纲' : stage === 'content' ? '正文' : (stage ?? '')
+
 const loadArticle = async () => {
   if (!taskId.value) {
     errorMessage.value = '文章链接缺少任务编号。'
@@ -325,6 +363,7 @@ const loadArticle = async () => {
     if (article.value) {
       void loadExecutionLogs()
       loadRelated()
+      void loadReferences()
     }
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '请稍后重试'
@@ -818,6 +857,54 @@ onMounted(loadArticle)
   font-size: 16px;
   font-weight: 650;
   color: var(--text-strong);
+}
+
+/* 参考来源列表 */
+.references-loading {
+  color: var(--text-weak);
+  font-size: 13px;
+}
+
+.references-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reference-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-soft, rgba(0, 0, 0, 0.03));
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.reference-stage {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--color-primary);
+  background: var(--color-primary-bg, rgba(64, 128, 255, 0.1));
+}
+
+.reference-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-strong);
+}
+
+.reference-score {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-weak);
 }
 
 @media (max-width: 700px) {

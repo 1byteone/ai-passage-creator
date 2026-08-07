@@ -50,6 +50,9 @@ public class ArticleAsyncService {
     @Resource
     private RagService ragService;
 
+    @Resource
+    private RagReferenceStore ragReferenceStore;
+
     /**
      * 异步执行文章生成任务
      *
@@ -138,6 +141,8 @@ public class ArticleAsyncService {
             Article phase1Article = articleService.getByTaskId(taskId);
             if (phase1Article != null) {
                 state.setCharacterStyle(phase1Article.getCharacterStyle());
+                // RAG 参考检索的租户隔离
+                state.setUserId(phase1Article.getUserId());
             }
 
             //执行阶段1：生成标题方案
@@ -203,6 +208,8 @@ public class ArticleAsyncService {
             title.setSubTitle(article.getSubTitle());
             state.setTitle(title);
             state.setCharacterStyle(article.getCharacterStyle());
+            // RAG 参考检索的租户隔离
+            state.setUserId(article.getUserId());
 
             //执行阶段2：生成大纲
             if(orchestratorEnabled){
@@ -265,6 +272,8 @@ public class ArticleAsyncService {
             state.setTaskId(taskId);
             state.setStyle(article.getStyle());
             state.setMethodology(article.getMethodology() != null ? article.getMethodology() : "default");
+            // RAG 参考检索的租户隔离
+            state.setUserId(article.getUserId());
 
             // 从数据库获取允许的配图方式
             List<String> enabledMethods = null;
@@ -303,6 +312,13 @@ public class ArticleAsyncService {
                 });
             }
 
+            // RAG 参考溯源：把正文阶段注入的参考存库 + 推 SSE（供详情页溯源展示）
+            if (state.getRagReferences() != null && !state.getRagReferences().isEmpty()) {
+                ragReferenceStore.saveStage(taskId, "content", state.getRagReferences());
+                sendSseMessage(taskId, SseMessageTypeEnum.RAG_REFERENCE_FOUND, Map.of(
+                        "taskId", taskId, "stage", "content", "count", state.getRagReferences().size()));
+            }
+
             // 质量门检测（生成内容后、保存前）
             ArticleQualityGateService.GateResult gate = articleQualityGateService
                     .checkAndDetox(state, taskId, article.getUserId());
@@ -312,12 +328,6 @@ public class ArticleAsyncService {
 
             // 更新状态为已完成（evaluateViral 要求 COMPLETED 状态）
             articleService.updateArticleStatus(taskId, ArticleStatusEnum.COMPLETED, null);
-
-            // RAG 向量索引：文章完成后异步嵌入向量库（失败静默，不影响主流程）
-            Article savedArticle = articleService.getByTaskId(taskId);
-            if (savedArticle != null) {
-                ragService.indexArticleAsync(savedArticle);
-            }
 
             // VIP/管理员专属爆款评分（必须在 COMPLETED 之后）
             BigDecimal viralScore = null;
@@ -348,6 +358,14 @@ public class ArticleAsyncService {
 
             // 完成 SSE 连接
             sseEmitterManager.complete(taskId);
+
+            // RAG 向量索引：文章完成后异步嵌入向量库（失败静默，不影响主流程）。
+            // 放在 complete() 之后，使「完成信号」与索引延迟彻底解耦——队列满时
+            // CallerRunsPolicy 会把索引拉回本线程同步执行，若在 complete 之前会拖住用户。
+            Article savedArticle = articleService.getByTaskId(taskId);
+            if (savedArticle != null) {
+                ragService.indexArticleAsync(savedArticle);
+            }
 
             log.info("阶段3异步任务完成, taskId={}", taskId);
         } catch (Exception e) {

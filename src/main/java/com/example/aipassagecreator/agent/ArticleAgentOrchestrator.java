@@ -58,6 +58,7 @@ public class ArticleAgentOrchestrator {
     private static final String KEY_STYLE = "style";
     private static final String KEY_METHODOLOGY = "methodology";
     private static final String KEY_USER_DESCRIPTION = "userDescription";
+    private static final String KEY_USER_ID = "userId";
     private static final String KEY_MAIN_TITLE = "mainTitle";
     private static final String KEY_SUB_TITLE = "subTitle";
     private static final String KEY_TITLE_OPTIONS = "titleOptions";
@@ -68,6 +69,8 @@ public class ArticleAgentOrchestrator {
     private static final String KEY_IMAGES = "images";
     private static final String KEY_FULL_CONTENT = "fullContent";
     private static final String KEY_ENABLED_IMAGE_METHODS = "enabledImageMethods";
+    /** RAG 参考溯源：ContentGeneratorAgent 注入的参考列表 */
+    private static final String KEY_RAG_REFERENCES = "ragReferences";
 
     // endregion
 
@@ -84,6 +87,7 @@ public class ArticleAgentOrchestrator {
             inputs.put(KEY_TOPIC, state.getTopic());
             inputs.put(KEY_STYLE, state.getStyle());
             inputs.put(KEY_METHODOLOGY, state.getMethodology());
+            inputs.put(KEY_USER_ID, state.getUserId());
 
             // 构建并执行图
             StateGraph graph = buildPhase1Graph();
@@ -133,6 +137,7 @@ public class ArticleAgentOrchestrator {
             inputs.put(KEY_USER_DESCRIPTION, state.getUserDescription());
             inputs.put(KEY_STYLE, state.getStyle());
             inputs.put(KEY_METHODOLOGY, state.getMethodology());
+            inputs.put(KEY_USER_ID, state.getUserId());
 
             StateGraph graph = buildPhase2Graph();
             CompiledGraph compiledGraph = graph.compile();
@@ -204,6 +209,7 @@ public class ArticleAgentOrchestrator {
             inputs.put(KEY_STYLE, state.getStyle());
             inputs.put(KEY_METHODOLOGY, state.getMethodology());
             inputs.put(KEY_ENABLED_IMAGE_METHODS, state.getEnabledImageMethods());
+            inputs.put(KEY_USER_ID, state.getUserId());
 
             StateGraph graph = buildPhase3Graph();
             CompiledGraph compiledGraph = graph.compile();
@@ -234,6 +240,11 @@ public class ArticleAgentOrchestrator {
                 String fullContent = finalState.value(KEY_FULL_CONTENT)
                         .map(Object::toString)
                         .orElse(null);
+
+                // RAG 参考溯源：收集正文阶段注入的参考（跨 ClassLoader 拷贝）
+                finalState.value(KEY_RAG_REFERENCES)
+                        .map(v -> copyList(v, new TypeReference<List<com.example.aipassagecreator.service.RagAugmentationService.Reference>>() {}))
+                        .ifPresent(state::setRagReferences);
 
                 // 更新状态
                 if (contentWithPlaceholders != null) {
@@ -333,6 +344,7 @@ public class ArticleAgentOrchestrator {
             strategies.put(KEY_STYLE, new ReplaceStrategy());
             strategies.put(KEY_METHODOLOGY, new ReplaceStrategy());
             strategies.put(KEY_USER_DESCRIPTION, new ReplaceStrategy());
+            strategies.put(KEY_USER_ID, new ReplaceStrategy());
             strategies.put(KEY_MAIN_TITLE, new ReplaceStrategy());
             strategies.put(KEY_SUB_TITLE, new ReplaceStrategy());
             strategies.put(KEY_TITLE_OPTIONS, new ReplaceStrategy());
@@ -343,6 +355,7 @@ public class ArticleAgentOrchestrator {
             strategies.put(KEY_IMAGES, new ReplaceStrategy());
             strategies.put(KEY_FULL_CONTENT, new ReplaceStrategy());
             strategies.put(KEY_ENABLED_IMAGE_METHODS, new ReplaceStrategy());
+            strategies.put(KEY_RAG_REFERENCES, new ReplaceStrategy());
             return strategies;
         };
     }

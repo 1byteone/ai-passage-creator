@@ -38,3 +38,9 @@ model:
     article-default: dashscope
     fallback: dashscope
     image-model: agnes-image-2.1-flash
+
+# 测试固定内存向量库：不依赖外部 Supabase（系统环境变量 SUPABASE_DB_URL 可能触发
+# auto 模式去连真实 pgvector，CI/本地无网络时上下文加载直接失败）
+rag:
+  vectorstore:
+    active: memory

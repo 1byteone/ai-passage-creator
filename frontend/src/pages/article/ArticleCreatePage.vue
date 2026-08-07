@@ -541,6 +541,11 @@
           />
         </div>
 
+        <!-- RAG 参考注入提示（正文阶段命中历史/共享内容，由 SSE 事件驱动） -->
+        <div v-if="ragReferenceInfo" class="rag-reference-badge">
+          <ReadOutlined /> 正文已参考 {{ ragReferenceInfo.count }} 条历史/共享内容
+        </div>
+
         <!-- 创作技巧 -->
         <div v-if="currentPhase === 'INPUT'" class="panel-section">
           <h4 class="panel-title">
@@ -802,6 +807,7 @@ import {
   CrownOutlined,
   FileTextOutlined,
   HistoryOutlined,
+  ReadOutlined,
   ReloadOutlined
 } from '@ant-design/icons-vue'
 import { Flame, Sparkles, BookOpen, Plus } from 'lucide-vue-next'
@@ -939,6 +945,8 @@ interface QualityReport {
   viralScore?: number
 }
 const qualityReport = ref<QualityReport | null>(null)
+// RAG 参考注入信息（RAG_REFERENCE_FOUND SSE 事件携带）
+const ragReferenceInfo = ref<{ stage: string; count: number } | null>(null)
 const realtimeLogs = ref<RealtimeLog[]>([])
 
 const currentAgentStep = computed(() => {
@@ -1280,6 +1288,12 @@ const handleSSEMessage = (msg: SSEMessage) => {
         `质量检测: ${qr.score} 分${qr.passed ? ' ✓通过' : ' ✗未通过'}${qr.detoxed ? '（已自动降AI味改写）' : ''}${qr.viralScore != null ? ` | 爆款分: ${qr.viralScore}` : ''}`,
         qr.passed ? 'success' : 'warning'
       )
+      break
+
+    case 'RAG_REFERENCE_FOUND':
+      // RAG 参考注入完成（正文阶段检索到相关历史文章/共享文档）
+      ragReferenceInfo.value = { stage: msg.stage ?? 'content', count: msg.count ?? 0 }
+      addLog(`已注入 ${msg.count ?? 0} 条参考材料`, 'info')
       break
 
     case 'ERROR':
@@ -2163,6 +2177,19 @@ onBeforeUnmount(() => {
   font-weight: 600;
   color: var(--color-text);
   margin: 0 0 16px;
+}
+
+/* RAG 参考注入提示 */
+.rag-reference-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--color-primary);
+  background: var(--color-primary-bg, rgba(64, 128, 255, 0.08));
+  border-radius: 8px;
 }
 
 /* 右侧栏配图预览 */

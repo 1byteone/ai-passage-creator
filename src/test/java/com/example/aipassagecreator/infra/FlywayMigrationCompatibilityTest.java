@@ -14,6 +14,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -74,6 +75,29 @@ class FlywayMigrationCompatibilityTest {
                 assertTrue(rs.getInt(1) >= 3, "user 表应含种子数据");
             }
         }
+    }
+
+    @Test
+    @DisplayName("迁移版本号在 db/migration + db/vendor/mysql 合并后唯一（防同版本冲突启动失败）")
+    void migrationVersions_uniqueAcrossVendorLocations() {
+        // 生产 MySQL 的 flyway.locations 同时扫 db/migration 与 db/vendor/mysql。
+        // 若两个文件声明同版本（如历史曾出现的两个 V3），Flyway 启动即抛
+        // "Found more than one migration with version N"。此处不执行 SQL（vendor 的
+        // 存储过程仅 MySQL 可跑），仅用 info() 解析合并后的版本集并断言唯一。
+        Flyway flyway = Flyway.configure()
+                .dataSource(dataSource)
+                .locations("classpath:db/migration", "classpath:db/vendor/mysql")
+                .load();
+
+        List<String> versions = Arrays.stream(flyway.info().all())
+                .map(MigrationInfo::getVersion)
+                .filter(Objects::nonNull)
+                .map(v -> v.getVersion())
+                .toList();
+
+        assertEquals(versions.size(), versions.stream().distinct().count(),
+                "db/migration 与 db/vendor/mysql 合并后的版本号必须唯一: " + versions);
+        assertTrue(versions.contains("4"), "character_style 迁移应已改名到 V4: " + versions);
     }
 
     private List<String> listTables(Statement stmt) throws Exception {

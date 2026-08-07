@@ -3,12 +3,14 @@ package com.example.aipassagecreator.service;
 import com.example.aipassagecreator.constant.UserConstant;
 import com.example.aipassagecreator.mapper.ArticleMapper;
 import com.example.aipassagecreator.model.dto.skill.TopicOption;
+import com.example.aipassagecreator.model.po.Article;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.model.vo.TopicRecommendVO;
 import com.example.aipassagecreator.skill.SkillExecution;
 import com.example.aipassagecreator.skill.SkillRegistry;
 import com.example.aipassagecreator.utils.GsonUtils;
 import com.google.gson.reflect.TypeToken;
+import com.mybatisflex.core.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -117,8 +119,12 @@ public class TopicRecommendService {
         try {
             boolean isAdmin = UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole());
             Long userId = isAdmin ? null : loginUser.getId();
-            // 以用户最近的选题作为检索 query（无则用通用查询词）
-            String query = "用户历史文章选题";
+            // 以用户最近一篇已完成文章的标题/选题作为检索 query（比固定短语更贴近真实内容，
+            // 避免语义检索命中任意无关 chunk）
+            String query = recentArticleQuery(userId);
+            if (query == null) {
+                return List.of();
+            }
             List<RagService.RagHit> hits = ragService.search(query, "article", userId, limit);
             List<String> topics = new ArrayList<>();
             for (RagService.RagHit hit : hits) {
@@ -132,6 +138,27 @@ public class TopicRecommendService {
             log.warn("用户历史选题加载失败，降级为空", e);
             return List.of();
         }
+    }
+
+    /** 取用户（admin 取全站）最近一篇已完成文章的标题/选题作为检索 query */
+    @SuppressWarnings("rawtypes")
+    private String recentArticleQuery(Long userId) {
+        QueryWrapper wrapper = QueryWrapper.create()
+                .eq(Article::getIsDelete, 0)
+                .eq(Article::getStatus, "COMPLETED")
+                .orderBy(Article::getCreateTime, false)
+                .limit(1);
+        if (userId != null) {
+            wrapper.eq(Article::getUserId, userId);
+        }
+        Article recent = articleMapper.selectOneByQuery(wrapper);
+        if (recent == null) {
+            return null;
+        }
+        if (recent.getMainTitle() != null && !recent.getMainTitle().isBlank()) {
+            return recent.getMainTitle();
+        }
+        return recent.getTopic();
     }
 
     /** AI 动态生成（topic-gen skill 同步执行，结果缓存 10 分钟） */

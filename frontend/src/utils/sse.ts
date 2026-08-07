@@ -27,6 +27,9 @@ export interface SSEMessage {
   detoxed?: boolean
   violations?: string[]
   viralScore?: number
+  // RAG 参考注入事件（RAG_REFERENCE_FOUND）
+  stage?: string
+  count?: number
 }
 
 export interface SSEOptions {

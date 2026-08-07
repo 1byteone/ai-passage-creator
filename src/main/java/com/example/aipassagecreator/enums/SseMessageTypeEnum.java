@@ -76,6 +76,11 @@ public enum SseMessageTypeEnum {
     QUALITY_CHECKED("QUALITY_CHECKED", "质量门检测完成"),
 
     /**
+     * RAG 参考检索完成 — 携带注入的参考数量/阶段
+     */
+    RAG_REFERENCE_FOUND("RAG_REFERENCE_FOUND", "已注入参考材料"),
+
+    /**
      * 错误
      */
     ERROR("ERROR", "错误");

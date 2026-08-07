@@ -253,3 +253,16 @@ create table if not exists skill_checkpoint (
     create_time datetime default CURRENT_TIMESTAMP not null,
     update_time datetime default CURRENT_TIMESTAMP not null
 );
+
+-- RAG 参考溯源表（与 V5__add_rag_reference.sql 同步维护）
+create table if not exists rag_reference (
+    id bigint auto_increment primary key,
+    task_id varchar(64) not null,
+    stage varchar(20) not null,
+    ref_id varchar(128) not null,
+    ref_type varchar(20) null,
+    ref_title varchar(256) null,
+    score double null,
+    create_time datetime default CURRENT_TIMESTAMP not null
+);
+create index if not exists idx_rag_ref_task on rag_reference(task_id);

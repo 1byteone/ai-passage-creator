@@ -19,6 +19,16 @@ public class ArticleState implements Serializable {
     private String taskId;
 
     /**
+     * 所属用户（RAG 参考检索的租户隔离前提；null 视为全站，增强服务对 null fail-closed）
+     */
+    private Long userId;
+
+    /**
+     * 各阶段注入的 RAG 参考（供溯源存库/SSE 展示；由编排器/legacy 注入点填充）
+     */
+    private java.util.List<com.example.aipassagecreator.service.RagAugmentationService.Reference> ragReferences;
+
+    /**
      * 选题
      */
     private String topic;
