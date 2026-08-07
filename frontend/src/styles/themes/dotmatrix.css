@@ -4,16 +4,16 @@
  * 触发：<html data-theme="dotmatrix">
  */
 [data-theme="dotmatrix"] {
-  /* 色彩 — 黑底青绿霓虹 */
-  --surface-canvas: #0A0E14;        /* 深炭黑 */
+  /* 色彩 — 黑底青绿霓虹（对比度优化版） */
+  --surface-canvas: #080C12;        /* 深底 — 点阵有对比 */
   --surface-page: #0D1117;
-  --surface-panel: #11161F;
-  --surface-muted: #161D29;
-  --text-strong: #E6EDF3;
+  --surface-panel: #141B24;         /* 卡片底色 +2 级 — 间隙可见 + 文字可读 */
+  --surface-muted: #1C2633;
+  --text-strong: #F0F6FC;
   --text-body: #C9D1D9;
-  --text-subtle: #8B949E;
-  --text-muted: #6E7681;
-  --text-inverse: #0A0E14;
+  --text-subtle: #A0AEC0;           /* #8B949E→更亮，保证 AA 4.5:1 */
+  --text-muted: #8B949E;
+  --text-inverse: #080C12;
   --color-primary: #00F0FF;         /* 青霓虹 */
   --color-primary-dark: #00C8D6;
   --color-primary-light: #66F5FF;
@@ -74,21 +74,21 @@
   --shadow-raised: 0 0 20px rgba(0, 240, 255, 0.12);
   --shadow-focus: 0 0 0 2px rgba(0, 240, 255, 0.3);
   --gradient-primary: linear-gradient(135deg, #00F0FF, #00C8D6);
-  --gradient-hero: linear-gradient(180deg, #0A0E14, #11161F);
+  --gradient-hero: linear-gradient(180deg, #080C12, #141B24);
   --gradient-hero-dark: linear-gradient(180deg, #00131A, #00060A);
 
   /* 点阵网格背景 — 柔和可见（13%，交互时发光至 90% 高亮） */
-  --dot-bg-color: rgba(0, 240, 255, 0.13);
+  --dot-bg-color: rgba(0, 240, 255, 0.12);
   --grid-line-color: rgba(0, 240, 255, 0.06);
 
   /* 旧 token 补齐（组件实际引用） */
   --bg-primary: #00F0FF;
   --bg-primary-hover: #00C8D6;
-  --bg-dark: #0A0E14;
-  --bg-dark-hover: #161D29;
+  --bg-dark: #080C12;
+  --bg-dark-hover: #1C2633;
   --bg-success: #3FB950;
-  --color-secondary: #0A0E14;
-  --color-secondary-light: #21262D;
+  --color-secondary: #080C12;
+  --color-secondary-light: #1C2633;
   --color-primary-rgb: 0, 240, 255;   /* 青霓虹 RGB */
   --glass-bg: rgba(17, 22, 31, 0.85); /* 深色毛玻璃，header 背景 */
 }

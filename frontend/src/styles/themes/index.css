@@ -121,6 +121,15 @@ html[data-theme='dotmatrix'] .nav-item.active {
   color: var(--color-primary);
   background: rgba(0, 240, 255, 0.1);
 }
+
+/* 点阵终端：下拉菜单分隔线 + 箭头深色 */
+[data-theme='dotmatrix'] .ant-dropdown-menu-item-divider,
+[data-theme='dotmatrix'] .ant-menu-item-divider {
+  background: var(--border-default) !important;
+}
+[data-theme='dotmatrix'] .ant-dropdown-arrow {
+  border-color: var(--surface-panel) !important;
+}
 html[data-theme='dotmatrix'] .site-title {
   color: var(--text-body);
 }
@@ -195,9 +204,18 @@ html[data-theme='dotmatrix'] .nav-icon {
 }
 
 /* 下拉菜单项悬停 */
+[data-theme='dotmatrix'] .ant-dropdown-menu-item,
+[data-theme='dotmatrix'] .ant-select-item-option {
+  color: var(--text-body) !important;
+  background: transparent !important;
+}
 [data-theme='dotmatrix'] .ant-dropdown-menu-item:hover,
 [data-theme='dotmatrix'] .ant-select-item-option:hover {
   background-color: var(--surface-muted) !important;
+}
+[data-theme='dotmatrix'] .ant-dropdown-menu-item-selected {
+  color: var(--color-primary) !important;
+  background: rgba(0, 240, 255, 0.08) !important;
 }
 
 /* 表格边框深色 */
