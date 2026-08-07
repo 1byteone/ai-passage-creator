@@ -357,10 +357,11 @@ User Input → Vue → POST /api/article/create → SSE taskId → EventSource �
 - **类型**: `feat` / `fix` / `docs` / `refactor` / `test` / `chore` / `style` / `perf`
 - **Scope**: `frontend` / `backend` / `card` / `skill` / `infra` / `db`
 - **分支**: `dev` (开发) / `master` (生产) / `track/*` (特性分支)
-- **推送**: 脚本每次只推单个 remote，GitHub 用 `github`，Gitee 用 `origin`（`gitee` 名不存在）：
+- **推送**: 脚本每次只推单个 remote，GitHub 用 `github`，Gitee 用 `origin`（`gitee` 名不存在）。脚本内置 **pre-push 质量闸门**（前端 type-check+lint+单测、后端编译），失败即中止推送——本地没过不推，从源头杜绝 CI 失败邮件；紧急热修用 `SKIP_PUSH_CHECK=1` 跳过：
   ```bash
   bash scripts/git-push.sh github dev   # → GitHub
   bash scripts/git-push.sh origin dev   # → Gitee
+  SKIP_PUSH_CHECK=1 bash scripts/git-push.sh github dev  # 跳过检查强制推送
   ```
   查看 remote 列表: `git remote -v`
 
