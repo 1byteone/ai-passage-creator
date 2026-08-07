@@ -11,9 +11,11 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 @Component
 @Slf4j
@@ -69,6 +71,29 @@ public class SkillSseEmitterManager {
                     completeWithErrorQuietly(state.emitter, e);
                     state.emitter = null;
                 }
+            }
+
+            // 同步派发给已注册监听器（skill→agent 桥接）；监听器异常不影响 SSI 主流程
+            for (Consumer<String> listener : state.listeners) {
+                try {
+                    listener.accept(event);
+                } catch (Exception e) {
+                    log.warn("Skill SSE 监听器异常, executionId={}", executionId, e);
+                }
+            }
+        }
+    }
+
+    /**
+     * 注册事件监听（skill → agent 桥接用）。
+     * 注册即回放当前缓冲，此后 publish 同步派发；streams 清理时随缓冲自动移除。
+     */
+    public void listen(String executionId, Consumer<String> listener) {
+        StreamState state = streams.computeIfAbsent(executionId, ignored -> new StreamState());
+        synchronized (state) {
+            state.listeners.add(listener);
+            for (String event : state.events) {
+                listener.accept(event);
             }
         }
     }
@@ -137,6 +162,7 @@ public class SkillSseEmitterManager {
 
     private static class StreamState {
         private final Deque<String> events = new ArrayDeque<>();
+        private final List<Consumer<String>> listeners = new CopyOnWriteArrayList<>();
         private SseEmitter emitter;
         private boolean terminal;
     }
