@@ -91,6 +91,41 @@
   background: rgba(0, 240, 255, 0.25);
 }
 
+/* 点阵终端：深色组件统一（卡片/表格/下拉/弹窗，避免白底刺眼） */
+[data-theme='dotmatrix'] .ant-card,
+[data-theme='dotmatrix'] .ant-card-body,
+[data-theme='dotmatrix'] .ant-table,
+[data-theme='dotmatrix'] .ant-table-thead > tr > th,
+[data-theme='dotmatrix'] .ant-table-tbody > tr > td,
+[data-theme='dotmatrix'] .ant-dropdown-menu,
+[data-theme='dotmatrix'] .ant-modal-content,
+[data-theme='dotmatrix'] .ant-popover-inner,
+[data-theme='dotmatrix'] .ant-select-dropdown {
+  background-color: var(--surface-panel) !important;
+  color: var(--text-body) !important;
+}
+
+/* 表格斑马纹/悬停深色 */
+[data-theme='dotmatrix'] .ant-table-tbody > tr:nth-child(odd) > td {
+  background-color: var(--surface-panel) !important;
+}
+[data-theme='dotmatrix'] .ant-table-tbody > tr:hover > td {
+  background-color: var(--surface-muted) !important;
+}
+
+/* 下拉菜单项悬停 */
+[data-theme='dotmatrix'] .ant-dropdown-menu-item:hover,
+[data-theme='dotmatrix'] .ant-select-item-option:hover {
+  background-color: var(--surface-muted) !important;
+}
+
+/* 表格边框深色 */
+[data-theme='dotmatrix'] .ant-table,
+[data-theme='dotmatrix'] .ant-table-thead > tr > th,
+[data-theme='dotmatrix'] .ant-table-tbody > tr > td {
+  border-color: var(--border-default) !important;
+}
+
 /* 简约点阵：柔和卡片阴影 */
 [data-theme='clean'] .ant-card {
   box-shadow: var(--shadow-md) !important;
