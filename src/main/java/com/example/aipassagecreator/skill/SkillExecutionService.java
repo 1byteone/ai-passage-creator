@@ -1,8 +1,10 @@
 package com.example.aipassagecreator.skill;
 
 import com.example.aipassagecreator.enums.SkillExecutionStatusEnum;
+import com.example.aipassagecreator.model.po.SkillExecutionPo;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.service.QuotaService;
+import com.example.aipassagecreator.service.RagService;
 import com.example.aipassagecreator.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,7 @@ public class SkillExecutionService {
     private final QuotaService quotaService;
     private final UserService userService;
     private final SkillRegistry skillRegistry;
+    private final RagService ragService;
 
     /**
      * 公共派发：配额校验与扣减 → 创建执行 → prepare → 含确认则注册 → executeAsync。
@@ -125,6 +128,13 @@ public class SkillExecutionService {
             // 执行失败用户未获得任何产出，退还配额
             if (SkillExecutionStatusEnum.FAILED.getValue().equals(execution.getStatus())) {
                 refundQuietly(userId, execution.getExecutionId());
+            }
+            // P1：Skill 成功产出入向量库（失败静默，indexSkillAsync 内置 try-catch）
+            if (SkillExecutionStatusEnum.SUCCESS.getValue().equals(execution.getStatus())) {
+                SkillExecutionPo po = execution.getPoForIndex();
+                if (po != null) {
+                    ragService.indexSkillAsync(po, execution.getPersistedOutput());
+                }
             }
         } finally {
             executionRegistry.remove(execution.getExecutionId());

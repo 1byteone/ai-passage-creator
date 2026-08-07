@@ -363,6 +363,15 @@ public class SkillExecution {
     }
 
     /**
+     * P1 索引用：返回持久化执行记录（终态后仍可读）。
+     * <p>
+     * SkillContext 终态即清理，但 DB 记录始终可读，RAG 索引用其做数据源。
+     */
+    SkillExecutionPo getPoForIndex() {
+        return persistedExecution;
+    }
+
+    /**
      * 测试/诊断用：暴露当前运行时共享数据快照。
      * 终态清理后 context 为空，返回不可变空 Map。
      */

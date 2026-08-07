@@ -2,6 +2,7 @@ package com.example.aipassagecreator.skill;
 
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.service.QuotaService;
+import com.example.aipassagecreator.service.RagService;
 import com.example.aipassagecreator.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -44,12 +45,15 @@ class SkillExecutionServiceChainAsyncTest {
     @Mock
     private SkillRegistry skillRegistry;
 
+    @Mock
+    private RagService ragService;
+
     private SkillExecutionService service;
 
     @BeforeEach
     void setUp() {
         service = new SkillExecutionService(sseEmitterManager, executionRegistry,
-                quotaService, userService, skillRegistry);
+                quotaService, userService, skillRegistry, ragService);
     }
 
     @Test
