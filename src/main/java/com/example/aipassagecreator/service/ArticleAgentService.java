@@ -52,6 +52,9 @@ public class ArticleAgentService {
     @Resource
     private IllustrationPromptBuilder illustrationPromptBuilder;
 
+    @Resource
+    private RagAugmentationService ragAugmentationService;
+
     /**
      * 获取当前类的代理对象
      * 用于解决 Spring AOP 同类方法调用代理失效问题
@@ -231,6 +234,14 @@ public class ArticleAgentService {
                 + methodologyPromptAssembler.buildTitleGuidance(
                         Optional.ofNullable(state.getMethodology()).orElse("default"));
 
+        // P3 legacy：标题阶段以选题检索参考
+        RagAugmentationService.AugmentedResult augmented = ragAugmentationService.augment(
+                state.getTopic(), state.getUserId());
+        if (!augmented.isEmpty()) {
+            prompt += augmented.promptBlock();
+            state.setRagReferences(augmented.references());
+        }
+
         String content = callLlm(prompt);
         List<ArticleState.TitleOption> titleOptions = parseJsonListResponse(
                 content,
@@ -256,6 +267,15 @@ public class ArticleAgentService {
                 +getStylePrompt(state.getStyle())  //添加风格Prompt
                 +methodologyPromptAssembler.buildContentGuidance(
                         Optional.ofNullable(state.getMethodology()).orElse("default"));
+
+        // P3 legacy：大纲阶段以主标题检索参考
+        RagAugmentationService.AugmentedResult augmented = ragAugmentationService.augment(
+                state.getTitle().getMainTitle() + " " + state.getTitle().getSubTitle(),
+                state.getUserId());
+        if (!augmented.isEmpty()) {
+            prompt += augmented.promptBlock();
+            state.setRagReferences(augmented.references());
+        }
 
         String content = callLlmWithStreaming(prompt, streamHandler,SseMessageTypeEnum.AGENT2_STREAMING);
         ArticleState.OutlineResult outlineResult = parseJsonResponse(content, ArticleState.OutlineResult.class,"大纲");

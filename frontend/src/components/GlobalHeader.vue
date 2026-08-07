@@ -113,6 +113,7 @@ import {
   AuditOutlined,
   ToolOutlined,
   TeamOutlined,
+  BookOutlined,
 } from '@ant-design/icons-vue'
 import { isVip as checkIsVip } from '@/utils/permission'
 import { getAvatar } from '@/utils/avatar'
@@ -169,6 +170,12 @@ const originItems = [
     key: '/admin/toolbox',
     icon: ToolOutlined,
     label: '工具箱',
+    admin: true,
+  },
+  {
+    key: '/admin/knowledge',
+    icon: BookOutlined,
+    label: '知识库',
     admin: true,
   },
 ]

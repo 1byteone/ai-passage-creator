@@ -16,3 +16,18 @@ export async function getRagReferences(taskId: string) {
     method: 'GET',
   })
 }
+
+/** 知识库文档列表（admin）GET /rag/documents */
+export async function listRagDocuments(params: { pageNum?: number; pageSize?: number; keyword?: string }) {
+  return request<API.BaseResponsePageRagDocument>('/rag/documents', { method: 'GET', params })
+}
+
+/** 删除知识库文档（admin）DELETE /rag/document/{id} */
+export async function deleteRagDocument(id: number) {
+  return request<API.BaseResponseBoolean>(`/rag/document/${id}`, { method: 'DELETE' })
+}
+
+/** 上传知识库文档（admin）POST /rag/document */
+export async function uploadRagDocument(data: { title: string; source: string; text: string }) {
+  return request<API.BaseResponseBoolean>('/rag/document', { method: 'POST', data })
+}

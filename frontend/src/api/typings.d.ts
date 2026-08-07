@@ -679,6 +679,30 @@ declare namespace API {
     message?: string
   }
 
+  type RagDocument = {
+    id?: number
+    title?: string
+    source?: string
+    text?: string
+    userId?: number
+    createTime?: string
+    updateTime?: string
+  }
+
+  type PageRagDocument = {
+    records?: RagDocument[]
+    pageNumber?: number
+    pageSize?: number
+    totalRow?: number
+    totalPage?: number
+  }
+
+  type BaseResponsePageRagDocument = {
+    code?: number
+    data?: PageRagDocument
+    message?: string
+  }
+
   // ── Workspace 协作空间 ──
 
   type Workspace = {
