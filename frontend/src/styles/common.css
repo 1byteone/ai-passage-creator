@@ -63,14 +63,14 @@ a:hover {
 }
 
 ::selection {
-  background: rgba(34, 197, 94, 0.2);
+  background: rgba(var(--color-primary-rgb), 0.2);
   color: var(--color-text);
 }
 
 /* ==================== 焦点与可访问性 ==================== */
 
 :where(a, button, input, textarea, select, [role='button'], [tabindex]):focus-visible {
-  outline: 3px solid rgba(34, 197, 94, 0.35) !important;
+  outline: 3px solid rgba(var(--color-primary-rgb), 0.35) !important;
   outline-offset: 3px !important;
 }
 
@@ -148,7 +148,7 @@ button,
 .ant-btn-primary:not(:disabled):hover {
   background: var(--bg-primary-hover);
   border-color: var(--bg-primary-hover);
-  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+  box-shadow: 0 6px 20px rgba(var(--color-primary-rgb), 0.35);
 }
 
 .ant-btn:disabled,
@@ -533,7 +533,7 @@ a[role="button"]:focus-visible,
   background: var(--gradient-primary) !important;
   border: none !important;
   color: white !important;
-  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3) !important;
+  box-shadow: 0 4px 14px rgba(var(--color-primary-rgb), 0.3) !important;
 }
 
 .create-btn.ant-btn:hover,
@@ -542,7 +542,7 @@ a[role="button"]:focus-visible,
   background: var(--gradient-primary) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3) !important;
+  box-shadow: 0 4px 14px rgba(var(--color-primary-rgb), 0.3) !important;
   opacity: 0.92;
 }
 

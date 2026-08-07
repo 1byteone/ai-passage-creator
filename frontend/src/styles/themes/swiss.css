@@ -80,4 +80,15 @@
   /* 瑞士强调元素 */
   --swiss-accent: #E63946;
   --swiss-border-width: 2px;
+
+  /* 旧 token 补齐（新语义 token 依赖，组件实际引用） */
+  --bg-primary: #E63946;           /* 瑞士红 */
+  --bg-primary-hover: #C1272D;
+  --bg-dark: #111111;
+  --bg-dark-hover: #2A2A2A;
+  --bg-success: #2A9D5A;
+  --color-primary-light: #F6A0A6;
+  --color-secondary: #111111;
+  --color-secondary-light: #444444;
+  --color-primary-rgb: 230, 57, 70;   /* 瑞士红 RGB */
 }

@@ -30,6 +30,7 @@ initTheme()
 const asyncAntComponents: Record<string, () => Promise<Component>> = {
   AAvatar: () => import('ant-design-vue/es/avatar').then((module) => module.default),
   AButton: () => import('ant-design-vue/es/button').then((module) => module.default),
+  AConfigProvider: () => import('ant-design-vue/es/config-provider').then((module) => module.default),
   ADropdown: () => import('ant-design-vue/es/dropdown').then((module) => module.default),
   AEmpty: () => import('ant-design-vue/es/empty').then((module) => module.default),
   AInput: () => import('ant-design-vue/es/input').then((module) => module.default),

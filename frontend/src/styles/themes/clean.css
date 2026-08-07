@@ -80,4 +80,14 @@
   /* 淡点阵背景 */
   --dot-bg-color: rgba(37, 99, 235, 0.04);
   --grid-line-color: rgba(37, 99, 235, 0.05);
+
+  /* 旧 token 补齐（组件实际引用） */
+  --bg-primary: #2563EB;
+  --bg-primary-hover: #1D4ED8;
+  --bg-dark: #111111;
+  --bg-dark-hover: #1F2937;
+  --bg-success: #16A34A;
+  --color-secondary: #111111;
+  --color-secondary-light: #6B7280;
+  --color-primary-rgb: 37, 99, 235;   /* Medium 蓝 RGB */
 }
