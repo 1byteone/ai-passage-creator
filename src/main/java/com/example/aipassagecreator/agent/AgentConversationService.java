@@ -4,14 +4,23 @@ import com.example.aipassagecreator.exception.BusinessException;
 import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.mapper.AgentConversationMapper;
 import com.example.aipassagecreator.mapper.AgentMessageMapper;
+import com.example.aipassagecreator.mapper.SkillExecutionMapper;
 import com.example.aipassagecreator.model.dto.agent.AgentChatRequest;
 import com.example.aipassagecreator.model.dto.agent.AgentChatResponse;
 import com.example.aipassagecreator.model.dto.agent.AgentConversationVO;
 import com.example.aipassagecreator.model.dto.agent.AgentMessageVO;
 import com.example.aipassagecreator.model.po.AgentConversationPo;
 import com.example.aipassagecreator.model.po.AgentMessagePo;
+import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.service.RagAugmentationService;
+import com.example.aipassagecreator.service.UserService;
 import com.example.aipassagecreator.skill.ModelRouter;
+import com.example.aipassagecreator.skill.SkillExecution;
+import com.example.aipassagecreator.skill.SkillExecutionService;
+import com.example.aipassagecreator.skill.SkillSseEmitterManager;
+import com.example.aipassagecreator.enums.SkillExecutionStatusEnum;
+import com.example.aipassagecreator.model.po.SkillExecutionPo;
+import com.example.aipassagecreator.utils.GsonUtils;
 import com.mybatisflex.core.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +41,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /** Agent 对话编排核心：会话持久化 + 意图路由 + 纯对话流式（RAG/skill 桥接由 Task 8/9 挂入） */
 @Slf4j
@@ -51,6 +61,13 @@ public class AgentConversationService {
     private final AgentRequestRegistry requestRegistry;
     private final ModelRouter modelRouter;
     private final RagAugmentationService ragAugmentationService;
+    private final SkillExecutionService skillExecutionService;
+    private final SkillSseEmitterManager skillSseEmitterManager;
+    private final SkillExecutionMapper skillExecutionMapper;
+    private final UserService userService;
+
+    /** requestId → conversationId 映射，供 executeSkillRoute 落库时查找 */
+    private final Map<String, Long> requestConversationMap = new ConcurrentHashMap<>();
 
     // 自身代理：chat() 内必须经 Spring 代理调用 executeChatRoute/executeSkillRoute，
     // 直接 this.xxx() 是自调用，会绕过 @Async 拦截导致流式生成阻塞在 HTTP 请求线程。
@@ -103,6 +120,7 @@ public class AgentConversationService {
         if (userId != null) {
             conversationId = resolveConversation(req, userId);
             appendMessage(conversationId, "user", "text", req.getMessage(), null);
+            requestConversationMap.put(requestId, conversationId);
         }
 
         // 路由：显式 skill 优先，其次关键词意图，最后纯对话。
@@ -223,10 +241,81 @@ public class AgentConversationService {
         return messages;
     }
 
-    /** skill 路由占位 — Task 9 注入真实桥接逻辑（由 chat() 经 self 代理异步执行） */
+    /** skill 路由 — 桥接 skill 执行事件到 agent SSE 流 + 落库 skill 结果 */
     @Async("skillExecutor")
     void executeSkillRoute(String requestId, String skillName, Map<String, Object> inputs, Long userId) {
-        // 本任务仅保证编译；Task 9 注入真实桥接逻辑
+        sseManager.publish(requestId, AgentEventFactory.started(requestId));
+        try {
+            User user = userId != null ? userService.getById(userId) : null;
+            if (user == null) {
+                sseManager.publish(requestId, AgentEventFactory.error(requestId, "用户不存在"));
+                return;
+            }
+            SkillExecution execution = skillExecutionService.dispatchAndExecute(
+                    skillName, inputs == null ? Map.of() : inputs, user);
+
+            // 桥接 skill 事件进 agent 流（listen 会先回放缓冲，后实时派发）
+            skillSseEmitterManager.listen(execution.getExecutionId(),
+                    event -> {
+                        String agentEvent = AgentSkillEventTranslator.translate(event);
+                        if (!agentEvent.isEmpty()) {
+                            sseManager.publish(requestId, agentEvent);
+                        }
+                    });
+
+            // 等 skill 到终态：轮询执行状态（最多 10 分钟），随后落库 assistant 消息
+            waitTerminal(execution.getExecutionId());
+            Map<String, Object> output = fetchSkillOutput(execution.getExecutionId());
+            Long msgId = null;
+            if (userId != null && output != null) {
+                String content = String.valueOf(output.getOrDefault("output", ""));
+                Long conversationId = conversationIdOf(requestId);
+                if (conversationId != null) {
+                    msgId = appendMessage(conversationId, "assistant", "skill", content,
+                            "{\"executionId\":\"%s\"}".formatted(execution.getExecutionId()));
+                }
+            }
+            sseManager.publish(requestId, AgentEventFactory.complete(requestId, msgId));
+        } catch (Exception e) {
+            log.error("Agent skill 路由失败: requestId={}, skillName={}", requestId, skillName, e);
+            sseManager.publish(requestId, AgentEventFactory.error(requestId, "技能执行失败，请重试"));
+        } finally {
+            sseManager.complete(requestId);
+            requestRegistry.remove(requestId);
+        }
+    }
+
+    private void waitTerminal(String executionId) {
+        for (int i = 0; i < 120; i++) {           // 10min / 5s
+            SkillExecutionPo po = skillExecutionMapper.selectOneByQuery(
+                    QueryWrapper.create().eq("skill_execution_id", executionId));
+            if (po != null && (SkillExecutionStatusEnum.SUCCESS.getValue().equals(po.getStatus())
+                    || SkillExecutionStatusEnum.FAILED.getValue().equals(po.getStatus()))) {
+                return;
+            }
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+    }
+
+    private Map<String, Object> fetchSkillOutput(String executionId) {
+        SkillExecutionPo po = skillExecutionMapper.selectOneByQuery(
+                QueryWrapper.create().eq("skill_execution_id", executionId));
+        if (po == null || po.getOutputData() == null || po.getOutputData().isBlank()) {
+            return Map.of();
+        }
+        return GsonUtils.getInstance().fromJson(po.getOutputData(),
+                new com.google.gson.reflect.TypeToken<Map<String, Object>>() {
+                });
+    }
+
+    /** 从 requestId 查找对应的 conversationId（chat() 时已注册） */
+    private Long conversationIdOf(String requestId) {
+        return requestConversationMap.get(requestId);
     }
 
     private AgentMessageVO toVo(AgentMessagePo po) {
