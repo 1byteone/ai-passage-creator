@@ -509,6 +509,10 @@ onBeforeUnmount(() => {
   font-weight: 500;
   color: var(--color-text);
   font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
 }
 
 .login-btn {
