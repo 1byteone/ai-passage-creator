@@ -107,3 +107,17 @@ admin 删除 → DELETE /rag/document/{id} → 删表 + deleteBySource(清向量
 - 后端 `mvn test` 全绿（当前 471 → 预计 +若干）
 - 前端 `npm run type-check` + `lint:check` + `test:skill`（pre-push 闸门自动跑）
 - CI 全绿（Backend + Frontend）
+
+## 八、实现完成确认（2026-08-07）
+
+| 任务 | 提交 | 状态 |
+|---|---|---|
+| Task1 P1 Skill 索引接线 | `5791d65` | ✅ 完成 |
+| Task2 P2 rag_document 表 + CRUD API | `fabc8cd` | ✅ 完成 |
+| Task3 P3 标题/大纲编排器注入 | `381d773` | ✅ 完成 |
+| Task4 P3 legacy + 知识库前端页 | `929a36d` | ✅ 完成 |
+| Task5 文档收尾 + 全量验证 | — | ✅ 完成 |
+
+**全量测试**：后端 486 tests, 0 failures（含阶段二新增 SkillExecutionRagIndexTest + RagDocumentStoreTest + TitleOutlineRagInjectionTest）
+**前端**：type-check + lint + build 全绿
+**迁移版本唯一性**：FlywayMigrationCompatibilityTest 通过（V6 拆分到 vendor/mysql/V8，V7 rag_document）

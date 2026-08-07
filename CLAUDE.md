@@ -147,7 +147,9 @@ SkillExecutePage (Vue) ─→ POST /skill/{name}/execute
                                           ▼
                                  VectorStore (Supabase pgvector / 内存降级)
                                           ▲
-Skill SUCCESS ──@Async(ragExecutor)──▶ RagService.indexSkill  │   (索引接线见阶段二)
+Skill SUCCESS ──@Async(ragExecutor)──▶ RagService.indexSkill  │   ✓ 已接线
+                                          │                     │
+admin 知识库 ── POST/GET/DELETE /rag/document(s) ──▶ rag_document 表 + 向量索引
                                           │                     │
 文章删除 ───────────────────────────▶ RagService.deleteByTaskId (条纹锁+isDelete守卫)
                                           │
@@ -160,6 +162,7 @@ Skill SUCCESS ──@Async(ragExecutor)──▶ RagService.indexSkill  │   (�
                                           │
                                     rag_reference 表存库 + SSE RAG_REFERENCE_FOUND
                                     → 详情页 GET /rag/references/{taskId} 溯源
+                                    → 标题/大纲/正文三阶段均注入（stage=title/outline/content）
 ```
 
 ### 前端路由表
@@ -183,6 +186,7 @@ Skill SUCCESS ──@Async(ragExecutor)──▶ RagService.indexSkill  │   (�
 | `/admin/userManage` | UserManagePage | admin | 用户管理 |
 | `/admin/statistics` | StatisticsPage | admin | 数据统计 |
 | `/admin/toolbox` | ToolboxPage | admin | 熔断器+Webhook 测试 |
+| `/admin/knowledge` | KnowledgePage | admin | 知识库管理 |
 | `/user/login` | UserLoginPage | 无 | 登录 |
 | `/user/register` | UserRegisterPage | 无 | 注册 |
 | `/vip` | VipPage | 需登录 | 会员购买 |
