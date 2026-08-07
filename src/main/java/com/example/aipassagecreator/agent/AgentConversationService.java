@@ -20,6 +20,8 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +49,13 @@ public class AgentConversationService {
     private final AgentSseEmitterManager sseManager;
     private final AgentRequestRegistry requestRegistry;
     private final ModelRouter modelRouter;
+
+    // 自身代理：chat() 内必须经 Spring 代理调用 executeChatRoute/executeSkillRoute，
+    // 直接 this.xxx() 是自调用，会绕过 @Async 拦截导致流式生成阻塞在 HTTP 请求线程。
+    // @Lazy 打破自我引用环，仅注入懒解析代理；@Autowired 是字段注入的必需标记。
+    @Autowired
+    @Lazy
+    private AgentConversationService self;
 
     @Transactional(rollbackFor = Exception.class)
     public Long createConversation(Long userId, String title) {
@@ -94,15 +103,17 @@ public class AgentConversationService {
             appendMessage(conversationId, "user", "text", req.getMessage(), null);
         }
 
-        // 路由：显式 skill 优先，其次关键词意图，最后纯对话
+        // 路由：显式 skill 优先，其次关键词意图，最后纯对话。
+        // 关键词意图仅对登录用户生效——游客 (userId=null) 不触发 skill。
+        // 经 self 代理调用以触发 @Async("skillExecutor")，chat() 立即返回 agentRequestId 供前端订阅 SSE
         if (req.getSkillName() != null && !req.getSkillName().isBlank()) {
-            executeSkillRoute(requestId, req.getSkillName(), req.getInputs(), userId);
+            self.executeSkillRoute(requestId, req.getSkillName(), req.getInputs(), userId);
         } else {
             String detected = AgentSkillIntentDetector.detect(req.getMessage());
-            if (detected != null) {
-                executeSkillRoute(requestId, detected, null, userId);
+            if (detected != null && userId != null) {
+                self.executeSkillRoute(requestId, detected, null, userId);
             } else {
-                executeChatRoute(requestId, req.getMessage(), conversationId, userId);
+                self.executeChatRoute(requestId, req.getMessage(), conversationId, userId);
             }
         }
 
@@ -140,7 +151,7 @@ public class AgentConversationService {
         return po.getId();
     }
 
-    /** 纯对话路由 — 流式 text_delta → 落库 assistant 消息 → complete */
+    /** 纯对话路由 — 流式 text_delta → 落库 assistant 消息 → complete（由 chat() 经 self 代理异步执行） */
     @Async("skillExecutor")
     public void executeChatRoute(String requestId, String userMessage,
                                  Long conversationId, Long userId) {
@@ -195,7 +206,7 @@ public class AgentConversationService {
         return messages;
     }
 
-    /** skill 路由占位 — Task 9 注入真实桥接逻辑 */
+    /** skill 路由占位 — Task 9 注入真实桥接逻辑（由 chat() 经 self 代理异步执行） */
     @Async("skillExecutor")
     void executeSkillRoute(String requestId, String skillName, Map<String, Object> inputs, Long userId) {
         // 本任务仅保证编译；Task 9 注入真实桥接逻辑
