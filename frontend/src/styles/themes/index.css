@@ -30,6 +30,22 @@
   background-attachment: fixed;
 }
 
+/* 页面根容器透明化 — 让 body 的 fixed 点阵背景透出。
+   所有页面渲染在 BasicLayout 的 .main-content 下，其直接子元素即页面根容器。
+   仅点阵类主题生效，内容卡片的局部白底不受影响。 */
+[data-theme='dotmatrix'] .main-content > *,
+[data-theme='clean'] .main-content > * {
+  background-color: transparent !important;
+}
+
+/* 登录/注册等独立布局页面（不在 .main-content 内）同样透明化 */
+[data-theme='dotmatrix'] #app > .brand-section,
+[data-theme='clean'] #app > .brand-section,
+[data-theme='dotmatrix'] .login-page,
+[data-theme='clean'] .login-page {
+  background-color: transparent !important;
+}
+
 /* ==================== 组件级适配 ==================== */
 
 /* 瑞士甲板：主按钮直角 + 粗边 + 大写 + 无阴影 */
