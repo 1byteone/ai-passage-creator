@@ -19,6 +19,7 @@ import { getSkillUiConfig } from '@/config/skill'
 import heroWriting from '@/assets/illustration/hero-writing.png'
 import heroPlants from '@/assets/illustration/hero-plants.png'
 import BrandLoader from '@/components/BrandLoader.vue'
+import InteractiveDotGrid from '@/components/InteractiveDotGrid.vue'
 
 const router = useRouter()
 const loginUserStore = useLoginUserStore()
@@ -182,6 +183,8 @@ onBeforeUnmount(() => {
     <!-- Hero Section -->
     <section class="hero-section">
       <div class="hero-bg"></div>
+      <!-- 交互式点阵背景（仅 dotmatrix 主题，鼠标靠近发光） -->
+      <InteractiveDotGrid />
       <!-- undraw 插画装饰（绿色治愈系） -->
       <img
         :src="heroWriting"

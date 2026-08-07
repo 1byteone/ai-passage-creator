@@ -9,18 +9,17 @@
 
 /* ==================== 点阵网格背景 ==================== */
 
-/* 点阵终端：明显点阵 + 网格线（科技感背景） */
+/* 点阵终端：极淡点阵（无网格线，克制陪衬）。
+   参考 shadcn/现代终端：透明度 7%、1px 点、24px 均匀间距，
+   让内容成为主角，背景似有若无。 */
 [data-theme='dotmatrix'] body {
   background-color: var(--surface-canvas);
-  background-image:
-    radial-gradient(circle, var(--dot-bg-color) 2px, transparent 2px),
-    linear-gradient(var(--grid-line-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px);
-  background-size: 20px 20px, 40px 40px, 40px 40px;
+  background-image: radial-gradient(circle, var(--dot-bg-color) 1px, transparent 1px);
+  background-size: 24px 24px;
   background-attachment: fixed;
 }
 
-/* 简约点阵：淡点阵 + 微网格（科技纹理） */
+/* 简约点阵：更淡点阵 + 微网格（科技纹理，同克制原则） */
 [data-theme='clean'] body {
   background-color: var(--surface-canvas);
   background-image:
