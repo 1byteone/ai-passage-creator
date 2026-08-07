@@ -90,4 +90,5 @@
   --color-secondary: #0A0E14;
   --color-secondary-light: #21262D;
   --color-primary-rgb: 0, 240, 255;   /* 青霓虹 RGB */
+  --glass-bg: rgba(17, 22, 31, 0.85); /* 深色毛玻璃，header 背景 */
 }

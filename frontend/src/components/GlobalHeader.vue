@@ -285,7 +285,6 @@ onBeforeUnmount(() => {
   -webkit-backdrop-filter: var(--glass-blur);
   padding: 0;
   height: 64px;
-  line-height: 64px;
   border-bottom: 1px solid var(--color-border);
   transition: all var(--transition-normal);
   overflow: visible;
@@ -410,6 +409,8 @@ onBeforeUnmount(() => {
   color: var(--color-text-secondary);
   transition: all var(--transition-fast);
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .nav-item:hover {

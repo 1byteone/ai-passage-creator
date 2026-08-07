@@ -103,6 +103,31 @@ html[data-theme='dotmatrix'] .hero-section::after {
   box-shadow: none !important;
 }
 
+/* 点阵终端：导航栏深色适配 */
+html[data-theme='dotmatrix'] .header {
+  background: var(--glass-bg);
+  border-bottom-color: var(--border-default);
+}
+html[data-theme='dotmatrix'] .nav-item {
+  color: var(--text-subtle);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+html[data-theme='dotmatrix'] .nav-item:hover {
+  color: var(--text-body);
+  background: var(--surface-muted);
+}
+html[data-theme='dotmatrix'] .nav-item.active {
+  color: var(--color-primary);
+  background: rgba(0, 240, 255, 0.1);
+}
+html[data-theme='dotmatrix'] .site-title {
+  color: var(--text-body);
+}
+html[data-theme='dotmatrix'] .nav-icon {
+  color: var(--text-subtle);
+}
+
 /* 瑞士甲板：卡片/表格细灰边框 + 无阴影，表头红强调 */
 [data-theme='swiss'] .ant-card,
 [data-theme='swiss'] .ant-table,
