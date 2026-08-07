@@ -679,14 +679,14 @@ defineExpose({
   padding: 24px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
 }
 
 .awaiting-card {
   padding: 32px 24px 24px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
   text-align: center;
 }
 

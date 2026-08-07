@@ -177,7 +177,7 @@ const parsedOutline = computed<OutlineItem[]>(() => {
 
 .outline-item {
   padding: 12px 16px;
-  background: white;
+  background: var(--surface-panel);
   border-radius: var(--radius-md);
   border-left: 3px solid var(--color-primary);
 }

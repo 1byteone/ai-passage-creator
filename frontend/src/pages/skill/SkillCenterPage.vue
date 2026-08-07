@@ -590,7 +590,7 @@ onMounted(loadSkills)
   padding: 18px 22px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
   text-decoration: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }

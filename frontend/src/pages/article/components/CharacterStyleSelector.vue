@@ -95,7 +95,7 @@ const handleSelect = (val: string) => {
   overflow: hidden;
   cursor: pointer;
   transition: all var(--transition-fast);
-  background: white;
+  background: var(--surface-panel);
 
   &:hover:not(.style-disabled) {
     border-color: var(--color-primary);

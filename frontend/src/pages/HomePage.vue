@@ -604,7 +604,7 @@ onBeforeUnmount(() => {
   max-width: 680px;
   margin: 0 0 16px;
   padding: 8px;
-  background: white;
+  background: var(--surface-panel);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--color-border);
@@ -794,7 +794,7 @@ onBeforeUnmount(() => {
   padding: 12px;
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
 }
 
 .proof-step.active {
@@ -880,7 +880,7 @@ onBeforeUnmount(() => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
   overflow: hidden;
 }
 
@@ -893,7 +893,7 @@ onBeforeUnmount(() => {
   padding: 18px;
   border: 0;
   border-right: 1px solid var(--color-border);
-  background: white;
+  background: var(--surface-panel);
   text-align: left;
   cursor: pointer;
   transition: background var(--transition-fast);
@@ -1018,7 +1018,7 @@ onBeforeUnmount(() => {
   gap: 14px;
   min-height: 104px;
   padding: 18px;
-  background: white;
+  background: var(--surface-panel);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   transition:
@@ -1098,7 +1098,7 @@ onBeforeUnmount(() => {
   gap: 18px;
   min-width: 0;
   padding: 22px;
-  background: white;
+  background: var(--surface-panel);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -1234,7 +1234,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: white;
+  background: var(--surface-panel);
 }
 
 .workflow-summary-item {
@@ -1321,7 +1321,7 @@ onBeforeUnmount(() => {
 }
 
 .article-card {
-  background: white;
+  background: var(--surface-panel);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   overflow: hidden;

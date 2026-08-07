@@ -301,7 +301,7 @@ onBeforeUnmount(() => {
   padding: 22px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
   display: grid;
   gap: 12px;
 }
@@ -371,7 +371,7 @@ onBeforeUnmount(() => {
   padding: 30px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
   display: grid;
   justify-items: center;
   gap: 14px;
@@ -428,7 +428,7 @@ onBeforeUnmount(() => {
 .result-block {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
   overflow: hidden;
 }
 

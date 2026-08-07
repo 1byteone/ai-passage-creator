@@ -83,7 +83,7 @@ const handleStateChange = (nextState: ExecutionState) => {
   padding: 0 16px;
   border: 1px solid #86efac;
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
   color: var(--color-text);
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
   cursor: pointer;

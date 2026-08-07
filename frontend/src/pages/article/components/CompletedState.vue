@@ -157,14 +157,14 @@ const downloadImage = (url: string, filename: string) => {
 
 .proofread-button {
   border-color: rgba(255, 255, 255, 0.7);
-  background: white;
+  background: var(--surface-panel);
   color: var(--color-primary-dark);
   font-weight: 600;
 }
 
 .illustration-button {
   margin-left: auto;
-  background: white;
+  background: var(--surface-panel);
   color: var(--color-primary-dark);
   border: 1px solid rgba(255, 255, 255, 0.7);
   font-weight: 600;

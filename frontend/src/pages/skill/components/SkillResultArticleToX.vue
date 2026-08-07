@@ -93,7 +93,7 @@ const downloadResult = () => downloadResultText(result.value, 'social-copy.md')
   min-width: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
   overflow: hidden;
 }
 

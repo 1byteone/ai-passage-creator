@@ -310,7 +310,7 @@ const downloadAll = () => downloadResultText(formattedMarkdown.value, 'research-
   padding: 14px 18px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
   color: var(--color-text);
   font-size: 14px;
   line-height: 1.65;
@@ -342,7 +342,7 @@ const downloadAll = () => downloadResultText(formattedMarkdown.value, 'research-
   padding: 16px 18px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
 }
 
 .fact-card.confidence-high {
@@ -435,7 +435,7 @@ const downloadAll = () => downloadResultText(formattedMarkdown.value, 'research-
   padding: 12px 16px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
   color: var(--color-text);
   font-size: 14px;
   line-height: 1.6;

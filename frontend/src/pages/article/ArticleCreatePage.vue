@@ -1467,7 +1467,7 @@ onBeforeUnmount(() => {
 
 /* 左侧边栏 */
 .sidebar-left {
-  background: white;
+  background: var(--surface-panel);
   border-right: 1px solid var(--color-border);
   padding: 24px;
   display: flex;
@@ -1610,7 +1610,7 @@ onBeforeUnmount(() => {
 .main-content {
   padding: 32px 40px;
   overflow-y: auto;
-  background: white;
+  background: var(--surface-panel);
 }
 
 /* 阶段切换容器（Transition 唯一子元素） */
@@ -1712,7 +1712,7 @@ onBeforeUnmount(() => {
   font-size: 15px;
   border-radius: var(--radius-lg);
   padding: 16px;
-  background: white;
+  background: var(--surface-panel);
 
   &:focus {
     border-color: var(--color-primary);
@@ -1794,7 +1794,7 @@ onBeforeUnmount(() => {
 .style-group :deep(.ant-radio-wrapper) {
   margin: 0;
   padding: 6px 12px;
-  background: white;
+  background: var(--surface-panel);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   transition: all 0.2s;
@@ -1833,7 +1833,7 @@ onBeforeUnmount(() => {
   padding: 10px 12px;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: white;
+  background: var(--surface-panel);
 
   &:hover {
     border-color: var(--color-primary);
@@ -1929,7 +1929,7 @@ onBeforeUnmount(() => {
 .methods-group :deep(.ant-checkbox-wrapper) {
   margin: 0;
   padding: 6px 12px;
-  background: white;
+  background: var(--surface-panel);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   transition: all 0.2s;
@@ -2037,7 +2037,7 @@ onBeforeUnmount(() => {
 
 .outline-item {
   padding: 12px 16px;
-  background: white;
+  background: var(--surface-panel);
   border-radius: var(--radius-md);
   border-left: 3px solid var(--color-primary);
 }
@@ -2149,7 +2149,7 @@ onBeforeUnmount(() => {
 
 /* 右侧辅助面板 */
 .sidebar-right {
-  background: white;
+  background: var(--surface-panel);
   border-left: 1px solid var(--color-border);
   padding: 24px;
   display: flex;
@@ -2284,7 +2284,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 6px;
   padding: 6px 8px;
-  background: white;
+  background: var(--surface-panel);
 }
 
 .preview-label {
@@ -2407,7 +2407,7 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.2s ease;
-  background: white;
+  background: var(--surface-panel);
 
   &:hover {
     border-color: var(--color-primary);
@@ -2930,7 +2930,7 @@ onBeforeUnmount(() => {
   .mobile-context-item {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    background: white;
+    background: var(--surface-panel);
   }
 
   .mobile-progress-card {

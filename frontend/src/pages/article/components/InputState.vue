@@ -90,7 +90,7 @@ defineEmits<{
   font-size: 15px;
   border-radius: var(--radius-lg);
   padding: 16px;
-  background: white;
+  background: var(--surface-panel);
 
   &:focus {
     border-color: var(--color-primary);

@@ -65,7 +65,7 @@ const phaseStatus = (index: number) => {
 .progress-panel {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: white;
+  background: var(--surface-panel);
 }
 
 .progress-heading {
