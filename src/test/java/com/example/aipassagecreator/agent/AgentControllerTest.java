@@ -59,11 +59,17 @@ class AgentControllerTest {
 
     @Test
     void progress_guestOwnerForbidden_throws() {
-        registry.register("agent-x", "u:1");
+        // register under a real guest, then try with a different guestId → NOT_FOUND
+        registry.register("agent-x", "g:real-guest");
         MockHttpServletRequest req = new MockHttpServletRequest();
+        req.addParameter("guestId", "wrong-guest");
         when(userService.getLoginUserVO(req)).thenReturn(null);
-        assertThrows(BusinessException.class,
-                () -> controller.progress("agent-x", req));
+        try {
+            controller.progress("agent-x", req);
+            fail("expected BusinessException");
+        } catch (BusinessException e) {
+            assertEquals(ErrorCode.NOT_FOUND_ERROR.getCode(), e.getCode());
+        }
     }
 
     @Test

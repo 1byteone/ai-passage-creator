@@ -66,6 +66,9 @@ public class AgentController {
     @GetMapping("/conversations")
     public BaseResponse<List<AgentConversationVO>> conversations(HttpServletRequest servletRequest) {
         LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
         List<AgentConversationVO> list = conversationService.listConversations(loginUser.getId());
         return ResultUtils.success(list);
     }
@@ -74,6 +77,9 @@ public class AgentController {
     public BaseResponse<Map<String, Object>> createConversation(@Valid @RequestBody AgentCreateConversationRequest request,
                                                                 HttpServletRequest servletRequest) {
         LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
         Long id = conversationService.createConversation(loginUser.getId(), request.getTitle());
         return ResultUtils.success(Map.of("conversationId", id));
     }
@@ -82,6 +88,9 @@ public class AgentController {
     public BaseResponse<List<AgentMessageVO>> messages(@PathVariable Long conversationId,
                                                        HttpServletRequest servletRequest) {
         LoginUserVO loginUser = userService.getLoginUserVO(servletRequest);
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
         List<AgentMessageVO> list = conversationService.listMessages(conversationId, loginUser.getId());
         return ResultUtils.success(list);
     }
