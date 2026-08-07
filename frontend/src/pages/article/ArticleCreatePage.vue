@@ -460,7 +460,6 @@
             >
               <div class="topic-card-icon">
                 <Flame v-if="isAiTopic(example)" :size="16" class="icon-ai" />
-                <Sparkles v-else-if="isAiTopic(example)" :size="16" class="icon-ai" />
                 <BookOpen v-else :size="16" class="icon-history" />
               </div>
               <div class="topic-card-body">
@@ -810,7 +809,7 @@ import {
   ReadOutlined,
   ReloadOutlined
 } from '@ant-design/icons-vue'
-import { Flame, Sparkles, BookOpen, Plus } from 'lucide-vue-next'
+import { Flame, BookOpen, Plus } from 'lucide-vue-next'
 import { createArticle, confirmTitle, confirmOutline } from '@/api/articleController'
 import RagHitsPanel from '@/components/RagHitsPanel.vue'
 import { useRagSearch } from '@/composables/useRagSearch'
