@@ -11,19 +11,22 @@
 
 /* 点阵终端：明显点阵 + 网格线（科技感背景） */
 [data-theme='dotmatrix'] body {
+  background-color: var(--surface-canvas);
   background-image:
-    radial-gradient(circle, var(--dot-bg-color) 1px, transparent 1px),
+    radial-gradient(circle, var(--dot-bg-color) 1.5px, transparent 1.5px),
     linear-gradient(var(--grid-line-color) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px);
-  background-size: 24px 24px, 24px 24px, 24px 24px;
+  background-size: 24px 24px, 48px 48px, 48px 48px;
   background-attachment: fixed;
 }
 
-/* 简约点阵：极淡点阵（沉浸阅读不干扰） */
+/* 简约点阵：淡点阵 + 微网格（科技纹理） */
 [data-theme='clean'] body {
+  background-color: var(--surface-canvas);
   background-image:
-    radial-gradient(circle, var(--dot-bg-color) 1px, transparent 1px);
-  background-size: 32px 32px;
+    radial-gradient(circle, var(--dot-bg-color) 1px, transparent 1px),
+    linear-gradient(var(--grid-line-color) 1px, transparent 1px);
+  background-size: 28px 28px, 56px 56px;
   background-attachment: fixed;
 }
 

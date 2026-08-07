@@ -78,8 +78,8 @@
   --gradient-hero-dark: linear-gradient(180deg, #00131A, #00060A);
 
   /* 点阵网格背景 */
-  --dot-bg-color: rgba(0, 240, 255, 0.05);
-  --grid-line-color: rgba(0, 240, 255, 0.08);
+  --dot-bg-color: rgba(0, 240, 255, 0.12);
+  --grid-line-color: rgba(0, 240, 255, 0.1);
 
   /* 旧 token 补齐（组件实际引用） */
   --bg-primary: #00F0FF;

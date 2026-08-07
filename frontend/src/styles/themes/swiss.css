@@ -73,9 +73,10 @@
   --shadow-subtle: none;
   --shadow-raised: none;
   --shadow-focus: 0 0 0 2px rgba(230, 57, 70, 0.3);
-  --gradient-primary: none;
-  --gradient-hero: none;
-  --gradient-hero-dark: none;
+  /* 瑞士甲板拒绝渐变装饰，但保证渐变引用处有纯色兜底（防透明不可见） */
+  --gradient-primary: linear-gradient(135deg, #E63946, #C1272D);
+  --gradient-hero: #F5F5F3;
+  --gradient-hero-dark: #111111;
 
   /* 瑞士强调元素 */
   --swiss-accent: #E63946;

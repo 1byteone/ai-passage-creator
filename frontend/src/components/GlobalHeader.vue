@@ -513,7 +513,7 @@ onBeforeUnmount(() => {
   font-size: 14px;
   font-weight: 600;
   color: white;
-  background: var(--gradient-primary);
+  background: var(--bg-primary);
   border: none;
   box-shadow: var(--shadow-green);
   transition: all var(--transition-normal);
