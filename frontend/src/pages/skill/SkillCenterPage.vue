@@ -454,13 +454,13 @@ onMounted(loadSkills)
 }
 
 .skill-icon.green {
-  background: #f0fdf4;
-  color: #15803d;
+  background: var(--state-success-bg);
+  color: var(--state-success-text);
 }
 
 .skill-icon.amber {
-  background: #fffbeb;
-  color: #b45309;
+  background: var(--state-warning-bg);
+  color: var(--state-warning-text);
 }
 
 .skill-copy h3 {
@@ -608,7 +608,7 @@ onMounted(loadSkills)
   width: 46px;
   height: 46px;
   border-radius: var(--radius-md);
-  background: #fff7e6;
+  background: var(--state-warning-bg);
   color: var(--color-primary-dark);
   font-size: 20px;
 }

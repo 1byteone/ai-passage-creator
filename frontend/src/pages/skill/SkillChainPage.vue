@@ -354,7 +354,7 @@ onBeforeUnmount(() => {
 
 .pick-item.picked {
   border-color: var(--color-primary);
-  background: #fff8f0;
+  background: var(--state-warning-bg);
 }
 
 .pick-warn {

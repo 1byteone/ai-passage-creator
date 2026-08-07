@@ -54,10 +54,10 @@
   /* 语义化状态层 */
   --state-success-bg: #F0FDF4;
   --state-success-text: #15803D;
-  --state-warning-bg: #FEFCE8;
-  --state-warning-text: #A16207;
-  --state-error-bg: #FEF2F2;
-  --state-error-text: #B91C1C;
+  --state-warning-bg: #FFFBEB;
+  --state-warning-text: #B45309;
+  --state-error-bg: #FFF1F0;
+  --state-error-text: #A8071A;
   --state-info-bg: #EFF6FF;
   --state-info-text: #1D4ED8;
 

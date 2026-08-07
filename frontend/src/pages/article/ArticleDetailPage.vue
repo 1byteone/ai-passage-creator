@@ -737,9 +737,9 @@ onMounted(loadArticle)
   white-space: nowrap;
 }
 
-.approval-pending { background: #fef3c7; color: #92400e; }
+.approval-pending { background: var(--state-warning-bg); color: var(--state-warning-text); }
 .approval-approved { background: #d1fae5; color: #065f46; }
-.approval-rejected { background: #fee2e2; color: #991b1b; }
+.approval-rejected { background: var(--state-error-bg); color: var(--state-error-text); }
 
 .approval-history-badge {
   font-size: 11px;

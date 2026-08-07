@@ -925,13 +925,13 @@ onBeforeUnmount(() => {
 }
 
 .quick-skill-icon.green {
-  background: #f0fdf4;
-  color: #15803d;
+  background: var(--state-success-bg);
+  color: var(--state-success-text);
 }
 
 .quick-skill-icon.amber {
-  background: #fffbeb;
-  color: #b45309;
+  background: var(--state-warning-bg);
+  color: var(--state-warning-text);
 }
 
 .quick-skill-copy {

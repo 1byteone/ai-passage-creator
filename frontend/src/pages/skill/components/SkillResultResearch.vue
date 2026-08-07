@@ -370,18 +370,18 @@ const downloadAll = () => downloadResultText(formattedMarkdown.value, 'research-
 }
 
 .fact-card.confidence-high .confidence-tag {
-  background: #f0fdf4;
-  color: var(--color-primary-dark);
+  background: var(--state-success-bg);
+  color: var(--state-success-text);
 }
 
 .fact-card.confidence-medium .confidence-tag {
-  background: #fffbeb;
-  color: #92400e;
+  background: var(--state-warning-bg);
+  color: var(--state-warning-text);
 }
 
 .fact-card.confidence-low .confidence-tag {
-  background: #fef2f2;
-  color: #991b1b;
+  background: var(--state-error-bg);
+  color: var(--state-error-text);
 }
 
 .fact-text {
@@ -407,7 +407,7 @@ const downloadAll = () => downloadResultText(formattedMarkdown.value, 'research-
   padding: 12px 16px;
   border: 1px dashed var(--color-border);
   border-radius: var(--radius-md);
-  background: #fffbeb;
+  background: var(--state-warning-bg);
   color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 1.6;

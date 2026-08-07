@@ -172,8 +172,8 @@ const downloadFinal = () => downloadResultText(finalContent.value, 'proofread-ar
   justify-content: center;
   padding: 20px;
   border-right: 1px solid var(--color-border);
-  background: #f0fdf4;
-  color: var(--color-primary-dark);
+  background: var(--state-success-bg);
+  color: var(--state-success-text);
 }
 
 .score-block span {
@@ -245,14 +245,14 @@ const downloadFinal = () => downloadResultText(finalContent.value, 'proofread-ar
 
 .diff-legend .removed,
 .diff-content .removed {
-  background: #fff1f0;
-  color: #a8071a;
+  background: var(--state-error-bg);
+  color: var(--state-error-text);
 }
 
 .diff-legend .added,
 .diff-content .added {
-  background: #f0fdf4;
-  color: #166534;
+  background: var(--state-success-bg);
+  color: var(--state-success-text);
 }
 
 .diff-content,

@@ -138,7 +138,7 @@ const phaseStatus = (index: number) => {
 .active .phase-marker {
   border-color: var(--color-primary);
   color: var(--color-primary-dark);
-  background: #f0fdf4;
+  background: var(--state-success-bg);
 }
 
 .phase-label {
