@@ -65,14 +65,16 @@ test('dedupe: keeps highest score per refId', async () => {
   assert.equal(hits.value[0].score, 0.9)
 })
 
-test('filters non-article and excluded refId', async () => {
+test('keeps all backend types and excludes refId (type filter is backend-owned, M12)', async () => {
   const searchFn = async () =>
     ({ data: { code: 0, data: [hit('self', '自己', 0.9), hit('skill-1', '技能', 0.8, 'skill'), hit('good', '好文', 0.7)] } }) as API.BaseResponseListRagHit
   const { hits, search } = useRagSearch({ debounceMs: 10, searchFn, lifecycle: noLifecycle })
   search('q', { type: 'article', topK: 5, excludeRefId: 'self' })
   await sleep(30)
-  assert.equal(hits.value.length, 1)
-  assert.equal(hits.value[0].refId, 'good')
+  // M12：前端不再过滤 type（后端 buildFilter 按 type 契约返回，前端过滤会掩盖契约不一致
+  // 且丢弃共享文档命中）；本层只负责 excludeRefId 排除与按 score 去重。
+  assert.equal(hits.value.length, 2)
+  assert.deepEqual(hits.value.map((h) => h.refId).sort(), ['good', 'skill-1'])
 })
 
 test('errors are silent and keep previous hits', async () => {
