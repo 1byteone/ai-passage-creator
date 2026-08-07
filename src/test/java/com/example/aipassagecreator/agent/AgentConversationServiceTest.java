@@ -5,6 +5,7 @@ import com.example.aipassagecreator.mapper.AgentMessageMapper;
 import com.example.aipassagecreator.model.dto.agent.AgentChatRequest;
 import com.example.aipassagecreator.model.dto.agent.AgentChatResponse;
 import com.example.aipassagecreator.model.po.AgentConversationPo;
+import com.example.aipassagecreator.service.RagAugmentationService;
 import com.example.aipassagecreator.skill.ModelRouter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.isNull;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -42,6 +44,8 @@ class AgentConversationServiceTest {
     private AgentRequestRegistry requestRegistry;
     @Mock
     private ModelRouter modelRouter;
+    @Mock
+    private RagAugmentationService ragAugmentationService;
 
     @InjectMocks
     private AgentConversationService service;
@@ -53,6 +57,13 @@ class AgentConversationServiceTest {
     void setUpSelfProxy() {
         self = spy(service);
         ReflectionTestUtils.setField(service, "self", self);
+        // RAG 默认返回空结果，不影响既有纯对话测试
+        lenient().when(ragAugmentationService.augment(any(String.class), any(Long.class)))
+                .thenReturn(RagAugmentationService.AugmentedResult.EMPTY);
+        // modelRouter 由 executeChatRoute 调用；仅 executeChatRoute 测试消费此 stub
+        lenient().when(modelRouter.resolve(any(), any()))
+                .thenAnswer(inv -> mock(ChatModel.class, a ->
+                        "stream".equals(a.getMethod().getName()) ? Flux.empty() : null));
     }
 
     @Test
@@ -74,10 +85,7 @@ class AgentConversationServiceTest {
         AgentChatRequest req = new AgentChatRequest();
         req.setMessage("你好，介绍一下你自己");
         req.setGuestId("g1");
-        // mock 流式：返回空 Flux，避免真实调用聊天模型
-        when(modelRouter.resolve(null, null)).thenReturn(mock(ChatModel.class, invocation ->
-                "stream".equals(invocation.getMethod().getName())
-                        ? Flux.empty() : null));
+        // modelRouter 已由 setUp 提供 lenient stub
         AgentChatResponse resp = service.chat(req, null, "g1");
         assertNotNull(resp.getAgentRequestId());
         assertNull(resp.getConversationId()); // 游客不建会话
@@ -96,9 +104,7 @@ class AgentConversationServiceTest {
         AgentChatRequest req = new AgentChatRequest();
         req.setMessage("帮我总结这篇文章"); // AgentSkillIntentDetector → content-summarizer
         req.setGuestId("g1");
-        // 走纯对话路由会解析 modelRouter 并流式生成；skill 占位路由不解析模型
-        when(modelRouter.resolve(null, null)).thenReturn(mock(ChatModel.class, invocation ->
-                "stream".equals(invocation.getMethod().getName()) ? Flux.empty() : null));
+        // modelRouter 已由 setUp 提供 lenient stub
         AgentChatResponse resp = service.chat(req, null, "g1");
         assertNotNull(resp.getAgentRequestId());
         assertNull(resp.getConversationId()); // 游客不建会话

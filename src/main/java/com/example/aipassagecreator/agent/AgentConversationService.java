@@ -10,6 +10,7 @@ import com.example.aipassagecreator.model.dto.agent.AgentConversationVO;
 import com.example.aipassagecreator.model.dto.agent.AgentMessageVO;
 import com.example.aipassagecreator.model.po.AgentConversationPo;
 import com.example.aipassagecreator.model.po.AgentMessagePo;
+import com.example.aipassagecreator.service.RagAugmentationService;
 import com.example.aipassagecreator.skill.ModelRouter;
 import com.mybatisflex.core.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,7 @@ public class AgentConversationService {
     private final AgentSseEmitterManager sseManager;
     private final AgentRequestRegistry requestRegistry;
     private final ModelRouter modelRouter;
+    private final RagAugmentationService ragAugmentationService;
 
     // 自身代理：chat() 内必须经 Spring 代理调用 executeChatRoute/executeSkillRoute，
     // 直接 this.xxx() 是自调用，会绕过 @Async 拦截导致流式生成阻塞在 HTTP 请求线程。
@@ -151,14 +153,29 @@ public class AgentConversationService {
         return po.getId();
     }
 
-    /** 纯对话路由 — 流式 text_delta → 落库 assistant 消息 → complete（由 chat() 经 self 代理异步执行） */
+    /** 纯对话路由 — RAG 增强 + 流式 + 落库 */
     @Async("skillExecutor")
     public void executeChatRoute(String requestId, String userMessage,
                                  Long conversationId, Long userId) {
         sseManager.publish(requestId, AgentEventFactory.started(requestId));
         try {
+            // RAG 增强：命中才注入参考块并推送引用事件；userId null（游客）自动跳过
+            var augmented = ragAugmentationService.augment(userMessage, userId);
+            if (!augmented.isEmpty()) {
+                var sources = augmented.references().stream()
+                        .map(r -> new AgentEventFactory.SourceRef(
+                                r.refId(), r.title(), r.type(), "最近"))
+                        .toList();
+                sseManager.publish(requestId, AgentEventFactory.ragReference(requestId, sources));
+            }
+
             ChatModel chatModel = modelRouter.resolve(null, null);
             List<Message> messages = buildMessages(conversationId, userId, userMessage);
+            // 注入软参考块（system 消息里追加）
+            if (!augmented.isEmpty()) {
+                messages.add(new SystemMessage(augmented.promptBlock()));
+            }
+
             StringBuilder full = new StringBuilder();
             for (ChatResponse resp : chatModel.stream(new Prompt(messages)).toIterable()) {
                 String delta = resp.getResult().getOutput().getText();
@@ -173,7 +190,7 @@ public class AgentConversationService {
             }
             sseManager.publish(requestId, AgentEventFactory.complete(requestId, msgId));
         } catch (Exception e) {
-            log.error("Agent 纯对话失败: requestId={}", requestId, e);
+            log.error("Agent 对话失败: requestId={}", requestId, e);
             sseManager.publish(requestId, AgentEventFactory.error(requestId, "生成失败，请重试"));
         } finally {
             sseManager.complete(requestId);
