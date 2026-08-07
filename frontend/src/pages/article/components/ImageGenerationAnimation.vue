@@ -42,7 +42,7 @@
     <a-progress
       :percent="progressPercent"
       :status="completed ? 'success' : 'active'"
-      :stroke-color="completed ? undefined : { from: '#22C55E', to: '#16A34A' }"
+      :stroke-color="completed ? undefined : { from: 'var(--color-primary)', to: 'var(--color-primary-dark)' }"
       class="animation-progress"
     />
   </div>

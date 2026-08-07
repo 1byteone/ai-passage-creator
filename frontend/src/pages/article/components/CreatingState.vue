@@ -39,7 +39,7 @@
         <PictureOutlined />
         <span>正在生成配图</span>
       </div>
-      <a-progress :percent="imageProgress" status="active" :stroke-color="{ from: '#22C55E', to: '#16A34A' }" />
+      <a-progress :percent="imageProgress" status="active" :stroke-color="{ from: 'var(--color-primary)', to: 'var(--color-primary-dark)' }" />
       <p class="progress-hint">{{ imageCount }}/{{ totalImages }} 张图片已完成</p>
     </div>
 

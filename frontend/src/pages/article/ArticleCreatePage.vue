@@ -422,7 +422,7 @@
             <a-progress
               :percent="(quota / 5) * 100"
               :show-info="false"
-              :stroke-color="quota <= 1 ? '#ff4d4f' : '#22C55E'"
+              :stroke-color="quota <= 1 ? 'var(--color-error)' : 'var(--color-primary)'"
               size="small"
               class="quota-progress"
             />

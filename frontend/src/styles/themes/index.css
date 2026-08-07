@@ -149,6 +149,46 @@
   border-color: var(--border-default) !important;
 }
 
+/* 点阵终端：分页器深色 */
+[data-theme='dotmatrix'] .ant-pagination-item,
+[data-theme='dotmatrix'] .ant-pagination-prev,
+[data-theme='dotmatrix'] .ant-pagination-next {
+  background-color: var(--surface-panel) !important;
+  border-color: var(--border-default) !important;
+}
+[data-theme='dotmatrix'] .ant-pagination-item a {
+  color: var(--text-body) !important;
+}
+[data-theme='dotmatrix'] .ant-pagination-item-active {
+  border-color: var(--color-primary) !important;
+}
+[data-theme='dotmatrix'] .ant-pagination-item-active a {
+  color: var(--color-primary) !important;
+}
+
+/* 点阵终端：空状态 / 骨架屏深色 */
+[data-theme='dotmatrix'] .ant-empty-description {
+  color: var(--text-subtle) !important;
+}
+[data-theme='dotmatrix'] .ant-skeleton * {
+  background-color: var(--surface-muted) !important;
+}
+
+/* 点阵终端：警告条与标签深色（ant-alert 自带浅色底） */
+[data-theme='dotmatrix'] .ant-alert {
+  background-color: var(--surface-panel) !important;
+  border-color: var(--border-default) !important;
+}
+[data-theme='dotmatrix'] .ant-alert-message,
+[data-theme='dotmatrix'] .ant-alert-description {
+  color: var(--text-body) !important;
+}
+[data-theme='dotmatrix'] .ant-tag {
+  background-color: var(--surface-muted) !important;
+  border-color: var(--border-default) !important;
+  color: var(--text-body) !important;
+}
+
 /* 简约点阵：柔和卡片阴影 + 温和圆角 */
 [data-theme='clean'] .ant-card {
   box-shadow: var(--shadow-md) !important;
