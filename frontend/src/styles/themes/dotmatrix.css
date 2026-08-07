@@ -77,8 +77,8 @@
   --gradient-hero: linear-gradient(180deg, #0A0E14, #11161F);
   --gradient-hero-dark: linear-gradient(180deg, #00131A, #00060A);
 
-  /* 点阵网格背景 — 极淡克制（shadcn/现代终端风格） */
-  --dot-bg-color: rgba(0, 240, 255, 0.07);
+  /* 点阵网格背景 — 柔和可见（13%，交互时发光至 90% 高亮） */
+  --dot-bg-color: rgba(0, 240, 255, 0.13);
   --grid-line-color: rgba(0, 240, 255, 0.06);
 
   /* 旧 token 补齐（组件实际引用） */

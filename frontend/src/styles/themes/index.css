@@ -45,6 +45,40 @@
   background-color: transparent !important;
 }
 
+/* 点阵终端 hero 氛围装饰（仅本主题，浅色主题不受影响）
+   1. 底部淡青色径向光晕：从底部向上渐变，增强赛博沉浸
+   2. 极细扫描线：repeating-linear-gradient 静止微纹理
+   3. 边缘 vignette 暗角：聚焦中心内容 */
+html[data-theme='dotmatrix'] .hero-bg {
+  background:
+    radial-gradient(120% 100% at 50% 115%, rgba(0, 240, 255, 0.1), transparent 62%),
+    radial-gradient(80% 60% at 80% 0%, rgba(0, 240, 255, 0.05), transparent 60%),
+    var(--gradient-hero);
+}
+
+html[data-theme='dotmatrix'] .hero-section::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(0, 240, 255, 0.025) 2px 3px),
+    radial-gradient(130% 100% at 50% 20%, transparent 62%, rgba(2, 4, 8, 0.45) 100%);
+}
+
+/* 扫描线微弱呼吸动效（prefers-reduced-motion 自动降级） */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-theme='dotmatrix'] .hero-section::after {
+    animation: dotmatrix-scan 8s linear infinite;
+  }
+}
+
+@keyframes dotmatrix-scan {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(3px); }
+}
+
 /* ==================== 组件级适配 ==================== */
 
 /* 瑞士甲板：主按钮直角 + 粗边 + 大写 + 无阴影 */
