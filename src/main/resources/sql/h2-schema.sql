@@ -266,3 +266,25 @@ create table if not exists rag_reference (
     create_time datetime default CURRENT_TIMESTAMP not null
 );
 create index if not exists idx_rag_ref_task on rag_reference(task_id);
+
+-- Agent 会话与消息表（与 V6__create_agent_conversation.sql 同步维护）
+create table if not exists agent_conversation (
+    id bigint auto_increment primary key,
+    user_id bigint not null,
+    title varchar(100) not null,
+    create_time datetime not null default CURRENT_TIMESTAMP,
+    update_time datetime default null,
+    is_delete tinyint default 0
+);
+
+create table if not exists agent_message (
+    id bigint auto_increment primary key,
+    conversation_id bigint not null,
+    role varchar(10) not null,
+    kind varchar(16) not null default 'text',
+    content text not null,
+    meta_json text default null,
+    create_time datetime not null default CURRENT_TIMESTAMP,
+    is_delete tinyint default 0
+);
+create index if not exists idx_agent_msg_conv on agent_message(conversation_id, create_time);
