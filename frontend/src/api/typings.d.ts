@@ -425,7 +425,9 @@ declare namespace API {
 
   type SkillVariableOption = {
     label: string
-    value: unknown
+    // 收紧为 string | number：antd Select 的 DefaultOptionType.value 只接受该联合，
+    // unknown 在严格检查下不兼容（CI vue-tsc 全量必报）；构造点均为字符串值
+    value: string | number
   }
 
   type TopicOption = {

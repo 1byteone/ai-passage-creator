@@ -144,8 +144,10 @@ const updateValue = (fieldName: string, value: unknown) => {
   }
 }
 
-const handleRadioChange = (fieldName: string, event: { target: { value: unknown } }) => {
-  updateValue(fieldName, event.target.value)
+// antd radio-group 的 @change 事件类型随版本/严格度变化，用 unknown + 收窄最稳
+const handleRadioChange = (fieldName: string, event: unknown) => {
+  const target = event as { target?: { value?: unknown } } | null
+  updateValue(fieldName, target?.target?.value)
 }
 
 const validateField = (fieldName: string, raw?: API.SkillVariableDef): boolean => {
