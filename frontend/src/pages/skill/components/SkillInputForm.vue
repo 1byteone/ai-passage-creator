@@ -109,7 +109,7 @@
 
 <script setup lang="ts">
 import { computed, reactive } from 'vue'
-import { Radio as ARadio, RadioGroup as ARadioGroup, Select as ASelect, Upload as AUpload } from 'ant-design-vue'
+import { Radio as ARadio, RadioGroup as ARadioGroup, Select as ASelect, Upload as AUpload, message } from 'ant-design-vue'
 import { PlayCircleOutlined } from '@ant-design/icons-vue'
 import { getFieldDefinition } from '@/config/skill'
 import { uploadImage } from '@/api/comicController'
@@ -167,10 +167,15 @@ const asStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === 'string')
 
 // upload 控件：上传到 COS 拿到 URL 后写回 modelValue[fieldName]（string[]），返回 false 阻止组件默认上传
+// 失败不重抛：COS 5xx / 超限等上传失败必须给用户反馈，而非静默丢弃照片
 const uploadPhoto = async (fieldName: string, file: File) => {
-  const url = await uploadImage(file)
-  const current = asStringArray(props.modelValue[fieldName]) ? props.modelValue[fieldName] : []
-  emit('update:modelValue', { ...props.modelValue, [fieldName]: [...current, url] })
+  try {
+    const url = await uploadImage(file)
+    const current = asStringArray(props.modelValue[fieldName]) ? props.modelValue[fieldName] : []
+    emit('update:modelValue', { ...props.modelValue, [fieldName]: [...current, url] })
+  } catch {
+    message.error('图片上传失败，请重试')
+  }
 }
 
 const handleUpload = (fieldName: string, file: File) => {

@@ -25,6 +25,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { message } from 'ant-design-vue'
 import { getComicEpisode, getComicEpisodesByMonth, listComicBooks, listComicMonths } from '@/api/comicController'
 
 const books = ref<API.ComicBookPo[]>([])
@@ -36,6 +37,8 @@ const loadBooks = async () => {
   try {
     const res = await listComicBooks()
     if (res.data.code === 0) books.value = res.data.data ?? []
+  } catch {
+    message.error('手帐加载失败，请重试')
   } finally {
     loading.value = false
   }
@@ -43,16 +46,24 @@ const loadBooks = async () => {
 
 // MVP：展示最新月册的章节；完整按档案→月册→章节两级浏览
 const loadEpisodes = async (bookId: number) => {
-  const res = await listComicMonths(bookId)
-  const latest = res.data.data?.[0]
-  if (latest) {
-    episodes.value = await getComicEpisodesByMonth(bookId, latest.yearMonth!)
+  try {
+    const res = await listComicMonths(bookId)
+    const latest = res.data.data?.[0]
+    if (latest) {
+      episodes.value = await getComicEpisodesByMonth(bookId, latest.yearMonth!)
+    }
+  } catch {
+    message.error('手帐加载失败，请重试')
   }
 }
 
 const preview = async (ep: API.ComicEpisodePo) => {
-  const res = await getComicEpisode(ep.id!)
-  previewHtml.value = res.data.data?.pageHtml ?? ''
+  try {
+    const res = await getComicEpisode(ep.id!)
+    previewHtml.value = res.data.data?.pageHtml ?? ''
+  } catch {
+    message.error('预览失败，请重试')
+  }
 }
 
 onMounted(loadBooks)
