@@ -168,7 +168,28 @@ public class ComicJournalService {
             volume.setIsDelete(0);
             volumeMapper.insert(volume);
         } else {
-            volume.setEpisodeCount(volume.getEpisodeCount() + 1);
+            // 已有月册：按当月全部章节重渲染 index_html，否则连续阅读页永远只有第一章，
+            // episode_count 与 index_html 在第二集后开始分叉
+            try {
+                List<Map<String, Object>> episodeMaps = new ArrayList<>();
+                List<ComicEpisodePo> monthEpisodes = episodeMapper.selectListByQuery(
+                        com.mybatisflex.core.query.QueryWrapper.create()
+                                .eq("book_id", bookId)
+                                .eq("year_month", yearMonth)
+                                .eq("is_delete", 0)
+                                .orderBy("episode_no", true));
+                for (ComicEpisodePo ep : monthEpisodes) {
+                    episodeMaps.add(Map.of("title", ep.getTitle(), "episodeNo", ep.getEpisodeNo()));
+                }
+                volume.setIndexHtml(templateEngine.renderMonthly(
+                        ComicStyle.from(episode.getStyle()),
+                        yearMonth + " 手帐",
+                        episodeMaps));
+                volume.setEpisodeCount(monthEpisodes.size());
+            } catch (Exception e) {
+                // 重渲染失败保留旧 index_html 与旧计数，不阻断本集落库（本集已在上一步插入）
+                log.warn("月册 indexHtml 重渲染失败，保留旧值: bookId={}, yearMonth={}", bookId, yearMonth, e);
+            }
             volume.setUpdateTime(LocalDateTime.now());
             volumeMapper.update(volume);
         }
