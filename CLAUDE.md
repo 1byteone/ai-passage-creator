@@ -138,6 +138,30 @@ SkillExecutePage (Vue) ─→ POST /skill/{name}/execute
         前端流式展示进度 + 结果渲染
 ```
 
+### 数据流：漫画手帐 Skill
+
+```
+SkillExecutePage (Vue) ─→ POST /skill/comic-journal/execute
+                    │
+                    ▼
+        SkillExecutionService (异步)
+          ├─ route_content: 内容→排版风格 → routeResult
+          ├─ storyboard: 分镜 (HITL 确认) → storyboardResult
+          ├─ illustration: 画风提示词 → imagePrompts
+          ├─ compose: 排版布局 → layoutResult
+          └─ SUCCESS → comicJournalService.processAsync (@Async ragExecutor)
+                    │
+                    ▼
+        ComicJournalService
+          ├─ AgnesImageService 逐格生图 (失败降级静态占位)
+          ├─ ComicTemplateEngine 渲染 HTML → comic_episode.pageHtml
+          ├─ CardRenderPipeline PNG (playwright.enabled=false 时跳过)
+          └─ 落库 comic_book → comic_episode → comic_monthly_volume
+                    │
+                    ▼
+        前端 /comic 浏览页 (iframe srcdoc 预览 + PNG 下载)
+```
+
 ### 数据流：RAG 向量检索
 
 ```
@@ -171,6 +195,7 @@ admin 知识库 ── POST/GET/DELETE /rag/document(s) ──▶ rag_document �
 |------|------|------|------|
 | `/` | HomePage | 无 | 营销首页 + 快捷入口 |
 | `/create` | ArticleCreatePage | 需登录 | 创作主流程 |
+| `/comic` | ComicLibraryPage | 需登录 | 漫画手帐浏览页 |
 | `/article/list` | ArticleListPage | 需登录 | 文章历史列表 |
 | `/article/:taskId` | ArticleDetailPage | 需登录 | 文章详情 + 审批 + 相关文章 |
 | `/article/:taskId/cards` | CardPage | 需登录 | 卡片渲染管理 |
@@ -330,6 +355,7 @@ User Input → Vue → POST /api/article/create → SSE taskId → EventSource �
 | **Outline Section** | 大纲章节 (含要点列表 points[]) | `OutlineSection { section, title, points }` |
 | **Skill** | 可复用的 AI 技能定义 (JSON schema) | `SkillController / SkillExecutePage` |
 | **Card Render** | Playwright 渲染 HTML→PNG 卡片图 | `card/` 包 + `CardController` |
+| **Comic Journal** | 漫画手帐（内容→分镜→插画→排版→渲染落库） | `comic/` 包 + `ComicController` |
 | **Viral Quality** | 爆款质量评分 | `viral_quality` 相关表 |
 | **Approval** | 内容审批工作流 | `ApprovalController` |
 

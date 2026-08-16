@@ -65,7 +65,7 @@ class FlywayMigrationCompatibilityTest {
             List<String> tables = listTables(stmt);
             for (String table : List.of("user", "article", "skill_execution", "article_quality",
                     "workspace", "approval_record", "publish_schedule", "article_card", "api_key",
-                    "skill_checkpoint")) {
+                    "skill_checkpoint", "comic_book", "comic_episode", "comic_monthly_volume")) {
                 assertTrue(tables.contains(table), "迁移后应存在表 " + table);
             }
 
@@ -78,9 +78,36 @@ class FlywayMigrationCompatibilityTest {
     }
 
     @Test
+    @DisplayName("V10 修复锁死：comic_episode.png_url 可容纳 base64 PNG data URL（>512 字符）")
+    void migrate_pngUrl_holdsLongDataUrl() throws Exception {
+        // 独立内存库，避免与共享 flyway_compat 库互相污染（该库 DB_CLOSE_DELAY=-1 跨用例存活）
+        JdbcDataSource pngDs = new JdbcDataSource();
+        pngDs.setURL("jdbc:h2:mem:flyway_compat_png;MODE=MySQL;DB_CLOSE_DELAY=-1");
+        pngDs.setUser("sa");
+
+        Flyway flyway = Flyway.configure()
+                .dataSource(pngDs)
+                .locations("classpath:db/migration")
+                .load();
+        flyway.migrate();
+
+        // renderToPngDataUrl 返回 base64 data URL（约 70-90K 字符），V9 的 varchar(512) 会抛 Data too long
+        String longUrl = "data:image/png;base64," + "A".repeat(2000);
+        try (Connection conn = pngDs.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("insert into comic_episode (book_id, episode_no, title, png_url) "
+                    + "values (1, 1, 't', '" + longUrl + "')");
+            try (ResultSet rs = stmt.executeQuery(
+                    "select png_url from comic_episode where book_id = 1 and episode_no = 1")) {
+                assertTrue(rs.next(), "png_url 写入后应可回读");
+                assertEquals(longUrl, rs.getString(1));
+            }
+        }
+    }
+
+    @Test
     @DisplayName("迁移版本号在 db/migration + db/vendor/mysql 合并后唯一（防同版本冲突启动失败）")
-    void migrationVersions_uniqueAcrossVendorLocations() {
-        // 生产 MySQL 的 flyway.locations 同时扫 db/migration 与 db/vendor/mysql。
+    void migrationVersions_uniqueAcrossVendorLocations() {        // 生产 MySQL 的 flyway.locations 同时扫 db/migration 与 db/vendor/mysql。
         // 若两个文件声明同版本（如历史曾出现的两个 V3），Flyway 启动即抛
         // "Found more than one migration with version N"。此处不执行 SQL（vendor 的
         // 存储过程仅 MySQL 可跑），仅用 info() 解析合并后的版本集并断言唯一。
