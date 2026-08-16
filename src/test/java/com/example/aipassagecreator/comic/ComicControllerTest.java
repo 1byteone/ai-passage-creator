@@ -4,8 +4,10 @@ import com.example.aipassagecreator.mapper.ComicBookMapper;
 import com.example.aipassagecreator.mapper.ComicEpisodeMapper;
 import com.example.aipassagecreator.model.po.ComicBookPo;
 import com.example.aipassagecreator.model.po.ComicEpisodePo;
+import com.example.aipassagecreator.model.po.ComicMonthlyVolumePo;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.service.UserService;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -126,6 +128,21 @@ class ComicControllerTest {
         mockMvc.perform(get("/comic/episodes/" + ep.getId()).session(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(40101)); // NO_AUTH_ERROR
+    }
+
+    @Test
+    @DisplayName("登录用户查看自己的月册列表 → 成功返回空列表")
+    void listMonths_ownBook_returnsData() throws Exception {
+        long userId = registerUser();
+        User user = userService.getById(userId);
+        MockHttpSession session = loginAs(user.getUserAccount(), "Comic@2026");
+
+        ComicBookPo book = insertBook(userId, "我的手帐");
+
+        mockMvc.perform(get("/comic/books/" + book.getId() + "/months").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data").isArray());
     }
 
     @Test
