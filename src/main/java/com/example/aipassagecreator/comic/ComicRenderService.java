@@ -16,9 +16,9 @@ import java.util.regex.Pattern;
 @Service
 public class ComicRenderService {
 
-    /** <img src="..."> 的 src 值 — 标准管线禁网，渲染前须把远端图内联为 data URL 才能显示 */
+    /** <img src="..."> 或 <img src='...'> 的 src 值 — 标准管线禁网，渲染前须把远端图内联为 data URL 才能显示 */
     private static final Pattern IMG_SRC = Pattern.compile(
-            "(?is)(<img\\b[^>]*?\\bsrc\\s*=\\s*\")([^\"]*)(\")");
+            "(?is)(<img\\b[^>]*?\\bsrc\\s*=\\s*[\"'])([^\"']*)([\"'])");
 
     private final CardRenderPipeline cardRenderPipeline;
     private final CardImageResolver imageResolver;
@@ -49,6 +49,7 @@ public class ComicRenderService {
      * 时保留原 URL（模板降级为无图），不阻断整页渲染；已是 data: 的 URL 原样返回。
      */
     private String inlineImages(String html) {
+        if (html == null) return null;
         Matcher matcher = IMG_SRC.matcher(html);
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
