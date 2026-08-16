@@ -29,6 +29,10 @@ public class ComicBookService {
         return book;
     }
 
+    public ComicBookPo getBookById(Long bookId) {
+        return bookMapper.selectOneById(bookId);
+    }
+
     public java.util.List<ComicBookPo> listBooks(Long userId) {
         return bookMapper.selectListByQuery(
                 QueryWrapper.create().eq("user_id", userId).eq("is_delete", 0)
