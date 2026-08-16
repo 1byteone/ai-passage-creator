@@ -137,7 +137,7 @@ public class SkillExecutionService {
                 if (po != null) {
                     ragService.indexSkillAsync(po, execution.getPersistedOutput());
                 }
-                // P2：comic-journal 不参与 RAG 索引，仅触发漫画手帐产出服务（生图→渲染→落库）
+                // P2：comic-journal 追加漫画手帐产出（RAG 保留无害，JSON 输出不参与检索）
                 if ("comic-journal".equals(execution.getDefinition().getName())) {
                     if (po != null) {
                         comicJournalService.processAsync(po, execution.getPersistedOutput(), userId);
