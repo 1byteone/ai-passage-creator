@@ -48,12 +48,15 @@ class SkillExecutionServiceChainAsyncTest {
     @Mock
     private RagService ragService;
 
+    @Mock
+    private com.example.aipassagecreator.comic.ComicJournalService comicJournalService;
+
     private SkillExecutionService service;
 
     @BeforeEach
     void setUp() {
         service = new SkillExecutionService(sseEmitterManager, executionRegistry,
-                quotaService, userService, skillRegistry, ragService);
+                quotaService, userService, skillRegistry, ragService, comicJournalService);
     }
 
     @Test

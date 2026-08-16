@@ -1,5 +1,6 @@
 package com.example.aipassagecreator.skill;
 
+import com.example.aipassagecreator.comic.ComicJournalService;
 import com.example.aipassagecreator.enums.SkillExecutionStatusEnum;
 import com.example.aipassagecreator.model.po.SkillExecutionPo;
 import com.example.aipassagecreator.model.po.User;
@@ -28,6 +29,7 @@ public class SkillExecutionService {
     private final UserService userService;
     private final SkillRegistry skillRegistry;
     private final RagService ragService;
+    private final ComicJournalService comicJournalService;
 
     /**
      * 公共派发：配额校验与扣减 → 创建执行 → prepare → 含确认则注册 → executeAsync。
@@ -134,6 +136,12 @@ public class SkillExecutionService {
                 SkillExecutionPo po = execution.getPoForIndex();
                 if (po != null) {
                     ragService.indexSkillAsync(po, execution.getPersistedOutput());
+                }
+                // P2：comic-journal 不参与 RAG 索引，仅触发漫画手帐产出服务（生图→渲染→落库）
+                if ("comic-journal".equals(execution.getDefinition().getName())) {
+                    if (po != null) {
+                        comicJournalService.processAsync(po, execution.getPersistedOutput(), userId);
+                    }
                 }
             }
         } finally {

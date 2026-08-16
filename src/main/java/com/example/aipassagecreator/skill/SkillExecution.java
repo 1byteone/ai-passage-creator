@@ -367,7 +367,7 @@ public class SkillExecution {
      * <p>
      * SkillContext 终态即清理，但 DB 记录始终可读，RAG 索引用其做数据源。
      */
-    SkillExecutionPo getPoForIndex() {
+    public SkillExecutionPo getPoForIndex() {
         return persistedExecution;
     }
 

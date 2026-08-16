@@ -34,6 +34,8 @@ class SkillExecutionRagIndexTest {
     private SkillRegistry skillRegistry;
     @Mock
     private RagService ragService;
+    @Mock
+    private com.example.aipassagecreator.comic.ComicJournalService comicJournalService;
 
     @InjectMocks
     private SkillExecutionService service;
@@ -62,6 +64,10 @@ class SkillExecutionRagIndexTest {
         when(execution.getPersistedOutput())
                 .thenReturn(Map.of("result", "调研结论"));
         when(execution.getPoForIndex()).thenReturn(po);
+        // settle 的 comic-journal 分支会读 definition.getName()，非漫画 skill 走不到该分支
+        SkillDefinition def = new SkillDefinition();
+        def.setName("proofreading");
+        when(execution.getDefinition()).thenReturn(def);
         return execution;
     }
 }
