@@ -1,0 +1,92 @@
+name: comic-journal
+description: 把日常、心情、照片、知识笔记、会议纪要、长文收录进按月成册的漫画手帐
+category: image
+requiredRoles: [user]
+multiRound: true
+
+variables:
+  content:
+    description: 日常/心情/知识/会议/长文内容
+    required: true
+    source: INPUT
+    uiType: textarea
+    placeholder: 写下今天的记录，或粘贴长文/会议纪要
+    maxLength: 20000
+  photos:
+    description: 照片（可选，最多 6 张）
+    required: false
+    source: INPUT
+    uiType: upload
+    placeholder: 上传照片
+  style:
+    description: 画风
+    required: false
+    source: INPUT
+    uiType: select
+    defaultValue: powder
+    options:
+      - label: 粉蜡手帐（默认）
+        value: powder
+      - label: 云层水粉
+        value: gouache
+      - label: 白纸彩铅
+        value: colorpencil
+      - label: 细墨轻彩
+        value: inkwash
+  bookName:
+    description: 手帐档案名
+    required: false
+    source: INPUT
+    uiType: input
+    defaultValue: 我的生活手帐
+
+phases:
+  - name: route_content
+    promptFile: skills/comic-journal/prompts/phase1_route_content.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: routeResult
+    variables:
+      - name: content
+      - name: photos
+    requireConfirmation: false
+
+  - name: storyboard
+    promptFile: skills/comic-journal/prompts/phase2_storyboard.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: storyboardResult
+    variables:
+      - name: routeResult
+        ref: route_content
+      - name: photos
+    requireConfirmation: true
+
+  - name: illustration
+    promptFile: skills/comic-journal/prompts/phase3_illustration.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: imagePrompts
+    variables:
+      - name: storyboardResult
+        ref: storyboard
+      - name: style
+    requireConfirmation: false
+
+  - name: compose
+    promptFile: skills/comic-journal/prompts/phase4_compose.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: layoutResult
+    variables:
+      - name: routeResult
+        ref: route_content
+      - name: storyboardResult
+        ref: storyboard
+      - name: imagePrompts
+        ref: illustration
+    requireConfirmation: false
