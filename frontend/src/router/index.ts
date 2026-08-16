@@ -78,6 +78,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/comic',
+      name: '漫画手帐',
+      component: () => import('@/pages/comic/ComicLibraryPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/handwriting',
       name: '手写笔记编辑器',
       component: () => import('@/pages/handwriting/HandwritingEditorPage.vue'),

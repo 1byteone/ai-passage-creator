@@ -34,6 +34,18 @@
         @blur="validateField(fieldName, rawDefinition)"
       />
 
+      <a-upload
+        v-else-if="fieldDefinition(fieldName, rawDefinition).uiType === 'upload'"
+        :before-upload="(file: File) => handleUpload(fieldName, file)"
+        :file-list="photoList(fieldName)"
+        :disabled="loading"
+        multiple
+        accept="image/jpeg,image/png,image/webp"
+        @remove="removePhoto(fieldName, $event)"
+      >
+        <a-button>选择照片</a-button>
+      </a-upload>
+
       <a-radio-group
         v-else-if="fieldDefinition(fieldName, rawDefinition).uiType === 'radio'"
         :value="modelValue[fieldName]"
@@ -97,9 +109,10 @@
 
 <script setup lang="ts">
 import { computed, reactive } from 'vue'
-import { Radio as ARadio, RadioGroup as ARadioGroup, Select as ASelect } from 'ant-design-vue'
+import { Radio as ARadio, RadioGroup as ARadioGroup, Select as ASelect, Upload as AUpload } from 'ant-design-vue'
 import { PlayCircleOutlined } from '@ant-design/icons-vue'
 import { getFieldDefinition } from '@/config/skill'
+import { uploadImage } from '@/api/comicController'
 
 const props = defineProps<{
   definition: API.SkillDefinition
@@ -148,6 +161,35 @@ const updateValue = (fieldName: string, value: unknown) => {
 const handleRadioChange = (fieldName: string, event: unknown) => {
   const target = event as { target?: { value?: unknown } } | null
   updateValue(fieldName, target?.target?.value)
+}
+
+const asStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === 'string')
+
+// upload 控件：上传到 COS 拿到 URL 后写回 modelValue[fieldName]（string[]），返回 false 阻止组件默认上传
+const uploadPhoto = async (fieldName: string, file: File) => {
+  const url = await uploadImage(file)
+  const current = asStringArray(props.modelValue[fieldName]) ? props.modelValue[fieldName] : []
+  emit('update:modelValue', { ...props.modelValue, [fieldName]: [...current, url] })
+}
+
+const handleUpload = (fieldName: string, file: File) => {
+  void uploadPhoto(fieldName, file)
+  return false
+}
+
+const photoList = (fieldName: string) => {
+  const urls = props.modelValue[fieldName]
+  if (!asStringArray(urls)) return []
+  return urls.map((url, index) => ({ uid: String(index), name: url, url }))
+}
+
+const removePhoto = (fieldName: string, file: { url?: string }) => {
+  const current = asStringArray(props.modelValue[fieldName]) ? props.modelValue[fieldName] : []
+  emit('update:modelValue', {
+    ...props.modelValue,
+    [fieldName]: current.filter((url) => url !== file.url),
+  })
 }
 
 const validateField = (fieldName: string, raw?: API.SkillVariableDef): boolean => {

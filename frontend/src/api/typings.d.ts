@@ -416,7 +416,7 @@ declare namespace API {
     required?: boolean
     source?: string
     phaseRef?: string
-    uiType?: 'input' | 'textarea' | 'select' | 'radio'
+    uiType?: 'input' | 'textarea' | 'select' | 'radio' | 'upload'
     options?: SkillVariableOption[]
     defaultValue?: unknown
     placeholder?: string
@@ -865,5 +865,57 @@ declare namespace API {
   type TopicRecommendItem = {
     text?: string
     source?: string
+  }
+
+  // ── Comic 漫画手帐 ──
+
+  type ComicBookPo = {
+    id?: number
+    userId?: number
+    bookName?: string
+  }
+
+  type ComicMonthlyVolumePo = {
+    id?: number
+    bookId?: number
+    yearMonth?: string
+  }
+
+  type ComicEpisodePo = {
+    id?: number
+    bookId?: number
+    title?: string
+    pageHtml?: string
+    pngUrl?: string
+  }
+
+  type BaseResponseComicBookPo = {
+    code?: number
+    data?: ComicBookPo
+    message?: string
+  }
+
+  type BaseResponseListComicBookPo = {
+    code?: number
+    data?: ComicBookPo[]
+    message?: string
+  }
+
+  type BaseResponseListComicMonthlyVolumePo = {
+    code?: number
+    data?: ComicMonthlyVolumePo[]
+    message?: string
+  }
+
+  type BaseResponseComicEpisodePo = {
+    code?: number
+    data?: ComicEpisodePo
+    message?: string
+  }
+
+  type BaseResponseListComicEpisodePo = {
+    code?: number
+    data?: ComicEpisodePo[]
+    message?: string
   }
 }

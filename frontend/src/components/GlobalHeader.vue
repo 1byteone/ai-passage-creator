@@ -114,6 +114,7 @@ import {
   ToolOutlined,
   TeamOutlined,
   BookOutlined,
+  ProfileOutlined,
 } from '@ant-design/icons-vue'
 import { isVip as checkIsVip } from '@/utils/permission'
 import { getAvatar } from '@/utils/avatar'
@@ -142,6 +143,11 @@ const originItems = [
     key: '/skill',
     icon: AppstoreOutlined,
     label: 'AI 工具',
+  },
+  {
+    key: '/comic',
+    icon: ProfileOutlined,
+    label: '漫画手帐',
   },
   {
     key: '/article/list',

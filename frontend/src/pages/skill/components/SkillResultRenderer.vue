@@ -20,11 +20,13 @@
     :inputs="inputs"
     :output-data="outputData"
   />
+  <SkillResultComicJournal v-else-if="skillName === 'comic-journal'" :output-data="outputData" />
   <SkillResultDefault v-else :output-data="outputData" />
 </template>
 
 <script setup lang="ts">
 import SkillResultArticleToX from './SkillResultArticleToX.vue'
+import SkillResultComicJournal from './SkillResultComicJournal.vue'
 import SkillResultDefault from './SkillResultDefault.vue'
 import SkillResultProofreading from './SkillResultProofreading.vue'
 import SkillResultResearch from './SkillResultResearch.vue'
