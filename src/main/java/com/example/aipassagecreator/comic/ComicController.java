@@ -64,6 +64,9 @@ public class ComicController {
                                                            @PathVariable String yearMonth,
                                                            HttpServletRequest request) {
         User user = userService.getLoginUser(request);
+        if (yearMonth == null || !yearMonth.matches("\\d{4}-\\d{2}")) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数格式错误：年月份格式应为 YYYY-MM");
+        }
         // 归属校验走档案本身（bookId → book.userId），与 getEpisode 同源，防跨用户越权浏览
         ComicBookPo book = bookService.getBookById(bookId);
         if (book == null) {
