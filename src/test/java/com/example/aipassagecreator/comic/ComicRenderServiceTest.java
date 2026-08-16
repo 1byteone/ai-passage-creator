@@ -83,4 +83,19 @@ class ComicRenderServiceTest {
         verify(cardRenderPipeline, never()).render(any(), any());
         verify(cardImageResolver, never()).toDataUrl(any());
     }
+
+    @Test
+    void renderToPngDataUrl_escapedAmpUrl_unescapesBeforeDownload() {
+        // th:src 把签名 URL 的 & 转义为 &amp;：下载前须还原，否则查到错地址导致原位图失效
+        String html = "<img src=\"https://cos/img.png?x=1&amp;y=2\"/>";
+        when(cardRenderPipeline.isHealthy()).thenReturn(true);
+        when(cardImageResolver.toDataUrl("https://cos/img.png?x=1&y=2"))
+                .thenReturn("data:image/png;base64,QQ");
+        when(cardRenderPipeline.render(any(), any()))
+                .thenReturn(List.of(PageResult.builder().pngBytes(new byte[]{1}).build()));
+
+        renderService.renderToPngDataUrl(html, "task-1");
+
+        verify(cardImageResolver).toDataUrl("https://cos/img.png?x=1&y=2");
+    }
 }

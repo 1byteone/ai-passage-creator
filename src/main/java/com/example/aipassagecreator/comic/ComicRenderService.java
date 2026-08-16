@@ -52,7 +52,9 @@ public class ComicRenderService {
         Matcher matcher = IMG_SRC.matcher(html);
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
-            String url = matcher.group(2);
+            // th:src 在模板阶段已做 HTML 转义（& → &amp; 等）：下载前先反转义还原真实 URL
+            // （签名 URL 的查询参数含 & 会被转义，不还原会下载错地址导致原位图失效）
+            String url = matcher.group(2).replace("&amp;", "&");
             String dataUrl = imageResolver.toDataUrl(url);
             if (dataUrl != null) {
                 // quoteReplacement 防 data URL 里的 $ / 反斜杠被替换引擎特殊处理
