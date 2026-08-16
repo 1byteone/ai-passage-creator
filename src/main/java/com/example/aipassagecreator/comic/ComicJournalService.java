@@ -93,7 +93,9 @@ public class ComicJournalService {
             // photoSlots 是照片直出的唯一数据源，故以其非空判定照片模式：
             // 即便 mode/type 标记为 photo，没有 photoSlots 也没有可渲染的照片，回退常规路径
             List<Map<String, Object>> ordered = new ArrayList<>(photoSlots);
-            ordered.sort(Comparator.comparingInt(s -> num(s.get("slotNo"))));
+            // slotNo 缺失(null)排最后：LLM 偶发缺 slotNo 不应乱序破坏照片与版位对应
+            ordered.sort(Comparator.comparing(ComicJournalService::slotNoOf,
+                    Comparator.nullsLast(Comparator.naturalOrder())));
             List<String> photos = extractPhotos(po);
             imageUrls = new ArrayList<>();
             panels = new ArrayList<>();
@@ -268,6 +270,22 @@ public class ComicJournalService {
 
     private static String str(Object o, String fallback) {
         return o == null || o.toString().isBlank() ? fallback : o.toString();
+    }
+
+    /** slotNo 提取：缺失/非法返回 null（排序时 nullsLast 排最后，维持照片与版位对应） */
+    private static Integer slotNoOf(Map<String, Object> slot) {
+        Object o = slot.get("slotNo");
+        if (o instanceof Number n) {
+            return n.intValue();
+        }
+        if (o == null) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(o.toString().trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /** 取整数值（Gson 数字默认解析为 Double）；缺失/非法返回 -1，让越界照片回退占位图 */
