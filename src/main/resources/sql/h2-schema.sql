@@ -325,7 +325,7 @@ create table if not exists comic_episode (
     image_prompts longtext null,
     layout_result longtext null,
     page_html longtext null,
-    png_url varchar(512) null,
+    png_url longtext null,
     is_delete tinyint default 0 not null,
     create_time datetime default CURRENT_TIMESTAMP not null,
     update_time datetime default CURRENT_TIMESTAMP not null
