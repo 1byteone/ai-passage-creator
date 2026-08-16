@@ -44,7 +44,15 @@ public class ComicController {
     @Operation(summary = "档案的月册列表")
     public BaseResponse<List<ComicMonthlyVolumePo>> listMonths(@PathVariable Long bookId,
                                                                HttpServletRequest request) {
-        userService.getLoginUser(request);
+        User user = userService.getLoginUser(request);
+        // 归属校验走档案本身（bookId → book.userId），与 getEpisode 同源，防跨用户越权浏览
+        ComicBookPo book = bookService.getBookById(bookId);
+        if (book == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "档案不存在");
+        }
+        if (!book.getUserId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权访问该档案");
+        }
         return ResultUtils.success(volumeMapper.selectListByQuery(
                 QueryWrapper.create().eq("book_id", bookId).eq("is_delete", 0)
                         .orderBy("year_month", false)));
@@ -55,10 +63,18 @@ public class ComicController {
     public BaseResponse<List<ComicEpisodePo>> listEpisodes(@PathVariable Long bookId,
                                                            @PathVariable String yearMonth,
                                                            HttpServletRequest request) {
-        userService.getLoginUser(request);
+        User user = userService.getLoginUser(request);
+        // 归属校验走档案本身（bookId → book.userId），与 getEpisode 同源，防跨用户越权浏览
+        ComicBookPo book = bookService.getBookById(bookId);
+        if (book == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "档案不存在");
+        }
+        if (!book.getUserId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权访问该档案");
+        }
         return ResultUtils.success(episodeMapper.selectListByQuery(
-                QueryWrapper.create().eq("book_id", bookId).eq("is_delete", 0)
-                        .orderBy("episode_no", false)));
+                QueryWrapper.create().eq("book_id", bookId).eq("year_month", yearMonth)
+                        .eq("is_delete", 0).orderBy("episode_no", false)));
     }
 
     @GetMapping("/episodes/{episodeId}")

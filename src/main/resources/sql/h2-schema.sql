@@ -320,6 +320,7 @@ create table if not exists comic_episode (
     input_type varchar(16) default 'daily' not null,
     input_summary varchar(512) null,
     style varchar(32) default 'powder' not null,
+    year_month char(7) null,
     route_result longtext null,
     storyboard_result longtext null,
     image_prompts longtext null,

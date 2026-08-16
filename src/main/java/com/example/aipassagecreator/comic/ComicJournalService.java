@@ -98,7 +98,8 @@ public class ComicJournalService {
         String pngUrl = pngDataUrl != null ? pngDataUrl
                 : (imageUrls.isEmpty() ? null : imageUrls.get(0));
 
-        // 5) 落库 episode
+        // 5) 落库 episode（yearMonth 与月册聚合共用同一值，保证同档可按月过滤）
+        String yearMonth = LocalDateTime.now().toString().substring(0, 7);
         ComicEpisodePo episode = new ComicEpisodePo();
         episode.setBookId(book.getId());
         episode.setEpisodeNo(nextEpisodeNo(book.getId()));
@@ -106,6 +107,7 @@ public class ComicJournalService {
         episode.setInputType(str(route.get("type"), "daily"));
         episode.setInputSummary(str(route.get("summary"), ""));
         episode.setStyle(style.getName());
+        episode.setYearMonth(yearMonth);
         episode.setRouteResult(json(route));
         episode.setStoryboardResult(json(storyboard));
         episode.setImagePrompts(json(imagePrompts));
@@ -116,7 +118,7 @@ public class ComicJournalService {
         episodeMapper.insert(episode);
 
         // 6) 月册聚合
-        upsertMonthlyVolume(book.getId(), episode);
+        upsertMonthlyVolume(book.getId(), episode, yearMonth);
 
         log.info("漫画手帐产出完成: episodeId={}, bookId={}, type={}, style={}",
                 episode.getId(), book.getId(), episode.getInputType(), style.getName());
@@ -149,8 +151,7 @@ public class ComicJournalService {
         return max == null ? 1 : (int) (max + 1);
     }
 
-    private void upsertMonthlyVolume(Long bookId, ComicEpisodePo episode) {
-        String yearMonth = LocalDateTime.now().toString().substring(0, 7);
+    private void upsertMonthlyVolume(Long bookId, ComicEpisodePo episode, String yearMonth) {
         ComicMonthlyVolumePo volume = volumeMapper.selectOneByQuery(
                 com.mybatisflex.core.query.QueryWrapper.create()
                         .eq("book_id", bookId).eq("year_month", yearMonth).eq("is_delete", 0));

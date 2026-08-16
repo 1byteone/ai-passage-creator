@@ -50,6 +50,8 @@ phases:
     variables:
       - name: content
       - name: photos
+      - name: style
+      - name: bookName
     requireConfirmation: false
 
   - name: storyboard

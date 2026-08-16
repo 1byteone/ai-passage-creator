@@ -18,6 +18,7 @@ public class ComicEpisodePo {
     private String inputType;
     private String inputSummary;
     private String style;
+    private String yearMonth;
     private String routeResult;
     private String storyboardResult;
     private String imagePrompts;

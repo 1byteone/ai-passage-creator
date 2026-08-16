@@ -112,12 +112,7 @@ class ComicControllerTest {
         User user = userService.getById(userId);
         MockHttpSession session = loginAs(user.getUserAccount(), "Comic@2026");
 
-        ComicBookPo book = new ComicBookPo();
-        book.setUserId(userId + 999); // 他人档案
-        book.setBookName("他人手帐");
-        book.setDefaultStyle("powder");
-        book.setIsDelete(0);
-        bookMapper.insert(book);
+        ComicBookPo book = insertBook(userId + 999, "他人手帐");
 
         ComicEpisodePo ep = new ComicEpisodePo();
         ep.setBookId(book.getId());
@@ -131,5 +126,73 @@ class ComicControllerTest {
         mockMvc.perform(get("/comic/episodes/" + ep.getId()).session(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(40101)); // NO_AUTH_ERROR
+    }
+
+    @Test
+    @DisplayName("登录用户访问他人档案月册 → NO_AUTH_ERROR(40101)")
+    void listMonths_otherUsersBook_denied() throws Exception {
+        long userId = registerUser();
+        User user = userService.getById(userId);
+        MockHttpSession session = loginAs(user.getUserAccount(), "Comic@2026");
+
+        ComicBookPo book = insertBook(userId + 999, "他人手帐");
+
+        mockMvc.perform(get("/comic/books/" + book.getId() + "/months").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(40101)); // NO_AUTH_ERROR
+    }
+
+    @Test
+    @DisplayName("登录用户访问他人档案章节列表 → NO_AUTH_ERROR(40101)")
+    void listEpisodes_otherUsersBook_denied() throws Exception {
+        long userId = registerUser();
+        User user = userService.getById(userId);
+        MockHttpSession session = loginAs(user.getUserAccount(), "Comic@2026");
+
+        ComicBookPo book = insertBook(userId + 999, "他人手帐");
+
+        mockMvc.perform(get("/comic/books/" + book.getId() + "/months/2026-07/episodes").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(40101)); // NO_AUTH_ERROR
+    }
+
+    @Test
+    @DisplayName("章节列表按 yearMonth 过滤 → 只返回该月章节")
+    void listEpisodes_filtersByYearMonth() throws Exception {
+        long userId = registerUser();
+        User user = userService.getById(userId);
+        MockHttpSession session = loginAs(user.getUserAccount(), "Comic@2026");
+
+        ComicBookPo book = insertBook(userId, "我的手帐");
+        insertEpisode(book.getId(), 1, "七月章节", "2026-07");
+        insertEpisode(book.getId(), 2, "八月章节", "2026-08");
+
+        mockMvc.perform(get("/comic/books/" + book.getId() + "/months/2026-07/episodes").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].title").value("七月章节"));
+    }
+
+    private ComicBookPo insertBook(long ownerUserId, String bookName) {
+        ComicBookPo book = new ComicBookPo();
+        book.setUserId(ownerUserId);
+        book.setBookName(bookName);
+        book.setDefaultStyle("powder");
+        book.setIsDelete(0);
+        bookMapper.insert(book);
+        return book;
+    }
+
+    private void insertEpisode(long bookId, int episodeNo, String title, String yearMonth) {
+        ComicEpisodePo ep = new ComicEpisodePo();
+        ep.setBookId(bookId);
+        ep.setEpisodeNo(episodeNo);
+        ep.setTitle(title);
+        ep.setInputType("daily");
+        ep.setStyle("powder");
+        ep.setYearMonth(yearMonth);
+        ep.setIsDelete(0);
+        episodeMapper.insert(ep);
     }
 }

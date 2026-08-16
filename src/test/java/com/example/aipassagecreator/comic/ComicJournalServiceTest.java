@@ -41,9 +41,17 @@ class ComicJournalServiceTest {
         return po;
     }
 
-    private Map<String, Object> output() {
+    private Map<String, Object> output(String style, String bookName) {
+        Map<String, Object> route = new java.util.HashMap<>(Map.of(
+                "type", "daily", "title", "雨中散步", "summary", "s", "beats", List.of(), "tone", "t"));
+        if (style != null) {
+            route.put("style", style);
+        }
+        if (bookName != null) {
+            route.put("bookName", bookName);
+        }
         return Map.of(
-                "routeResult", Map.of("type", "daily", "title", "雨中散步", "summary", "s", "beats", List.of(), "tone", "t"),
+                "routeResult", route,
                 "storyboardResult", Map.of("mode", "panels", "panels", List.of(
                         Map.of("panelNo", 1, "composition", "近景", "content", "c", "emotion", "e", "captionText", "雨停了"))),
                 "imagePrompts", Map.of("imagePrompts", List.of(Map.of("panelNo", 1, "prompt", "p"))),
@@ -58,12 +66,20 @@ class ComicJournalServiceTest {
         when(bookMapper.selectOneByQuery(any())).thenReturn(null); // 无档案则新建
         when(volumeMapper.selectOneByQuery(any())).thenReturn(null);
 
-        service.processAsync(po(), output(), 1L);
+        service.processAsync(po(), output("inkwash", "晨跑手帐"), 1L);
 
-        verify(bookMapper).insert(any(ComicBookPo.class));
+        // phase1 routeResult 透传 style/bookName → 新建档案带画风与档案名
+        ArgumentCaptor<ComicBookPo> bookCaptor = ArgumentCaptor.forClass(ComicBookPo.class);
+        verify(bookMapper).insert(bookCaptor.capture());
+        assertEquals("晨跑手帐", bookCaptor.getValue().getBookName());
+        assertEquals("inkwash", bookCaptor.getValue().getDefaultStyle());
+
         ArgumentCaptor<ComicEpisodePo> epCaptor = ArgumentCaptor.forClass(ComicEpisodePo.class);
         verify(episodeMapper).insert(epCaptor.capture());
         assertEquals("daily", epCaptor.getValue().getInputType());
+        assertEquals("inkwash", epCaptor.getValue().getStyle());
+        assertNotNull(epCaptor.getValue().getYearMonth());
+        assertTrue(epCaptor.getValue().getYearMonth().matches("\\d{4}-\\d{2}"), "yearMonth 应为 YYYY-MM");
         assertTrue(epCaptor.getValue().getPageHtml().contains("<html>"));
         assertEquals("https://cos/img.png", epCaptor.getValue().getPngUrl());
         verify(volumeMapper).insert(any(ComicMonthlyVolumePo.class));
@@ -76,10 +92,17 @@ class ComicJournalServiceTest {
         when(bookMapper.selectOneByQuery(any())).thenReturn(null);
         when(volumeMapper.selectOneByQuery(any())).thenReturn(null);
 
-        service.processAsync(po(), output(), 1L);
+        // routeResult 无 style/bookName → 回退默认画风与默认档案名
+        service.processAsync(po(), output(null, null), 1L);
+
+        ArgumentCaptor<ComicBookPo> bookCaptor = ArgumentCaptor.forClass(ComicBookPo.class);
+        verify(bookMapper).insert(bookCaptor.capture());
+        assertEquals("我的生活手帐", bookCaptor.getValue().getBookName());
+        assertEquals("powder", bookCaptor.getValue().getDefaultStyle());
 
         ArgumentCaptor<ComicEpisodePo> epCaptor = ArgumentCaptor.forClass(ComicEpisodePo.class);
         verify(episodeMapper).insert(epCaptor.capture());
+        assertEquals("powder", epCaptor.getValue().getStyle());
         // 生图失败降级为静态占位（渲染仍成功，pageHtml 存在）
         assertTrue(epCaptor.getValue().getPageHtml().contains("<html>"));
     }
