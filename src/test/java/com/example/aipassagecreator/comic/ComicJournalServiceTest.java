@@ -165,4 +165,53 @@ class ComicJournalServiceTest {
         assertTrue(updated.getIndexHtml().contains("午后"), "重渲染后 indexHtml 应含第二集标题");
         assertEquals(2, updated.getEpisodeCount());
     }
+
+    @Test
+    void processAsync_photoMode_rendersUploadedPhotosAndFallsBackPngToFirstPhoto() {
+        // photo 输入：inputData 携带 photos URL 数组；storyboard 输出 photoSlots（版位/旁注）
+        SkillExecutionPo po = po();
+        po.setInputData("{\"photos\":[\"https://cos/photo1.jpg\",\"https://cos/photo2.jpg\"]}");
+
+        // 渲染引擎回显每格配图 URL，证明照片按 slotNo 顺序落入渲染 HTML
+        when(templateEngine.renderEpisode(any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
+            @SuppressWarnings("unchecked")
+            List<String> urls = inv.getArgument(3);
+            StringBuilder sb = new StringBuilder();
+            for (String u : urls) {
+                sb.append(u).append('|');
+            }
+            return sb.toString();
+        });
+        when(renderService.renderToPngDataUrl(any(), any())).thenReturn(null); // PNG 渲染不可用 → 降级封面
+        when(bookMapper.selectOneByQuery(any())).thenReturn(null); // 无档案则新建
+        when(volumeMapper.selectOneByQuery(any())).thenReturn(null);
+
+        Map<String, Object> route = new java.util.HashMap<>(Map.of(
+                "type", "photo", "title", "照片手帐", "summary", "s", "beats", List.of(), "tone", "t"));
+        Map<String, Object> output = Map.of(
+                "routeResult", route,
+                "storyboardResult", Map.of("mode", "photos", "photoSlots", List.of(
+                        Map.of("slotNo", 1, "photoIndex", 0, "note", "清晨", "frame", "横图整幅"),
+                        Map.of("slotNo", 2, "photoIndex", 1, "note", "午后", "frame", "方图居中"))),
+                "imagePrompts", Map.of("imagePrompts", List.of()),
+                "layoutResult", Map.of("cover", Map.of("title", "照片手帐", "subtitle", "s", "tone", "t"),
+                        "sections", List.of(), "textBlocks", List.of(), "imagePlacements", List.of()));
+
+        service.processAsync(po, output, 1L);
+
+        ArgumentCaptor<ComicEpisodePo> epCaptor = ArgumentCaptor.forClass(ComicEpisodePo.class);
+        verify(episodeMapper).insert(epCaptor.capture());
+        ComicEpisodePo ep = epCaptor.getValue();
+        // 照片直出：两张上传照片都进入渲染 HTML，且未调用 AI 生图
+        assertTrue(ep.getPageHtml().contains("https://cos/photo1.jpg"), "pageHtml 应含第一张照片 URL");
+        assertTrue(ep.getPageHtml().contains("https://cos/photo2.jpg"), "pageHtml 应含第二张照片 URL");
+        assertEquals("photo", ep.getInputType());
+        verify(agnesImageService, never()).searchImage(any());
+        // 渲染不可用 → pngUrl 降级为第一张照片 URL（封面）
+        assertEquals("https://cos/photo1.jpg", ep.getPngUrl());
+        // storyboard（含 photoSlots）与 imagePrompts 照常持久化
+        assertNotNull(ep.getStoryboardResult());
+        assertTrue(ep.getStoryboardResult().contains("photoSlots"));
+        assertNotNull(ep.getImagePrompts());
+    }
 }

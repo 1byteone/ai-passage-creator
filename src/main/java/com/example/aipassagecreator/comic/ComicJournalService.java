@@ -9,6 +9,7 @@ import com.example.aipassagecreator.model.po.ComicMonthlyVolumePo;
 import com.example.aipassagecreator.model.po.SkillExecutionPo;
 import com.example.aipassagecreator.service.AgnesImageService;
 import com.example.aipassagecreator.utils.GsonUtils;
+import com.google.gson.reflect.TypeToken;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -83,11 +85,35 @@ public class ComicJournalService {
             bookMapper.insert(book);
         }
 
-        // 2) 生图（每格一张，失败降级静态占位）
-        List<String> imageUrls = generateImages(imagePrompts);
+        // 2) 配图（照片版位直出原图；否则每格生图，失败降级静态占位）
+        List<Map<String, Object>> photoSlots = list(storyboard.get("photoSlots"));
+        List<String> imageUrls;
+        List<Map<String, Object>> panels;
+        if (!photoSlots.isEmpty()) {
+            // photoSlots 是照片直出的唯一数据源，故以其非空判定照片模式：
+            // 即便 mode/type 标记为 photo，没有 photoSlots 也没有可渲染的照片，回退常规路径
+            List<Map<String, Object>> ordered = new ArrayList<>(photoSlots);
+            ordered.sort(Comparator.comparingInt(s -> num(s.get("slotNo"))));
+            List<String> photos = extractPhotos(po);
+            imageUrls = new ArrayList<>();
+            panels = new ArrayList<>();
+            for (int i = 0; i < ordered.size(); i++) {
+                Map<String, Object> slot = ordered.get(i);
+                int photoIndex = num(slot.get("photoIndex"));
+                String photoUrl = photoIndex >= 0 && photoIndex < photos.size() ? photos.get(photoIndex) : "";
+                panels.add(Map.of(
+                        "panelNo", i + 1,
+                        "captionText", str(slot.get("note"), ""),
+                        "composition", str(slot.get("frame"), "")));
+                // 照片缺失/越界回退静态占位图：面板与图位保持 1:1（模板按 panelNo-1 取图），旁注照常展示
+                imageUrls.add(photoUrl.isBlank() ? STATIC_PLACEHOLDER : photoUrl);
+            }
+        } else {
+            imageUrls = generateImages(imagePrompts);
+            panels = extractPanels(storyboard);
+        }
 
         // 3) 渲染 HTML
-        List<Map<String, Object>> panels = extractPanels(storyboard);
         List<Map<String, Object>> textBlocks = extractTextBlocks(layout);
         String title = extractTitle(route, layout);
         String html = templateEngine.renderEpisode(
@@ -136,6 +162,38 @@ public class ComicJournalService {
             urls.add(url != null && !url.isBlank() ? url : STATIC_PLACEHOLDER);
         }
         return urls;
+    }
+
+    /**
+     * 从 skill 输入解析照片 URL 列表（photo 类型上传的 COS 图片）。
+     * 输入缺失/解析失败降级为空列表——照片缺失走静态占位，不阻断产出流程。
+     */
+    private static List<String> extractPhotos(SkillExecutionPo po) {
+        String inputData = po.getInputData();
+        if (inputData == null || inputData.isBlank()) {
+            return List.of();
+        }
+        try {
+            Map<String, Object> inputs = GsonUtils.fromJson(
+                    inputData, new TypeToken<Map<String, Object>>() { });
+            if (inputs == null) {
+                return List.of();
+            }
+            List<String> photos = new ArrayList<>();
+            if (inputs.get("photos") instanceof List) {
+                for (Object item : (List<?>) inputs.get("photos")) {
+                    String url = str(item, "");
+                    if (!url.isBlank()) {
+                        photos.add(url);
+                    }
+                }
+            }
+            return photos;
+        } catch (Exception e) {
+            log.debug("漫画输入 photos 解析失败，降级为空列表: executionId={}, err={}",
+                    po.getSkillExecutionId(), e.getMessage());
+            return List.of();
+        }
     }
 
     private ComicBookPo findBook(Long userId, String bookName) {
@@ -210,6 +268,21 @@ public class ComicJournalService {
 
     private static String str(Object o, String fallback) {
         return o == null || o.toString().isBlank() ? fallback : o.toString();
+    }
+
+    /** 取整数值（Gson 数字默认解析为 Double）；缺失/非法返回 -1，让越界照片回退占位图 */
+    private static int num(Object o) {
+        if (o instanceof Number n) {
+            return n.intValue();
+        }
+        if (o == null) {
+            return -1;
+        }
+        try {
+            return Integer.parseInt(o.toString().trim());
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 
     private static String json(Object o) {
