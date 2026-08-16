@@ -6,7 +6,6 @@ import com.example.aipassagecreator.exception.BusinessException;
 import com.example.aipassagecreator.exception.ErrorCode;
 import com.example.aipassagecreator.service.CosService;
 import com.example.aipassagecreator.service.UserService;
-import com.example.aipassagecreator.model.po.User;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
