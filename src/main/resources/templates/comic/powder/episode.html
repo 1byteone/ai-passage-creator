@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="${title}">漫画手帐</title>
+    <link rel="stylesheet" th:href="@{__${styleCss}__}" href="/comic/powder/style.css"/>
+</head>
+<body class="comic-page">
+    <section class="cover">
+        <h1 class="cover-title" th:text="${title}">标题</h1>
+        <p class="cover-subtitle" th:if="${coverSubtitle != null and !coverSubtitle.isEmpty()}"
+           th:text="${coverSubtitle}">副题</p>
+    </section>
+    <section class="panels">
+        <article class="panel" th:each="p : ${panels}" th:attr="data-panel=${p.panelNo}">
+            <div class="panel-image" th:if="${p.panelNo <= imageUrls.size()}">
+                <img th:src="${imageUrls[p.panelNo - 1]}" alt="" th:attr="alt=${p.captionText}"/>
+            </div>
+            <p class="panel-caption" th:text="${p.captionText}">文字</p>
+        </article>
+    </section>
+    <section class="text-blocks">
+        <p class="text-block" th:each="tb : ${textBlocks}" th:text="${tb.content}">正文</p>
+    </section>
+</body>
+</html>

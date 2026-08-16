@@ -1,0 +1,22 @@
+.comic-page, .monthly-page {
+  background: #faf9f6;           /* 宣纸白 */
+  color: #2b2b2b;                /* 墨色主色 */
+  font-family: "Kaiti SC", "KaiTi", serif;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 28px;
+}
+.cover-title {
+  font-size: 30px;
+  color: #b23a3a;                /* 朱红点睛 */
+  line-height: 1.5;              /* 中文标题平衡换行 */
+}
+.panel { margin: 24px 0; }
+.panel-image img { max-width: 100%; border-radius: 2px; }
+.panel-caption {
+  font-size: 14px; color: #2b2b2b; margin: 6px 0 0;
+  white-space: pre-wrap;
+}
+.text-block { font-size: 15px; line-height: 1.9; }
+.monthly-title { color: #b23a3a; }
+.episode-list a { color: #2b2b2b; text-decoration: none; }
