@@ -69,10 +69,54 @@ class ChartSpecValidatorTest {
 
     @Test
     void validate_yFieldNotMeasure_blocked() {
-        var c = trendCtx();
+        // x 必须取分类列，否则会先被"柱状图横轴必须为分类字段"拦下，测不到 y 规则
+        var c = categoryCtx();
         ChartSpec spec = new ChartSpec("bar", "mono", "t", null, "s", null,
-                "i1", new ChartSpec.Encoding("month", "month", null), null,
+                "i1", new ChartSpec.Encoding("title", "title", null), null,
                 List.of("i1"), List.of());
+        DatasetParseException ex = assertThrows(DatasetParseException.class,
+                () -> validator2.validate(spec, c.ds(), c.profile()));
+        assertTrue(ex.getMessage().contains("纵轴"));
+    }
+
+    @Test
+    void validate_nullChartType_blocked() {
+        var c = trendCtx();
+        ChartSpec spec = new ChartSpec(null, "mono", "t", null, "s", null,
+                "i1", new ChartSpec.Encoding("month", "revenue", null), null,
+                List.of("i1"), List.of());
+        DatasetParseException ex = assertThrows(DatasetParseException.class,
+                () -> validator2.validate(spec, c.ds(), c.profile()));
+        assertTrue(ex.getMessage().contains("图表类型"));
+    }
+
+    @Test
+    void validate_unknownStyle_blocked() {
+        var c = trendCtx();
+        ChartSpec spec = new ChartSpec("line", "neon", "t", null, "s", null,
+                "i1", new ChartSpec.Encoding("month", "revenue", null), null,
+                List.of("i1"), List.of());
+        DatasetParseException ex = assertThrows(DatasetParseException.class,
+                () -> validator2.validate(spec, c.ds(), c.profile()));
+        assertTrue(ex.getMessage().contains("视觉风格"));
+    }
+
+    @Test
+    void validate_titleTooLong_blocked() {
+        var c = trendCtx();
+        ChartSpec spec = new ChartSpec("line", "mono", "长".repeat(81), null, "s", null,
+                "i1", new ChartSpec.Encoding("month", "revenue", null), null,
+                List.of("i1"), List.of());
+        assertThrows(DatasetParseException.class,
+                () -> validator2.validate(spec, c.ds(), c.profile()));
+    }
+
+    @Test
+    void validate_nullEvidence_blocked() {
+        var c = trendCtx();
+        ChartSpec spec = new ChartSpec("line", "mono", "t", null, "s", null,
+                "i1", new ChartSpec.Encoding("month", "revenue", null), null,
+                null, List.of());
         assertThrows(DatasetParseException.class,
                 () -> validator2.validate(spec, c.ds(), c.profile()));
     }
@@ -104,5 +148,25 @@ class ChartSpecValidatorTest {
                 "i1", new ChartSpec.Encoding(null, null, null), null,
                 List.of("i1"), List.of());
         assertDoesNotThrow(() -> validator2.validate(spec, c.ds(), c.profile()));
+    }
+
+    @Test
+    void validate_tableWithKnownEncoding_passes() {
+        var c = trendCtx();
+        ChartSpec spec = new ChartSpec("table", "mono", "明细", null, "s", null,
+                "i1", new ChartSpec.Encoding("month", "revenue", null), null,
+                List.of("i1"), List.of());
+        assertDoesNotThrow(() -> validator2.validate(spec, c.ds(), c.profile()));
+    }
+
+    @Test
+    void validate_tableWithUnknownMappedField_blocked() {
+        var c = trendCtx();
+        ChartSpec spec = new ChartSpec("table", "mono", "明细", null, "s", null,
+                "i1", new ChartSpec.Encoding("nope", "revenue", null), null,
+                List.of("i1"), List.of());
+        DatasetParseException ex = assertThrows(DatasetParseException.class,
+                () -> validator2.validate(spec, c.ds(), c.profile()));
+        assertTrue(ex.getMessage().contains("字段不存在"));
     }
 }
