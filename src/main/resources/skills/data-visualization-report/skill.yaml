@@ -1,0 +1,70 @@
+name: data-visualization-report
+description: 数据可视化报告：粘贴 JSON/CSV 数据，自动识别数据契约并产出受限图表规格
+category: dataviz
+requiredRoles: [user]
+multiRound: true
+
+variables:
+  rawData:
+    description: 数据内容（JSON 对象数组或 CSV，首行为表头）
+    required: true
+    source: INPUT
+    uiType: textarea
+    placeholder: 粘贴 CSV（含表头）或 JSON 对象数组
+    maxLength: 200000
+  dataFormat:
+    description: 数据格式
+    required: true
+    source: INPUT
+    uiType: select
+    defaultValue: csv
+    options:
+      - label: CSV（首行表头）
+        value: csv
+      - label: JSON 对象数组
+        value: json
+  goal:
+    description: 分析目标（想说明什么问题、给谁看）
+    required: false
+    source: INPUT
+    uiType: input
+    placeholder: 例如：向管理层说明季度销量走势
+  style:
+    description: 视觉风格
+    required: false
+    source: INPUT
+    uiType: select
+    defaultValue: glance
+    options:
+      - label: 黑白灰（保底可打印）
+        value: mono
+      - label: 快速判断（周报/汇报）
+        value: glance
+      - label: 细节阅读（研究报告）
+        value: editorial
+
+phases:
+  - name: profile_dataset
+    promptFile: skills/data-visualization-report/prompts/phase1_profile.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: datasetProfile
+    variables:
+      - name: rawData
+      - name: dataFormat
+      - name: goal
+    requireConfirmation: false
+
+  - name: recommend_charts
+    promptFile: skills/data-visualization-report/prompts/phase2_charts.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: chartSpecs
+    variables:
+      - name: datasetProfile
+        ref: profile_dataset
+      - name: goal
+      - name: style
+    requireConfirmation: true
