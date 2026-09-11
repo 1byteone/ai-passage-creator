@@ -32,34 +32,47 @@ public class DatasetParser {
         if (!Arrays.asList(SUPPORTED).contains(fmt)) {
             throw new DatasetParseException("不支持的数据格式: " + dataFormat);
         }
-        List<Map<String, String>> rows = "json".equals(fmt) ? parseJson(rawData) : parseCsv(rawData);
-        if (rows.isEmpty()) {
-            throw new DatasetParseException("未解析到有效数据行");
-        }
-        List<String> headers = new ArrayList<>(rows.get(0).keySet());
-        if (headers.size() > MAX_COLS) {
-            throw new DatasetParseException("列数超过 50 上限，请精简后再试");
-        }
-        return new Dataset(rows, headers);
+        return "json".equals(fmt) ? parseJson(rawData) : parseCsv(rawData);
     }
 
-    private List<Map<String, String>> parseJson(String raw) {
+    private Dataset parseJson(String raw) {
         List<Map<String, Object>> rawRows;
         try {
             rawRows = mapper.readValue(raw, new TypeReference<>() {});
         } catch (Exception e) {
             throw new DatasetParseException("JSON 格式不正确，需为对象数组");
         }
+        if (rawRows == null || rawRows.isEmpty()) {
+            throw new DatasetParseException("JSON 格式不正确，需为对象数组");
+        }
         if (rawRows.size() > MAX_ROWS) {
             throw new DatasetParseException("行数超过 1000 上限，请精简后再试");
         }
+
+        // 合并所有行的 keySet（保序 LinkedHashSet）作为 headers
+        Set<String> allHeaders = new LinkedHashSet<>();
+        for (Map<String, Object> rawRow : rawRows) {
+            if (rawRow != null) {
+                rawRow.keySet().forEach(k -> {
+                    String key = k == null ? "" : k.trim();
+                    if (!key.isEmpty()) {
+                        allHeaders.add(key);
+                    }
+                });
+            }
+        }
+        if (allHeaders.size() > MAX_COLS) {
+            throw new DatasetParseException("列数超过 50 上限，请精简后再试");
+        }
+
         List<Map<String, String>> rows = new ArrayList<>();
         for (Map<String, Object> rawRow : rawRows) {
+            if (rawRow == null) continue;
             Set<String> seen = new LinkedHashSet<>();
             Map<String, String> row = new LinkedHashMap<>();
             rawRow.forEach((k, v) -> {
                 String key = k == null ? "" : k.trim();
-                if (key.isEmpty() || !seen.add(key) || row.size() >= MAX_COLS) return;
+                if (key.isEmpty() || !seen.add(key)) return;
                 String value = valueToString(rawRow.get(k));
                 if (value.length() > MAX_CELL) {
                     throw new DatasetParseException("单元格超过 200 字符上限: 列 " + key);
@@ -68,18 +81,25 @@ public class DatasetParser {
             });
             if (!row.isEmpty()) rows.add(row);
         }
-        return rows;
+        if (rows.isEmpty()) {
+            throw new DatasetParseException("未解析到有效数据行");
+        }
+        return new Dataset(rows, new ArrayList<>(allHeaders));
     }
 
-    private List<Map<String, String>> parseCsv(String raw) {
+    private Dataset parseCsv(String raw) {
         // hutool CsvReader 已带引号处理，这里直接使用
         var reader = cn.hutool.core.text.csv.CsvUtil.getReader();
         List<cn.hutool.core.text.csv.CsvRow> csvRows = reader.readFromStr(raw).getRows();
         if (csvRows.isEmpty()) {
             throw new DatasetParseException("未解析到有效数据行");
         }
+        int rawColCount = csvRows.get(0).size();
+        if (rawColCount > MAX_COLS) {
+            throw new DatasetParseException("列数超过 50 上限，请精简后再试");
+        }
         List<String> headers = new ArrayList<>();
-        for (int i = 0; i < csvRows.get(0).size() && headers.size() < MAX_COLS; i++) {
+        for (int i = 0; i < rawColCount; i++) {
             String h = csvRows.get(0).getRawList().get(i).trim();
             headers.add(h.isEmpty() ? "col" + (i + 1) : h);
         }
@@ -102,13 +122,13 @@ public class DatasetParser {
         if (rows.isEmpty()) {
             throw new DatasetParseException("未解析到有效数据行");
         }
-        return rows;
+        return new Dataset(rows, headers);
     }
 
     private String valueToString(Object v) {
         if (v == null) return "";
-        if (v instanceof Number n) {
-            double d = n.doubleValue();
+        if (v instanceof Double || v instanceof Float || v instanceof java.math.BigDecimal) {
+            double d = ((Number) v).doubleValue();
             return d == Math.rint(d) ? String.valueOf((long) d) : String.valueOf(d);
         }
         return v.toString();
