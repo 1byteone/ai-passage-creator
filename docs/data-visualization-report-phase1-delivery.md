@@ -123,7 +123,7 @@
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/{executionId}/artifact` | 查询就绪状态，**始终 200**，以 `htmlReady` / `pngReady` 布尔表达 |
+| GET | `/{executionId}/artifact` | 查询就绪状态，就绪与否恒定 200（鉴权/存在性错误除外），以 `htmlReady` / `pngReady` 布尔表达 |
 | GET | `/{executionId}/html` | 报告 HTML（`text/html;charset=UTF-8` + `X-Content-Type-Options: nosniff`） |
 | GET | `/{executionId}/png` | 报告 PNG（`image/png`） |
 
@@ -144,8 +144,9 @@
 | 未登录 | `40100` | 未登录 |
 | 已登录但非归属人且非 admin | `40101` | 无权访问该报告 |
 | executionId 不存在 | `40400` | 报告不存在 |
-| executionId 格式非法（非 UUID） | `40000` | 非法的报告标识 |
-| 产物未生成（html/png 单文件端点） | `40400` | 报告尚未生成，请稍后刷新 |
+| executionId 标识格式非法（不匹配 `[0-9a-fA-F-]{36}`） | `40000` | 非法的报告标识 |
+| html 尚未生成 | `40400` | 报告尚未生成，请稍后刷新 |
+| png 尚未导出（或渲染引擎不可用） | `40400` | PNG 尚未导出或渲染引擎不可用 |
 
 **归属校验**：按 `skill_execution.user_id` 判定；`admin` 角色放行全部。校验顺序为**先路径白名单 → 再认证 → 再查记录 → 再判归属**，因此非法标识在任何 DB 访问前即被拒（`../` 无从进入查询），未登录也不被 40400 掩盖。
 
@@ -161,8 +162,9 @@
 | `style` | 白名单 `mono` / `glance` / `editorial` |
 | `title` | 非空且 ≤ 80 字 |
 | `evidence` | 非空（图表必须挂在结论上） |
-| `encoding.x` / `encoding.y` | 语义校验（见下） |
-| `sort` / `annotations` / `subtitle` / `source` / `unit` / `insightId` | 可选 |
+| `encoding.x` / `encoding.y` / `encoding.color` | x/y 语义校验（见下）；`color` 当前保留未校验 |
+| `sort` | 可选，结构 `{field, direction}` |
+| `annotations` / `subtitle` / `source` / `unit` / `insightId` | 可选（`annotations` 当前为 `List<String>`） |
 
 **轴语义规则**
 
@@ -172,7 +174,7 @@
 | `bar` | 必须 `category` | 必须 `measure` |
 | `table` | 允许 `encoding` 全空（展示全部列）；若声明了 x/y，字段必须真实存在 | — |
 
-**图数上限**：单页报告最多 6 图；**当前实现按 AI 提示词约束最多 3 图**（`phase2_charts.md` 规则 6：「最多 3 张图…结论少于 3 条时就少画」）。单图非法仅跳过该图，不拖垮整份报告。
+**图数上限**：设计默认 6 图（校验层与渲染层均未做强约束）；当前实际约束来自 AI 提示词，最多 3 图（`phase2_charts.md` 规则 6：「最多 3 张图…结论少于 3 条时就少画」）。单图非法仅跳过该图，不拖垮整份报告。
 
 ---
 
@@ -207,9 +209,12 @@
 
 ## 8. 测试结果
 
-### 8.1 全量后端测试 `mvn test`
+### 8.1 全量后端测试
+
+确切命令为**裸 `mvn test`**（不含 `-Dspring.profiles.active=test`）。两者结果不同，复现时请以本命令为准：
 
 ```
+mvn test
 Tests run: 613, Failures: 1, Errors: 4, Skipped: 3
 BUILD FAILURE
 ```
@@ -233,7 +238,7 @@ BUILD FAILURE
 | `ArticleFullFlowIntegrationTest.saveArticleContent_persistsAllFields:170` | `JsonSyntaxException: Expected BEGIN_ARRAY but was STRING`（`ArticleVO.objToVo` 解析 `outline` 字段） |
 | `ArticleFullFlowIntegrationTest.asyncPhase3_generatesAndPersistsContent:261` | `expected: <COMPLETED> but was: <FAILED>`（阶段 3 内 `GsonUtils.fromJson(article.getOutline(), List<...>)` 解析失败） |
 
-**基线与回归验证**：在 dataviz 首个提交之前的提交 `712a474` 上单独运行 `ArticleFullFlowIntegrationTest`，得到**完全相同**的 1 failure + 1 error。故这两项是**本次改动之前就存在**的缺陷，dataviz 提交（共 30 文件、2076 行新增）未触碰 `ArticleVO` / `ArticleServiceImpl` / `ArticleAsyncService`（`SkillExecutionService` 仅 +9 行注入收尾钩子）。根因是 `outline` 列在测试数据下被当作 JSON 字符串读回、而反序列化期望数组，属创作模块的既有数据契约不一致。
+**基线与回归验证**：在 dataviz 改动之前的基线 `2f6eef5` 上单独运行 `ArticleFullFlowIntegrationTest`，得到**完全相同**的 1 failure + 1 error。故这两项是**本次改动之前就存在**的缺陷，dataviz 提交（`2f6eef5..bc54e91`，共 33 文件、2358 行新增）未触碰 `ArticleVO` / `ArticleServiceImpl` / `ArticleAsyncService`（`SkillExecutionService` 仅 +9 行注入收尾钩子）。根因是 `outline` 列在测试数据下被当作 JSON 字符串读回、而反序列化期望数组，属创作模块的既有数据契约不一致。
 
 **dataviz 自身测试**：`dataviz` 包下 11 个测试类全绿（含解析器、画像、统计、Spec 校验、渲染、收尾、存储、控制器、Skill 注册与收尾触发）。
 
@@ -284,7 +289,7 @@ BUILD FAILURE
 4. **无文章回流**：报告不能回填到文章/卡片。属 Phase 3。
 5. **图表样式为内联 CSS**：`style`（mono/glance/editorial）影响字体/色板等轻量差异，**未实现三套整页报告模板**。属 Phase 2+。
 6. **`/dataviz` 返回的 URL 含 `/api` 前缀**：`htmlUrl` / `pngUrl` 为 `/api/dataviz/{id}/html`（因应用 context-path = `/api`）。前端若使用带 `baseURL` 的 axios/fetch 消费，需确认**不与其 baseURL 双拼**成 `/api/api/...`，否则 404。
-7. **图数**：校验/渲染层允许每页最多 6 图，当前 AI 提示词约束为最多 3 图。
+7. **图数**：设计默认每页最多 6 图，但校验层与渲染层均未做强约束；当前实际约束来自 AI 提示词，最多 3 图。
 8. **本地库 schema 漂移（环境性，非代码）**：本地 MySQL `skill_execution.status` 为 `varchar(20)`，而规范 schema（`V1__baseline.sql` 与 `h2-schema.sql`）为 `varchar(30)`。枚举值 `AWAITING_CONFIRMATION` 为 21 字符，故 HITL 阶段在本机落库失败，阻断端到端真跑。修复：本地库 `ALTER TABLE skill_execution MODIFY status varchar(30) NOT NULL DEFAULT 'PENDING'`（规范 schema 本身正确，无需改代码）。
 9. **Skill 输入变量持久化位置**：收尾所需的 `rawData` / `dataFormat` 是 INPUT 变量，终态只存在于 `inputData`；阶段输出在 `outputData`。收尾必须合并两者（见 CLAUDE.md 已知暗坑）。
 
