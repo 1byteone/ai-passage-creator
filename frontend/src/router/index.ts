@@ -86,14 +86,17 @@ const router = createRouter({
       },
     },
     {
-      path: '/vibecoding',
-      name: 'Vibecoding 工作台',
-      component: () => import('@/pages/vibecoding/VibecodingWorkflowPage.vue'),
-    },
-    {
       path: '/handwriting',
       name: '手写笔记编辑器',
       component: () => import('@/pages/handwriting/HandwritingEditorPage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/english',
+      name: '英语训练',
+      component: () => import('@/pages/english/EnglishLearningPage.vue'),
       meta: {
         requiresAuth: true,
       },
@@ -117,6 +120,14 @@ const router = createRouter({
       path: '/admin/toolbox',
       name: '系统工具箱',
       component: () => import('@/pages/admin/ToolboxPage.vue'),
+    },
+    {
+      path: '/admin/knowledge',
+      name: '知识库管理',
+      component: () => import('@/pages/admin/KnowledgePage.vue'),
+      meta: {
+        requiresAuth: true,
+      },
     },
     {
       path: '/workspace',

@@ -271,6 +271,28 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
+    <section class="start-flow-section" aria-labelledby="start-flow-title">
+      <div class="container">
+        <div class="start-flow-header">
+          <div>
+            <span class="section-kicker">创作任务</span>
+            <h2 id="start-flow-title">从一个选题完成一篇文章</h2>
+          </div>
+          <span class="start-flow-note">同一任务内逐步确认，随时可以返回修改</span>
+        </div>
+        <div class="start-flow-grid">
+          <article v-for="(stage, index) in capabilityStages.slice(0, 3)" :key="stage.title" class="start-flow-item">
+            <span class="start-flow-index">0{{ index + 1 }}</span>
+            <div>
+              <h3>{{ stage.title }}</h3>
+              <p>{{ stage.result }}</p>
+            </div>
+            <RightOutlined aria-hidden="true" />
+          </article>
+        </div>
+      </div>
+    </section>
+
     <!-- Recent Articles Section -->
     <div
       v-if="loginUserStore.loginUser.id && (recentArticles.length > 0 || loadingArticles)"
@@ -545,6 +567,7 @@ onBeforeUnmount(() => {
  * during the initial interaction window while preserving their scroll space.
  */
 .articles-section,
+.start-flow-section,
 .skill-strip-section,
 .capability-section,
 .features-section {
@@ -561,6 +584,83 @@ onBeforeUnmount(() => {
 
 .hero-copy {
   min-width: 0;
+}
+
+.start-flow-section {
+  padding: 28px 20px 8px;
+  background: var(--color-background);
+}
+
+.start-flow-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 14px;
+}
+
+.section-kicker {
+  color: var(--color-primary-dark);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.start-flow-header h2 {
+  margin: 4px 0 0;
+  color: var(--color-text);
+  font-size: 22px;
+  line-height: 1.3;
+}
+
+.start-flow-note {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.start-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.start-flow-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 82px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+}
+
+.start-flow-index {
+  color: var(--color-primary-dark);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.start-flow-item h3,
+.start-flow-item p {
+  margin: 0;
+}
+
+.start-flow-item h3 {
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.start-flow-item p {
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.start-flow-item > .anticon {
+  color: var(--color-text-muted);
+  font-size: 13px;
 }
 
 .hero-badge {
@@ -1459,6 +1559,21 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
+  .start-flow-section {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .start-flow-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .start-flow-grid {
+    grid-template-columns: 1fr;
+  }
+
   .hero-section {
     padding: 48px 16px 44px;
   }
