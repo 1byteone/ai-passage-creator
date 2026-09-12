@@ -13,7 +13,7 @@ export interface SkillUiConfig {
   accent: 'blue' | 'green' | 'amber'
 }
 
-export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x', 'research', 'seo-optimizer', 'content-translator', 'ai-detox', 'seeding-copy', 'rewrite-plagiarism', 'video-script', 'outline-expander', 'content-summarizer', 'headline-optimizer'] as const
+export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x', 'research', 'seo-optimizer', 'content-translator', 'ai-detox', 'seeding-copy', 'rewrite-plagiarism', 'video-script', 'outline-expander', 'content-summarizer', 'headline-optimizer', 'data-visualization-report'] as const
 
 export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
   'topic-gen': {

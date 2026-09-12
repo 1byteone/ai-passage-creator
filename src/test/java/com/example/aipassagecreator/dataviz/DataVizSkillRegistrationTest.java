@@ -2,6 +2,7 @@ package com.example.aipassagecreator.dataviz;
 
 import com.example.aipassagecreator.skill.PhaseDefinition;
 import com.example.aipassagecreator.skill.PromptTemplateEngine;
+import com.example.aipassagecreator.skill.SkillController;
 import com.example.aipassagecreator.skill.SkillDefinition;
 import com.example.aipassagecreator.skill.SkillRegistry;
 import com.example.aipassagecreator.skill.VariableDef;
@@ -15,7 +16,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * data-visualization-report Skill 的 YAML 注册契约。
+ * data-visualization-report Skill 的 YAML 注册契约 + 对外可达性。
  * <p>只校验定义与提示词，不触发真实模型调用。
  */
 @SpringBootTest
@@ -30,6 +31,9 @@ class DataVizSkillRegistrationTest {
 
     @Autowired
     private PromptTemplateEngine promptTemplateEngine;
+
+    @Autowired
+    private SkillController skillController;
 
     private SkillDefinition definition() {
         return skillRegistry.getSkill(SKILL);
@@ -110,5 +114,21 @@ class DataVizSkillRegistrationTest {
         assertTrue(phase2.contains("销量"));
         assertFalse(phase2.contains("{style}"), "占位符应已替换");
         assertTrue(phase2.contains("chartSpecs") || phase2.contains("charts"));
+    }
+
+    @Test
+    void publicSkill_isExposedInList() {
+        // 白名单漏登记会让整个 Skill 不可达，定义再正确也是死代码
+        List<Map<String, Object>> listed = skillController.listSkills().getData();
+        assertTrue(listed.stream().anyMatch(s -> SKILL.equals(s.get("name"))),
+                "skill 应在 /skill/list 中可见");
+    }
+
+    @Test
+    void publicSkill_definitionIsReachable() {
+        // getPublicSkill 对未登记 skill 抛 NOT_FOUND，此处断言不抛
+        SkillDefinition viaController = skillController.getDefinition(SKILL).getData();
+        assertEquals(SKILL, viaController.getName());
+        assertEquals(2, viaController.getPhases().size());
     }
 }
