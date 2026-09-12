@@ -8,7 +8,7 @@ import java.util.Set;
 @Component
 public class ChartSpecValidator {
 
-    private static final Set<String> CHART_TYPES = Set.of("line", "bar", "table");
+    private static final Set<String> CHART_TYPES = Set.of("line", "bar", "table", "pie", "scatter", "area");
     private static final Set<String> STYLES = Set.of("mono", "glance", "editorial");
 
     public void validate(ChartSpec spec, Dataset ds, DataQualityReport profile) {
@@ -41,18 +41,23 @@ public class ChartSpecValidator {
         }
         FieldProfile xField = fieldOf(profile, enc.x());
         FieldProfile yField = fieldOf(profile, enc.y());
-        if ("line".equals(spec.chartType())) {
-            if (!FieldProfile.TIME.equals(xField.semantic())) {
-                throw new DatasetParseException("折线图的横轴必须为时间字段");
-            }
-        }
-        if ("bar".equals(spec.chartType())) {
-            if (!FieldProfile.CATEGORY.equals(xField.semantic())) {
-                throw new DatasetParseException("柱状图的横轴必须为分类字段");
-            }
+        // 各图型的横轴语义要求：折线/面积看时间、柱状/饼图看分类、散点看另一个数值
+        switch (spec.chartType()) {
+            case "line" -> requireSemantic(xField, FieldProfile.TIME, "折线图的横轴必须为时间字段");
+            case "area" -> requireSemantic(xField, FieldProfile.TIME, "面积图的横轴必须为时间字段");
+            case "bar" -> requireSemantic(xField, FieldProfile.CATEGORY, "柱状图的横轴必须为分类字段");
+            case "pie" -> requireSemantic(xField, FieldProfile.CATEGORY, "饼图的横轴必须为分类字段");
+            case "scatter" -> requireSemantic(xField, FieldProfile.MEASURE, "散点图的横轴必须为数值字段");
+            default -> throw new DatasetParseException("不支持的图表类型: " + spec.chartType());
         }
         if (!FieldProfile.MEASURE.equals(yField.semantic())) {
             throw new DatasetParseException("纵轴必须为数值字段");
+        }
+    }
+
+    private void requireSemantic(FieldProfile field, String expected, String message) {
+        if (!expected.equals(field.semantic())) {
+            throw new DatasetParseException(message);
         }
     }
 
