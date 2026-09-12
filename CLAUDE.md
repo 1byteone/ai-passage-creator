@@ -206,19 +206,25 @@ SkillExecutePage (Vue) ─→ POST /skill/data-visualization-report/execute
         DataVizPostProcessor (静默降级：失败只记日志，不影响 Skill 主流程)
           ├─ DatasetParser       CSV/JSON → Dataset（512KB/1000行/50列/200字符 上限）
           ├─ DatasetValidator    类型推断 time/category/measure + 缺失/重复告警
-          ├─ ChartSpecValidator  白名单 line/bar/table；x=time/category，y=measure；title≤80；evidence 非空
+          ├─ ChartSpecValidator  白名单 line/area/bar/pie/scatter/table
+          │                      x 语义：line/area=time，bar/pie=category，scatter=measure；y 恒为 measure
           ├─ ChartHtmlRenderer   Spec → 内联 SVG（无 <script> 无 CDN，动态文本 escapeHtml）
+          │                      style 取 INPUT 变量 → 首图 style → glance 兜底，按 body[data-style] 落地三套风格
           ├─ 落盘 {user.dir}/data/dataviz/{executionId}/report.html
           └─ CardRenderPipeline PNG（渲染引擎不可用则只留 HTML）
                     │
                     ▼
-        GET /dataviz/{executionId}/artifact  就绪状态（htmlReady/pngReady，始终 200）
+        GET /dataviz/{executionId}/artifact  就绪状态（htmlReady/pngReady）
         GET /dataviz/{executionId}/html      text/html;charset=UTF-8 + nosniff
         GET /dataviz/{executionId}/png       image/png
                     │  归属校验按 skill_execution.user_id，admin 放行
                     │  未登录 40100 / 越权 40101 / 不存在 40400 / 非法标识 40000
                     ▼
-        前端 / 浏览器（Phase 1 无工作台，直接消费 URL）
+        SkillResultDataViz.vue
+          ├─ executionId 由 SkillExecuteSurface 提升为 prop（⚠ 产物不进 outputData）
+          ├─ 轮询 /artifact（1.5s，40 次上限 ≈60s）直至 htmlReady
+          └─ <iframe :src="/api/dataviz/{id}/html" sandbox=""> + 下载 HTML/PNG
+             （iframe 与 <a download> 直连端点，不经 axios，规避 /api 前缀双拼）
 ```
 
 ### 前端路由表
@@ -536,6 +542,8 @@ User Input → Vue → POST /api/article/create → SSE taskId → EventSource �
 | 17 | **混线提交** — 同一文件的改动里夹带其他功能的 hunk，一次提交把两条工作线混在一起 | `router/index.ts` / `GlobalHeader.vue` 等共享文件 | `git add -p` 逐 hunk 暂存；提交前 `git diff --cached` 核验不含无关功能关键字（如另一条线的路由名） |
 | 18 | **原型 HTML 分组重排** — 用 `[...new Set(group)]` 去重分组会打乱流程顺序 | `buildPrototypeHtml` | 只合并「连续同名」run；数组顺序即流程顺序 |
 | 19 | **未跟踪文件不进类型检查** — 新建文件若无人 import，`vue-tsc` 不报错，语法错误会在接线后集中爆发 | 任何新增 `.vue` / `.ts` | 接线后立即重跑 `npm run type-check`；新建页面文件本身也要过一次 type-check |
+| 20 | **后端产物不进 `outputData`** — 落盘的 HTML/PNG 不由 Skill 阶段产出，只靠 `outputData` 拿不到 | 任何「服务端渲染产物」类 Skill（dataviz / comic） | 由宿主组件把 `executionId` 提升为结果渲染器的 prop，前端再单独调产物端点查询 |
+| 21 | **iframe 直连端点 vs axios** — 相对路径若交给带 `baseURL` 的 axios 消费，会拼成 `/api/api/...` | dataviz 报告预览 / 任何二进制或 HTML 端点 | iframe `:src` 与 `<a download>` 用相对路径直连；二者都是浏览器原生请求，自带 session cookie，且必须带 `sandbox=""` |
 
 ---
 

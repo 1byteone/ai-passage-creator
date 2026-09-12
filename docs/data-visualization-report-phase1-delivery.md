@@ -27,6 +27,8 @@
 
 **明确不在 Phase 1**（见第 9 节已知限制）：前端工作台、PDF 导出、三套整页报告模板、RAG 索引、文章回流、pie/scatter/area 等其余图型。
 
+> 其中 **pie/scatter/area 与三套报告风格**已由 Phase 2 补齐，另附结果渲染器打通展示链路，见 `data-visualization-report-phase2-delivery.md`。
+
 ---
 
 ## 2. 新增 / 修改文件清单（按层分组）
@@ -283,12 +285,14 @@ BUILD FAILURE
 
 ## 9. 已知限制
 
-1. **无前端工作台**：无可视化选择/编辑图表的工作页面，仅 API + 技能执行链路。属 Phase 2。
-2. **无 PDF 导出**：仅 HTML / PNG。报告印刷场景依赖 HTML 打印或 PNG。属 Phase 2+。
+> 本节记录 **Phase 1 交付时** 的状态。Phase 2（见 `data-visualization-report-phase2-delivery.md`）已消除第 1、5 条中的图表类型与报告风格限制，并把结果渲染器接入前端。下表保留原始记录并标注现状。
+
+1. **无前端工作台**：无可视化选择/编辑图表的工作页面，仅 API + 技能执行链路。~~属 Phase 2~~ → **Phase 2 已接入结果渲染器**（轮询 `/artifact` + iframe 预览 + 下载），但**专属编辑工作台仍未做**。
+2. **无 PDF 导出**：仅 HTML / PNG。报告印刷场景依赖 HTML 打印或 PNG。属 Phase 2+（**仍未做**）。
 3. **无 RAG 索引**：生成的报告未写入向量库、未参与检索。属 Phase 4。
 4. **无文章回流**：报告不能回填到文章/卡片。属 Phase 3。
-5. **图表样式为内联 CSS**：`style`（mono/glance/editorial）影响字体/色板等轻量差异，**未实现三套整页报告模板**。属 Phase 2+。
-6. **`/dataviz` 返回的 URL 含 `/api` 前缀**：`htmlUrl` / `pngUrl` 为 `/api/dataviz/{id}/html`（因应用 context-path = `/api`）。前端若使用带 `baseURL` 的 axios/fetch 消费，需确认**不与其 baseURL 双拼**成 `/api/api/...`，否则 404。
+5. **图表样式为内联 CSS**：~~`style`（mono/glance/editorial）影响字体/色板等轻量差异，未实现三套整页报告模板~~ → **Phase 2 已实现三套报告风格**（`body[data-style]` 作用域：mono 可打印 / glance 快速判断 / editorial 阅读式）。
+6. **`/dataviz` 返回的 URL 含 `/api` 前缀**：`htmlUrl` / `pngUrl` 为 `/api/dataviz/{id}/html`（因应用 context-path = `/api`）。前端若使用带 `baseURL` 的 axios/fetch 消费，需确认**不与其 baseURL 双拼**成 `/api/api/...`，否则 404。→ **Phase 2 选择直接用相对路径**（iframe `:src` 与 `<a download>` 不经 axios），已规避该问题。
 7. **图数**：设计默认每页最多 6 图，但校验层与渲染层均未做强约束；当前实际约束来自 AI 提示词，最多 3 图。
 8. **本地库 schema 漂移（环境性，非代码）**：本地 MySQL `skill_execution.status` 为 `varchar(20)`，而规范 schema（`V1__baseline.sql` 与 `h2-schema.sql`）为 `varchar(30)`。枚举值 `AWAITING_CONFIRMATION` 为 21 字符，故 HITL 阶段在本机落库失败，阻断端到端真跑。修复：本地库 `ALTER TABLE skill_execution MODIFY status varchar(30) NOT NULL DEFAULT 'PENDING'`（规范 schema 本身正确，无需改代码）。
 9. **Skill 输入变量持久化位置**：收尾所需的 `rawData` / `dataFormat` 是 INPUT 变量，终态只存在于 `inputData`；阶段输出在 `outputData`。收尾必须合并两者（见 CLAUDE.md 已知暗坑）。
@@ -299,7 +303,7 @@ BUILD FAILURE
 
 | 阶段 | 内容 |
 |------|------|
-| **Phase 2 — 前端工作台** | 图表选择/编辑工作台；三套整页报告模板（mono/glance/editorial）；PDF 导出；pie/scatter/area 等图型扩展 |
+| ~~**Phase 2 — 前端工作台**~~ | ✅ **已完成**（见 `data-visualization-report-phase2-delivery.md`）：结果渲染器 + 三套报告风格 + pie/scatter/area。**未做**：专属图表编辑工作台、PDF 导出 |
 | **Phase 3 — 文章与卡片集成** | 报告回流到文章正文与卡片渲染；复用 `CardRenderPipeline` 的多页/模板能力 |
 | **Phase 4 — RAG 与高级数据源** | 报告向量索引与检索；`Insight` 结论结构落地；更多数据源接入（数据库/API/文件）与高级统计 |
 
