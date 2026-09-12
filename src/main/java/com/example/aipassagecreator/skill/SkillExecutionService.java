@@ -1,6 +1,7 @@
 package com.example.aipassagecreator.skill;
 
 import com.example.aipassagecreator.comic.ComicJournalService;
+import com.example.aipassagecreator.dataviz.DataVizPostProcessor;
 import com.example.aipassagecreator.enums.SkillExecutionStatusEnum;
 import com.example.aipassagecreator.model.po.SkillExecutionPo;
 import com.example.aipassagecreator.model.po.User;
@@ -30,6 +31,7 @@ public class SkillExecutionService {
     private final SkillRegistry skillRegistry;
     private final RagService ragService;
     private final ComicJournalService comicJournalService;
+    private final DataVizPostProcessor dataVizPostProcessor;
 
     /**
      * 公共派发：配额校验与扣减 → 创建执行 → prepare → 含确认则注册 → executeAsync。
@@ -141,6 +143,13 @@ public class SkillExecutionService {
                 if ("comic-journal".equals(execution.getDefinition().getName())) {
                     if (po != null) {
                         comicJournalService.processAsync(po, execution.getPersistedOutput(), userId);
+                    }
+                }
+                // P3：data-visualization-report 追加图表报告 HTML/PNG
+                // （rawData/dataFormat 在 inputData 里，processAsync 自行合并）
+                if ("data-visualization-report".equals(execution.getDefinition().getName())) {
+                    if (po != null) {
+                        dataVizPostProcessor.processAsync(po, execution.getPersistedOutput());
                     }
                 }
             }
