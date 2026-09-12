@@ -145,6 +145,7 @@
           :skill-name="skillName"
           :inputs="inputs"
           :output-data="outputData"
+          :execution-id="executionId"
           :embedded="embedded"
           @select-topic="(option) => emit('topicSelect', option)"
         />

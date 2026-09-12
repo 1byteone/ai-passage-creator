@@ -172,6 +172,18 @@ export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
     categoryLabel: '写作',
     accent: 'blue',
   },
+  'data-visualization-report': {
+    name: 'data-visualization-report',
+    title: '数据可视化报告',
+    shortTitle: '数据图表',
+    description: '粘贴 JSON 或 CSV，自动识别数据结构并生成图表报告，可导出 HTML 与 PNG。',
+    inputLabel: '数据内容与分析目标',
+    outputLabel: '图表规格与报告产物',
+    actionLabel: '生成报告',
+    icon: 'ideas',
+    categoryLabel: '数据',
+    accent: 'blue',
+  },
 }
 
 export const PHASE_LABELS: Record<string, string> = {
@@ -193,6 +205,8 @@ export const PHASE_LABELS: Record<string, string> = {
   expand_outline: '扩展大纲',
   summarize: '生成摘要',
   generate_headlines: '生成标题方案',
+  profile_dataset: '分析数据结构',
+  recommend_charts: '生成图表规格',
 }
 
 const FALLBACK_FIELDS: Record<string, Record<string, API.SkillVariableDef>> = {
@@ -434,6 +448,40 @@ const FALLBACK_FIELDS: Record<string, Record<string, API.SkillVariableDef>> = {
         { label: '标准（200-300字/章）', value: 'standard' },
         { label: '详细（500-800字/章）', value: 'detailed' },
         { label: '深度（1000+字/章）', value: 'deep' },
+      ],
+    },
+  },
+  'data-visualization-report': {
+    rawData: {
+      description: '数据内容（JSON 对象数组，或首行为表头的 CSV）',
+      required: true,
+      uiType: 'textarea',
+      placeholder: '粘贴 CSV（首行表头）或 JSON 对象数组',
+      maxLength: 200000,
+    },
+    dataFormat: {
+      description: '数据格式',
+      uiType: 'select',
+      defaultValue: 'csv',
+      options: [
+        { label: 'CSV（首行表头）', value: 'csv' },
+        { label: 'JSON 对象数组', value: 'json' },
+      ],
+    },
+    goal: {
+      description: '分析目标',
+      uiType: 'textarea',
+      placeholder: '例如：向管理层说明近半年的收入走势与关键转折',
+      maxLength: 500,
+    },
+    style: {
+      description: '视觉风格',
+      uiType: 'select',
+      defaultValue: 'glance',
+      options: [
+        { label: '黑白灰（保底，适合打印）', value: 'mono' },
+        { label: '快速判断（周报、汇报）', value: 'glance' },
+        { label: '细节阅读（研究报告、长文）', value: 'editorial' },
       ],
     },
   },
