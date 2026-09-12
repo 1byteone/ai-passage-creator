@@ -112,6 +112,7 @@ import {
   KeyOutlined,
   AuditOutlined,
   ToolOutlined,
+  RocketOutlined,
   TeamOutlined,
   BookOutlined,
   ProfileOutlined,
@@ -148,6 +149,11 @@ const originItems = [
     key: '/comic',
     icon: ProfileOutlined,
     label: '漫画手帐',
+  },
+  {
+    key: '/vibecoding',
+    icon: RocketOutlined,
+    label: 'Vibecoding',
   },
   {
     key: '/article/list',

@@ -86,6 +86,11 @@ const router = createRouter({
       },
     },
     {
+      path: '/vibecoding',
+      name: 'Vibecoding 工作台',
+      component: () => import('@/pages/vibecoding/VibecodingWorkflowPage.vue'),
+    },
+    {
       path: '/handwriting',
       name: '手写笔记编辑器',
       component: () => import('@/pages/handwriting/HandwritingEditorPage.vue'),
