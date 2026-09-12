@@ -75,14 +75,19 @@ description: 用结构化 Prompt 辅助产品经理完成低保真原型生成�
 - 回归轮次能区分新增问题、遗留问题、已修复和待验证问题。
 - 输出测试环境、账号类型、测试数据版本、浏览器、时间和结论。
 
-## 当前项目适配经验
+## 在当前 Agent 中的使用边界
+
+- 这是面向未来外部项目二次开发的交付 Skill，不对应当前产品菜单、路由、后端 Skill 或业务数据。
+- 用户提出“集成某个外部项目”时，先用本 Skill 产出范围确认清单，再实施目标项目集成；不得因为调用本 Skill 而新增 Vibecoding 工作台。
+- 该 Skill 只沉淀方法、模板和质量门；外部项目的技术选型、许可证、接口和页面实现必须单独评估。
+
+## 在当前项目二次开发中的适配经验
 
 - 前端页面优先复用 Vue 3、Ant Design Vue、Pinia、Vue Router 和现有请求封装。
-- 原型 HTML 由 `frontend/src/services/vibecodingWorkflow.ts` 的 `buildPrototypeHtml` 生成：纯字符串拼接、内联 CSS、无外部依赖，双击即可打开；结构化断言在 `frontend/tests/vibecoding-workflow.test.ts`。
-- 手写页面的排版预估通过 `frontend/src/services/textLayout.ts` 隔离 Pretext API，并保留 Canvas/Intl.Segmenter 不可用时的确定性降级。
-- 后端 API 的 `BaseResponse` 需要在前端正确解包 `response.data.data`；图片预览必须断言 URL 字符串和实际 `image/png` 响应，不能只检查接口 HTTP 200。
-- 关键交付至少执行类型检查、生产构建、纯逻辑测试、页面 UI 测试和真实接口联调。
-- 真实环境依赖 MySQL、Redis、Session、Playwright 渲染引擎和 COS；任一依赖不可用都要在交付报告中单独列为风险。
+- 原型交付物应优先是独立的单文件 HTML 或目标项目已有的原型载体，不自动加入当前产品路由。
+- 页面、接口、资源和认证的验证必须复用目标项目已有基础设施；不能以测试桩替代真实联调。
+- 关键交付至少执行类型检查、生产构建、纯逻辑测试、页面 UI 测试和真实接口联调；具体命令以目标项目为准。
+- 真实环境依赖、许可证、外部服务、账号和测试数据必须在交付报告中单独列为风险和前置条件。
 
 ## 推荐输出结构
 
