@@ -685,6 +685,18 @@ declare namespace API {
     source?: string
     text?: string
     userId?: number
+    sourceType?: string
+    domain?: string
+    documentKind?: string
+    status?: string
+    branchName?: string
+    commitSha?: string
+    sourcePath?: string
+    sectionPath?: string
+    checksum?: string
+    reviewerId?: number
+    reviewedAt?: string
+    indexedAt?: string
     createTime?: string
     updateTime?: string
   }
@@ -700,6 +712,39 @@ declare namespace API {
   type BaseResponsePageRagDocument = {
     code?: number
     data?: PageRagDocument
+    message?: string
+  }
+
+  type KnowledgeHit = {
+    title?: string
+    content?: string
+    score?: number
+    source?: string
+    sourcePath?: string
+    domain?: string
+    documentKind?: string
+    status?: string
+    commitSha?: string
+    sectionPath?: string
+  }
+
+  type BaseResponseListKnowledgeHit = {
+    code?: number
+    data?: KnowledgeHit[]
+    message?: string
+  }
+
+  type RagSyncResult = {
+    files?: number
+    sections?: number
+    branch?: string
+    commitSha?: string
+    sources?: string[]
+  }
+
+  type BaseResponseRagSyncResult = {
+    code?: number
+    data?: RagSyncResult
     message?: string
   }
 
@@ -916,6 +961,21 @@ declare namespace API {
   type BaseResponseListComicEpisodePo = {
     code?: number
     data?: ComicEpisodePo[]
+    message?: string
+  }
+
+  // ── 数据可视化报告（dataviz）──
+
+  type DataVizArtifactVO = {
+    htmlReady?: boolean
+    pngReady?: boolean
+    htmlUrl?: string
+    pngUrl?: string
+  }
+
+  type BaseResponseDataVizArtifactVO = {
+    code?: number
+    data?: DataVizArtifactVO
     message?: string
   }
 }
