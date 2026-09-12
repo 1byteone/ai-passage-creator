@@ -121,8 +121,9 @@ public class DataVizPostProcessor {
             return;
         }
 
+        List<ChartSpec> specs = extractSpecs(output.get("chartSpecs"));
         List<String> fragments = new ArrayList<>();
-        for (ChartSpec spec : extractSpecs(output.get("chartSpecs"))) {
+        for (ChartSpec spec : specs) {
             try {
                 chartSpecValidator.validate(spec, ds, profile);
                 fragments.add(chartHtmlRenderer.renderChart(spec, ds));
@@ -138,7 +139,8 @@ public class DataVizPostProcessor {
         }
 
         Path dir = baseDataDir.resolve("dataviz").resolve(executionId);
-        String html = chartHtmlRenderer.renderPage(REPORT_TITLE, fragments, profile.warnings());
+        String html = chartHtmlRenderer.renderPage(REPORT_TITLE, resolveStyle(output, specs),
+                fragments, profile.warnings());
         try {
             Files.createDirectories(dir);
             Files.writeString(dir.resolve(HTML_FILE), html);
@@ -166,6 +168,22 @@ public class DataVizPostProcessor {
         } catch (Exception e) {
             log.warn("dataviz PNG 导出失败（HTML 已保留）: executionId={}", executionId, e);
         }
+    }
+
+    /**
+     * 报告风格：优先取 Skill 的 INPUT 变量 style（用户在下单时选的），
+     * 其次取首张图表的 style，最后兜底 glance。
+     */
+    static String resolveStyle(Map<String, Object> output, List<ChartSpec> specs) {
+        Object input = output == null ? null : output.get("style");
+        if (input instanceof String s && !s.isBlank()) {
+            return s;
+        }
+        return specs.stream()
+                .map(ChartSpec::style)
+                .filter(s -> s != null && !s.isBlank())
+                .findFirst()
+                .orElse("glance");
     }
 
     private List<ChartSpec> extractSpecs(Object chartSpecsObj) {

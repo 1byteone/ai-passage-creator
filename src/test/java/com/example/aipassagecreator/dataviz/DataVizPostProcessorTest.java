@@ -27,6 +27,33 @@ class DataVizPostProcessorTest {
     @TempDir
     Path tempDir;
 
+    // ── 报告风格取值优先级 ──
+
+    private ChartSpec styledSpec(String style) {
+        return new ChartSpec("bar", style, "t", null, "s", null,
+                "i1", new ChartSpec.Encoding("title", "views", null), List.of("i1"), List.of());
+    }
+
+    @Test
+    @DisplayName("resolveStyle 优先取 Skill INPUT 变量 style")
+    void resolveStyle_prefersInputVariable() {
+        assertEquals("editorial",
+                DataVizPostProcessor.resolveStyle(Map.of("style", "editorial"), List.of(styledSpec("glance"))));
+    }
+
+    @Test
+    @DisplayName("resolveStyle 无 INPUT 变量时取首张图表风格")
+    void resolveStyle_fallsBackToFirstSpec() {
+        assertEquals("mono", DataVizPostProcessor.resolveStyle(Map.of(), List.of(styledSpec("mono"))));
+    }
+
+    @Test
+    @DisplayName("resolveStyle 都缺失时兜底 glance")
+    void resolveStyle_defaultsToGlance() {
+        assertEquals("glance", DataVizPostProcessor.resolveStyle(Map.of(), List.of()));
+        assertEquals("glance", DataVizPostProcessor.resolveStyle(Map.of("style", "  "), List.of()));
+    }
+
     private DataVizPostProcessor processor(CardRenderPipeline pipeline) {
         return new DataVizPostProcessor(
                 new DatasetParser(), new DatasetValidator(),
