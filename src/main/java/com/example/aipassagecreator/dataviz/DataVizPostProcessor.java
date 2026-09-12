@@ -39,9 +39,9 @@ public class DataVizPostProcessor {
     private final DatasetParser datasetParser;
     private final DatasetValidator datasetValidator;
     private final ChartSpecValidator chartSpecValidator;
-    private final StatsService statsService;
     private final ChartHtmlRenderer chartHtmlRenderer;
     private final CardRenderPipeline cardRenderPipeline;
+    private final DataVizStorageService dataVizStorageService;
 
     /** AI 多输出的未知字段不应让整份报告失败 */
     private final ObjectMapper mapper = new ObjectMapper()
@@ -50,15 +50,15 @@ public class DataVizPostProcessor {
     public DataVizPostProcessor(DatasetParser datasetParser,
                                 DatasetValidator datasetValidator,
                                 ChartSpecValidator chartSpecValidator,
-                                StatsService statsService,
                                 ChartHtmlRenderer chartHtmlRenderer,
-                                CardRenderPipeline cardRenderPipeline) {
+                                CardRenderPipeline cardRenderPipeline,
+                                DataVizStorageService dataVizStorageService) {
         this.datasetParser = datasetParser;
         this.datasetValidator = datasetValidator;
         this.chartSpecValidator = chartSpecValidator;
-        this.statsService = statsService;
         this.chartHtmlRenderer = chartHtmlRenderer;
         this.cardRenderPipeline = cardRenderPipeline;
+        this.dataVizStorageService = dataVizStorageService;
     }
 
     @Async("skillExecutor")
@@ -68,7 +68,7 @@ public class DataVizPostProcessor {
                 return;
             }
             // 与 DataVizStorageService.artifactDir 同一落盘位置
-            Path base = Path.of(System.getProperty("user.dir"), "data");
+            Path base = dataVizStorageService.baseDir();
             process(base, po.getSkillExecutionId(), withInputs(po, output));
         } catch (Exception e) {
             log.warn("dataviz 报告生成失败（不影响 Skill 主流程）: executionId={}",
@@ -125,7 +125,7 @@ public class DataVizPostProcessor {
         for (ChartSpec spec : extractSpecs(output.get("chartSpecs"))) {
             try {
                 chartSpecValidator.validate(spec, ds, profile);
-                fragments.add(chartHtmlRenderer.renderChart(spec, ds, profile));
+                fragments.add(chartHtmlRenderer.renderChart(spec, ds));
             } catch (Exception e) {
                 // 单图非法跳过，不拖垮整份报告
                 log.warn("dataviz 图表规格非法，跳过: executionId={}, reason={}",

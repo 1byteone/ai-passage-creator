@@ -17,7 +17,7 @@ public class ChartHtmlRenderer {
     private static final int CHART_H = 320;
     private static final int PAD = 48;
 
-    public String renderChart(ChartSpec spec, Dataset ds, DataQualityReport profile) {
+    public String renderChart(ChartSpec spec, Dataset ds) {
         String body = switch (spec.chartType()) {
             case "bar" -> renderBar(spec, ds);
             case "line" -> renderLine(spec, ds);

@@ -12,10 +12,8 @@ public record ChartSpec(
         String unit,
         String insightId,
         Encoding encoding,
-        Sort sort,
         List<String> evidence,
         List<String> annotations) {
 
     public record Encoding(String x, String y, String color) {}
-    public record Sort(String field, String direction) {}
 }

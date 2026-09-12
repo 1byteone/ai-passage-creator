@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class ChartHtmlRendererTest {
 
     private final DatasetParser parser = new DatasetParser();
-    private final DatasetValidator validator = new DatasetValidator();
     private final ChartHtmlRenderer renderer = new ChartHtmlRenderer();
 
     private Dataset trend() {
@@ -18,9 +17,9 @@ class ChartHtmlRendererTest {
     void renderChart_bar_containsSvgRectsAndEscapedTitle() {
         Dataset ds = trend();
         ChartSpec spec = new ChartSpec("bar", "glance", "收入对比<script>", null, "测试", "元",
-                "i1", new ChartSpec.Encoding("month", "revenue", null), null,
+                "i1", new ChartSpec.Encoding("month", "revenue", null),
                 List.of("i1"), List.of());
-        String html = renderer.renderChart(spec, ds, validator.validate(ds));
+        String html = renderer.renderChart(spec, ds);
         assertTrue(html.contains("rect"));
         assertTrue(html.contains("收入对比&lt;script&gt;"));
         assertFalse(html.contains("<script"));
@@ -30,9 +29,9 @@ class ChartHtmlRendererTest {
     void renderChart_line_containsPolyline() {
         Dataset ds = trend();
         ChartSpec spec = new ChartSpec("line", "mono", "收入趋势", null, "测试", "元",
-                "i1", new ChartSpec.Encoding("month", "revenue", null), null,
+                "i1", new ChartSpec.Encoding("month", "revenue", null),
                 List.of("i1"), List.of());
-        String html = renderer.renderChart(spec, ds, validator.validate(ds));
+        String html = renderer.renderChart(spec, ds);
         assertTrue(html.contains("polyline"));
     }
 
@@ -40,9 +39,9 @@ class ChartHtmlRendererTest {
     void renderChart_table_containsHtmlTable() {
         Dataset ds = trend();
         ChartSpec spec = new ChartSpec("table", "mono", "明细", null, "测试", null,
-                "i1", new ChartSpec.Encoding(null, null, null), null,
+                "i1", new ChartSpec.Encoding(null, null, null),
                 List.of("i1"), List.of());
-        String html = renderer.renderChart(spec, ds, validator.validate(ds));
+        String html = renderer.renderChart(spec, ds);
         assertTrue(html.contains("<table"));
         assertTrue(html.contains("2026-01"));
     }

@@ -30,8 +30,8 @@ class DataVizPostProcessorTest {
     private DataVizPostProcessor processor(CardRenderPipeline pipeline) {
         return new DataVizPostProcessor(
                 new DatasetParser(), new DatasetValidator(),
-                new ChartSpecValidator(), new StatsService(), new ChartHtmlRenderer(),
-                pipeline);
+                new ChartSpecValidator(), new ChartHtmlRenderer(),
+                pipeline, new DataVizStorageService());
     }
 
     private Map<String, Object> barOutput() {

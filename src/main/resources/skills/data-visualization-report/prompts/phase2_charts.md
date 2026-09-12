@@ -20,7 +20,6 @@
       "unit": "数值单位，没有则填 null",
       "insightId": "i1",
       "encoding": {"x": "字段名", "y": "字段名", "color": null},
-      "sort": null,
       "evidence": ["i1"],
       "annotations": []
     }

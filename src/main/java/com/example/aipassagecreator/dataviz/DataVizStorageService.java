@@ -22,7 +22,12 @@ public class DataVizStorageService {
         if (executionId == null || !EXEC_ID.matcher(executionId).matches()) {
             throw new IllegalArgumentException("非法的报告标识");
         }
-        return Path.of(System.getProperty("user.dir"), "data", "dataviz", executionId);
+        return baseDir().resolve("dataviz").resolve(executionId);
+    }
+
+    /** 数据根目录：产物写入 {baseDir}/dataviz/{executionId}/ */
+    public Path baseDir() {
+        return Path.of(System.getProperty("user.dir"), "data");
     }
 
     public boolean exists(Path dir, String fileName) {

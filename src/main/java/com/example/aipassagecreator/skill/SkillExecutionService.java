@@ -133,19 +133,19 @@ public class SkillExecutionService {
             if (SkillExecutionStatusEnum.FAILED.getValue().equals(execution.getStatus())) {
                 refundQuietly(userId, execution.getExecutionId());
             }
-            // P1：Skill 成功产出入向量库（失败静默，indexSkillAsync 内置 try-catch）
+            // Skill 成功产出入向量库（失败静默，indexSkillAsync 内置 try-catch）
             if (SkillExecutionStatusEnum.SUCCESS.getValue().equals(execution.getStatus())) {
                 SkillExecutionPo po = execution.getPoForIndex();
                 if (po != null) {
                     ragService.indexSkillAsync(po, execution.getPersistedOutput());
                 }
-                // P2：comic-journal 追加漫画手帐产出（RAG 保留无害，JSON 输出不参与检索）
+                // comic-journal 追加漫画手帐产出（RAG 保留无害，JSON 输出不参与检索）
                 if ("comic-journal".equals(execution.getDefinition().getName())) {
                     if (po != null) {
                         comicJournalService.processAsync(po, execution.getPersistedOutput(), userId);
                     }
                 }
-                // P3：data-visualization-report 追加图表报告 HTML/PNG
+                // data-visualization-report 追加图表报告 HTML/PNG
                 // （rawData/dataFormat 在 inputData 里，processAsync 自行合并）
                 if ("data-visualization-report".equals(execution.getDefinition().getName())) {
                     if (po != null) {
