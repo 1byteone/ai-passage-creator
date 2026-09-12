@@ -189,6 +189,36 @@ admin 知识库 ── POST/GET/DELETE /rag/document(s) ──▶ rag_document �
                                     → 标题/大纲/正文三阶段均注入（stage=title/outline/content）
 ```
 
+### 数据流：数据可视化报告 Skill（dataviz）
+
+```
+SkillExecutePage (Vue) ─→ POST /skill/data-visualization-report/execute
+                    │  inputs: rawData(textarea,≤200000) / dataFormat(csv|json) / goal / style
+                    ▼
+        SkillExecutionService (异步)
+          ├─ profile_dataset:    数据 → 字段画像 JSON → datasetProfile   (无确认)
+          ├─ recommend_charts:   画像 → Chart Spec JSON → chartSpecs     (HITL 确认)
+          └─ SUCCESS → dataVizPostProcessor.processAsync (@Async skillExecutor)
+                    │  ⚠ 收尾需 rawData/dataFormat，二者在 inputData，不在 outputData → 合并两者
+                    ▼
+        DataVizPostProcessor (静默降级：失败只记日志，不影响 Skill 主流程)
+          ├─ DatasetParser       CSV/JSON → Dataset（512KB/1000行/50列/200字符 上限）
+          ├─ DatasetValidator    类型推断 time/category/measure + 缺失/重复告警
+          ├─ ChartSpecValidator  白名单 line/bar/table；x=time/category，y=measure；title≤80；evidence 非空
+          ├─ ChartHtmlRenderer   Spec → 内联 SVG（无 <script> 无 CDN，动态文本 escapeHtml）
+          ├─ 落盘 {user.dir}/data/dataviz/{executionId}/report.html
+          └─ CardRenderPipeline PNG（渲染引擎不可用则只留 HTML）
+                    │
+                    ▼
+        GET /dataviz/{executionId}/artifact  就绪状态（htmlReady/pngReady，始终 200）
+        GET /dataviz/{executionId}/html      text/html;charset=UTF-8 + nosniff
+        GET /dataviz/{executionId}/png       image/png
+                    │  归属校验按 skill_execution.user_id，admin 放行
+                    │  未登录 40100 / 越权 40101 / 不存在 40400 / 非法标识 40000
+                    ▼
+        前端 / 浏览器（Phase 1 无工作台，直接消费 URL）
+```
+
 ### 前端路由表
 
 | 路由 | 页面 | 权限 | 说明 |
@@ -229,6 +259,7 @@ admin 知识库 ── POST/GET/DELETE /rag/document(s) ──▶ rag_document �
 | AI 框架 | Spring AI Alibaba StateGraph | 多阶段图编排，支持 HITL+工具调用 |
 | 用户隔离 | 普通用户只能检索自己，admin 全站 | 数据隐私 + 管理需求平衡 |
 | 认证 | Session + Redis | 传统 session 简单可靠，Redis 分布在多实例 |
+| 图表渲染 | 服务端直出内联 SVG，无 JS 无 CDN | 保证 Playwright 禁 JS 也能截图；报告自包含可离线打开，无外部依赖 |
 
 ---
 
@@ -466,6 +497,8 @@ User Input → Vue → POST /api/article/create → SSE taskId → EventSource �
 | 12 | **Sortable 未销毁** — 组件卸载时拖拽实例未 `destroy()` | OutlineEditingStage | `onBeforeUnmount` 中 `sortableInstance.destroy()` |
 | 13 | **双重提交** — `startExecution` 无 `submitting` 守卫 | SkillExecuteSurface | `if (submitting.value) return` |
 | 14 | **纯 CSS 中写 `//` 注释** — `<style scoped>` 无 `lang="scss"` 时 `//` 非法，vite build 失败 | 任何 .vue style 块 | style 无 `lang="scss"` 时用 `/* */` 注释；改 scss 前确认已声明 lang |
+| 15 | **Skill 输入变量不在 outputData** — `rawData` 等 INPUT 变量终态只存 `inputData`，收尾处理读 outputData 会拿不到 | dataviz / 任何 Skill 收尾 `PostProcessor` | 收尾时合并 `po.getInputData()` 与阶段输出（见 `DataVizPostProcessor.withInputs`） |
+| 16 | **`skill_execution.status` 列宽** — 枚举值 `AWAITING_CONFIRMATION` 长 21，列若为 `varchar(20)` 则 HITL 落库 `Data too long` | 任何 HITL Skill（dataviz / comic-journal） | 规范 schema 为 `varchar(30)`（`V1__baseline.sql` / `h2-schema.sql`）；旧库需 `ALTER TABLE skill_execution MODIFY status varchar(30)` |
 
 ---
 
