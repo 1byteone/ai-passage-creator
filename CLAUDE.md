@@ -7,6 +7,8 @@ AI 驱动的全栈文章创作平台：选题→标题→大纲→内容生成�
 
 ## 核心工程原则 (Core Principles)
 
+> 项目级 Agent 约定、Vibecoding 产品经理工作流和二次开发经验见 [AGENTS.md](AGENTS.md)；可复用 Skill 见 [skills/vibecoding-pm-workflow/SKILL.md](skills/vibecoding-pm-workflow/SKILL.md)。
+
 > 基于 [vibe-hub.org/anti-ai-flavor](https://vibe-hub.org/anti-ai-flavor) + [vibe-coding-ai-rules](https://github.com/obviousworks/vibe-coding-ai-rules)
 
 | 原则 | 含义 | AI 行为要求 |
@@ -226,6 +228,7 @@ SkillExecutePage (Vue) ─→ POST /skill/data-visualization-report/execute
 | `/` | HomePage | 无 | 营销首页 + 快捷入口 |
 | `/create` | ArticleCreatePage | 需登录 | 创作主流程 |
 | `/comic` | ComicLibraryPage | 需登录 | 漫画手帐浏览页 |
+| `/vibecoding` | VibecodingWorkflowPage | 无 | PM 原型与走查工作台（纯本地，无后端） |
 | `/article/list` | ArticleListPage | 需登录 | 文章历史列表 |
 | `/article/:taskId` | ArticleDetailPage | 需登录 | 文章详情 + 审批 + 相关文章 |
 | `/article/:taskId/cards` | CardPage | 需登录 | 卡片渲染管理 |
@@ -477,6 +480,37 @@ User Input → Vue → POST /api/article/create → SSE taskId → EventSource �
 
 ---
 
+## 外部能力二次开发工作流
+
+> 适用于把外部项目、Prompt 或工具吸收为本项目能力的场景。先例：typewords、pretext、comic-journal、dataviz、vibecoding-pm-workflow。
+
+### 五步法
+
+```
+1. 确认来源与许可证 — 查 LICENSE、THIRD_PARTY_NOTICES，判定可否复制代码/模板/资源
+2. 读产品原则 — 只吸收方法论，不搬运实现（外部仓库常为非商业许可，如 dataviz 面对的 PolyForm Noncommercial）
+3. 写设计规格 — docs/<topic>-design.md，明确非目标与边界
+4. 转实施计划 — docs/superpowers/plans/YYYY-MM-DD-<topic>.md，含 Global Constraints
+5. 交付与沉淀 — docs/<topic>-delivery.md 记录真实命令输出；接线后重跑 `npm run type-check`（见暗坑 #19）；红线沉淀回本文件「已知暗坑」
+```
+
+### 核查优先于假设
+
+动工前先只读核查现有资产，再定范围。**「看起来能用」与「符合契约」之间的距离，只能靠逐条核对和真实执行来度量**——vibecoding 交付中，初次判断「功能已存在且完整」，逐一核对后才发现原型布局与目标不符、页面文件存在未闭合的多行字符串。
+
+### Vibecoding PM 工作流
+
+`skills/vibecoding-pm-workflow/SKILL.md` 定义两种模式，均遵循「盘点 → 确认 → 执行 → 验证 → 交付」：
+
+| 模式 | 产出 | 落点 |
+|---|---|---|
+| `prototype` 低保真原型 | 单文件 HTML 线框图，按流程顺序纵向平铺 | `/vibecoding` 页面，`frontend/src/services/vibecodingWorkflow.ts` |
+| `audit` 页面全流程巡查 | 走查清单 + 三态标记 + Markdown/JSON 导出 | 同上 |
+
+硬约束：**未确认不生成**（流程项全部勾选后「生成」按钮才可用）；未在 PRD 中说明的内容标「待确认」，不自行补全。交付标准见 `AGENTS.md`。
+
+---
+
 ## 已知暗坑 (三轮审计沉淀)
 
 > **每次修改相关代码前先读此清单，避免重蹈覆辙。**
@@ -499,6 +533,9 @@ User Input → Vue → POST /api/article/create → SSE taskId → EventSource �
 | 14 | **纯 CSS 中写 `//` 注释** — `<style scoped>` 无 `lang="scss"` 时 `//` 非法，vite build 失败 | 任何 .vue style 块 | style 无 `lang="scss"` 时用 `/* */` 注释；改 scss 前确认已声明 lang |
 | 15 | **Skill 输入变量不在 outputData** — `rawData` 等 INPUT 变量终态只存 `inputData`，收尾处理读 outputData 会拿不到 | dataviz / 任何 Skill 收尾 `PostProcessor` | 收尾时合并 `po.getInputData()` 与阶段输出（见 `DataVizPostProcessor.withInputs`） |
 | 16 | **`skill_execution.status` 列宽** — 枚举值 `AWAITING_CONFIRMATION` 长 21，列若为 `varchar(20)` 则 HITL 落库 `Data too long` | 任何 HITL Skill（dataviz / comic-journal） | 规范 schema 为 `varchar(30)`（`V1__baseline.sql` / `h2-schema.sql`）；旧库需 `ALTER TABLE skill_execution MODIFY status varchar(30)` |
+| 17 | **混线提交** — 同一文件的改动里夹带其他功能的 hunk，一次提交把两条工作线混在一起 | `router/index.ts` / `GlobalHeader.vue` 等共享文件 | `git add -p` 逐 hunk 暂存；提交前 `git diff --cached` 核验不含无关功能关键字（如另一条线的路由名） |
+| 18 | **原型 HTML 分组重排** — 用 `[...new Set(group)]` 去重分组会打乱流程顺序 | `buildPrototypeHtml` | 只合并「连续同名」run；数组顺序即流程顺序 |
+| 19 | **未跟踪文件不进类型检查** — 新建文件若无人 import，`vue-tsc` 不报错，语法错误会在接线后集中爆发 | 任何新增 `.vue` / `.ts` | 接线后立即重跑 `npm run type-check`；新建页面文件本身也要过一次 type-check |
 
 ---
 
