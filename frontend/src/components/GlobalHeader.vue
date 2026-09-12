@@ -20,7 +20,7 @@
       <!-- 中间：导航菜单 -->
       <nav class="nav-center">
         <RouterLink
-          v-for="item in visibleItems"
+          v-for="item in coreItems"
           :key="item.key"
           :to="item.key"
           :class="['nav-item', { active: isActive(item.key) }]"
@@ -28,14 +28,16 @@
           <component :is="item.icon" class="nav-icon" />
           <span class="nav-label">{{ item.label }}</span>
         </RouterLink>
-        <details v-if="narrowCollapsedItems.length" class="mobile-more">
-          <summary class="more-button" aria-label="更多导航">
-            <MoreOutlined />
+        <details v-for="group in navigationGroups" :key="group.label" class="nav-group">
+          <summary :class="['nav-group-trigger', { active: group.items.some((item) => isActive(item.key)) }]">
+            <component :is="group.icon" class="nav-icon" />
+            <span class="nav-label">{{ group.label }}</span>
+            <DownOutlined class="nav-group-chevron" />
           </summary>
-          <div class="mobile-more-menu">
-            <RouterLink v-for="item in narrowCollapsedItems" :key="item.key" :to="item.key">
-                <component :is="item.icon" />
-                <span>{{ item.label }}</span>
+          <div class="nav-group-menu">
+            <RouterLink v-for="item in group.items" :key="item.key" :to="item.key" class="nav-group-item">
+              <component :is="item.icon" />
+              <span>{{ item.label }}</span>
             </RouterLink>
           </div>
         </details>
@@ -96,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount, type Component } from 'vue'
+import { computed, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import {
@@ -108,14 +110,15 @@ import {
   CrownOutlined,
   BarChartOutlined,
   AppstoreOutlined,
-  MoreOutlined,
   KeyOutlined,
   AuditOutlined,
   ToolOutlined,
-  RocketOutlined,
   TeamOutlined,
   BookOutlined,
   ProfileOutlined,
+  DownOutlined,
+  ThunderboltOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons-vue'
 import { isVip as checkIsVip } from '@/utils/permission'
 import { getAvatar } from '@/utils/avatar'
@@ -145,52 +148,60 @@ const originItems = [
     icon: AppstoreOutlined,
     label: 'AI 工具',
   },
-  {
-    key: '/comic',
-    icon: ProfileOutlined,
-    label: '漫画手帐',
-  },
-  {
-    key: '/vibecoding',
-    icon: RocketOutlined,
-    label: 'Vibecoding',
-  },
-  {
-    key: '/article/list',
-    icon: UnorderedListOutlined,
-    label: '文章',
-  },
-  {
-    key: '/workspace',
-    icon: TeamOutlined,
-    label: '空间',
-  },
-  // 管理员专属菜单项
-  {
-    key: '/admin/userManage',
-    icon: SettingOutlined,
-    label: '用户管理',
-    admin: true,
-  },
-  {
-    key: '/analytics',
-    icon: BarChartOutlined,
-    label: '数据分析',
-    admin: true,
-  },
-  {
-    key: '/admin/toolbox',
-    icon: ToolOutlined,
-    label: '工具箱',
-    admin: true,
-  },
-  {
-    key: '/admin/knowledge',
-    icon: BookOutlined,
-    label: '知识库',
-    admin: true,
-  },
 ]
+
+type NavigationItem = { key: string; icon: Component; label: string; admin?: boolean }
+type NavigationGroup = { label: string; icon: Component; items: NavigationItem[] }
+
+const coreItems: NavigationItem[] = originItems
+
+const navigationGroups = computed<NavigationGroup[]>(() => {
+  const groups: NavigationGroup[] = [
+    {
+      label: '内容资产',
+      icon: UnorderedListOutlined,
+      items: [
+        { key: '/article/list', icon: UnorderedListOutlined, label: '我的文章' },
+        { key: '/comic', icon: ProfileOutlined, label: '漫画手帐' },
+        { key: '/handwriting', icon: EditOutlined, label: '手写排版' },
+        { key: '/english', icon: BookOutlined, label: '英语训练' },
+      ],
+    },
+    {
+      label: 'AI 能力',
+      icon: AppstoreOutlined,
+      items: [
+        { key: '/skill', icon: AppstoreOutlined, label: '技能中心' },
+        { key: '/skill/chain', icon: ThunderboltOutlined, label: '链式编排' },
+        { key: '/skill/history', icon: ClockCircleOutlined, label: '执行历史' },
+        { key: '/analytics', icon: BarChartOutlined, label: '数据分析', admin: true },
+      ],
+    },
+    {
+      label: '协作与平台',
+      icon: TeamOutlined,
+      items: [
+        { key: '/workspace', icon: TeamOutlined, label: '协作空间' },
+        { key: '/approval', icon: AuditOutlined, label: '审批工作台', admin: true },
+        { key: '/apikey', icon: KeyOutlined, label: 'API 密钥' },
+      ],
+    },
+  ]
+
+  const adminItems: NavigationItem[] = [
+    { key: '/admin/userManage', icon: SettingOutlined, label: '用户管理' },
+    { key: '/admin/toolbox', icon: ToolOutlined, label: '工具箱' },
+    { key: '/admin/knowledge', icon: BookOutlined, label: '知识库' },
+  ]
+  if (loginUserStore.loginUser.userRole === 'admin') {
+    groups.push({ label: '管理', icon: SettingOutlined, items: adminItems })
+  }
+
+  return groups.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.admin || loginUserStore.loginUser.userRole === 'admin'),
+  }))
+})
 
 // 用户下拉菜单项目（低频入口）
 const dropdownItems = computed(() => {
@@ -202,41 +213,6 @@ const dropdownItems = computed(() => {
     items.push({ key: '/approval', icon: AuditOutlined, label: '审批工作台' })
   }
   return items
-})
-
-// 过滤菜单项
-const menuItems = computed(() => {
-  return originItems.filter((item) => {
-    if (item.admin) {
-      const loginUser = loginUserStore.loginUser
-      return loginUser && loginUser.userRole === 'admin'
-    }
-    return true
-  })
-})
-
-// 是否在窄屏下折叠
-const isNarrow = ref(false)
-
-// 响应式监听
-let resizeHandler: (() => void) | null = null
-
-const checkNarrow = () => {
-  isNarrow.value = window.innerWidth < 480
-}
-
-// 窄屏下折叠的菜单项（非核心项）
-const narrowCollapsedItems = computed(() => {
-  if (!isNarrow.value) return []
-  const coreKeys = new Set(['/', '/create', '/skill'])
-  return menuItems.value.filter((item) => !coreKeys.has(item.key))
-})
-
-const visibleItems = computed(() => {
-  const items = menuItems.value
-  if (!isNarrow.value) return items
-  const coreKeys = new Set(['/', '/create', '/skill'])
-  return items.filter((item) => coreKeys.has(item.key))
 })
 
 const isActive = (path: string) => {
@@ -272,19 +248,6 @@ const doLogout = async () => {
   }
 }
 
-// 响应式监听
-onMounted(() => {
-  checkNarrow()
-  resizeHandler = () => checkNarrow()
-  window.addEventListener('resize', resizeHandler)
-})
-
-onBeforeUnmount(() => {
-  if (resizeHandler) {
-    window.removeEventListener('resize', resizeHandler)
-    resizeHandler = null
-  }
-})
 </script>
 
 <style scoped>
@@ -433,6 +396,76 @@ onBeforeUnmount(() => {
 .nav-item.active {
   color: var(--color-primary-dark);
   background: rgba(34, 197, 94, 0.1);
+}
+
+.nav-group {
+  position: relative;
+}
+
+.nav-group-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  list-style: none;
+}
+
+.nav-group-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.nav-group-trigger:hover,
+.nav-group-trigger.active {
+  color: var(--color-primary-dark);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.nav-group-chevron {
+  margin-left: 2px;
+  font-size: 14px;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.nav-group-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 120;
+  display: grid;
+  min-width: 168px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-lg);
+}
+
+.nav-group-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nav-group-item:hover,
+.nav-group-item:focus-visible,
+.nav-group-item.router-link-active {
+  background: var(--color-background-secondary);
+  color: var(--color-text);
 }
 
 .nav-icon {
@@ -637,6 +670,24 @@ onBeforeUnmount(() => {
     height: 40px;
     justify-content: center;
     padding: 0;
+  }
+
+  .nav-group-trigger {
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .nav-group-chevron {
+    display: none;
+  }
+
+  .nav-group-menu {
+    position: fixed;
+    top: 58px;
+    right: 12px;
+    left: auto;
   }
 
   .mobile-more {
