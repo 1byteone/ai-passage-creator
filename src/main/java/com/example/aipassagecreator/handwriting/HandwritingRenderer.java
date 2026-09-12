@@ -49,7 +49,10 @@ public class HandwritingRenderer {
                          "pre", "code", "blockquote", "hr")
                 .addAttributes("pre", "class")
                 .addAttributes("code", "class");
-        return Jsoup.clean(rawContent, safelist);
+        // 用白名单内的 br 保留用户粘贴文本中的换行，避免 Jsoup 清洗时折叠为空格。
+        String withBreaks = rawContent.replace("\r\n", "\n").replace("\r", "\n")
+                .replace("\n", "<br>");
+        return Jsoup.clean(withBreaks, safelist);
     }
 
     /**
@@ -106,7 +109,12 @@ public class HandwritingRenderer {
     -webkit-font-smoothing: antialiased;
   }
   %s
-  .content { max-width: 100%%; word-wrap: break-word; }
+  .content {
+    max-width: 100%%;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
   .content p { margin-bottom: 8px; }
   .content h1, .content h2, .content h3 {
     margin-top: 20px; margin-bottom: 12px;

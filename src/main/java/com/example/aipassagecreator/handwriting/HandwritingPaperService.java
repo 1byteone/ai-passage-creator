@@ -33,15 +33,19 @@ public class HandwritingPaperService {
         return "background: #FFFFFF;";
     }
 
-    /** 横线纸：水平 repeating-linear-gradient */
+    /**
+     * 横线纸：行距必须与 HandwritingRenderer 的 28px/2.0（56px）一致。
+     * 首条线放在正文首行基线附近，避免文字落在两条横线之间。
+     */
     String lineCss() {
         return """
             background-color: #FFFFFF;
             background-image: repeating-linear-gradient(
-                transparent, transparent 39px,
-                #B8C6DB 39px, #B8C6DB 40px
+                transparent 0, transparent 55px,
+                #B8C6DB 55px, #B8C6DB 56px
             );
-            background-size: 100% 40px;
+            background-size: 100% 56px;
+            background-position: 0 48px;
             """;
     }
 
