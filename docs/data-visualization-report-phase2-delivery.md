@@ -134,27 +134,47 @@ npm run test:skill      # 26/26（含新增 dataviz-view.test.ts 的 5 个用例
 npm run test:ui -- dataviz-preview   # 2/2
 ```
 
-### 5.3 ⚠️ 未经真机验证的部分
+### 5.3 全链路集成测试 + 浏览器实测
 
-**「AI 产出真实 Chart Spec → 报告落盘 → iframe 显示图表」这条完整链路未做真机冒烟**。当前环境不具备 AI 凭据与 Playwright Chromium。
+`DataVizPipelineIntegrationTest`（提交 `360afca`）用真实 CSV 串起「解析 → 画像 → 五种图型 Spec 校验 → 渲染 → 整页报告」，不经 mock、不依赖 AI：
 
-已验证的替代覆盖：
-- SVG 结构断言（扇区数量、路径闭合、点坐标范围、超限合并）
-- 组件级逻辑（URL 构造、路径穿越编码、轮询停止与超时判定）
-- 执行页入口渲染与无运行时错误
+- 断言字段语义推断正确（`month`→time、`channel`→category、`revenue`→measure）
+- 断言五种图型的横轴规则放行真实数据
+- 断言六图型片段全部产出且报告含六个卡片、饼图扇区、散点、面积填充、折线、表格
+- 断言单文件无脚本无外链、非法风格兜底 `glance`
 
-建议按以下步骤人工冒烟：
+**浏览器实测**（临时脚本，用后即删）：把该测试产出的报告 HTML 载入 Chromium，实测结果：
+
+| 观测项 | 结果 |
+|---|---|
+| 页面错误 / 控制台错误 | **0** |
+| 图表卡片 | 6 |
+| SVG 实际渲染尺寸 | 5 个全部 680×340（非 0，说明真的画出来了） |
+| 图形标记数 | 折线 1 / 面积 2 / 柱状 6 / 饼 2 / 散点 6 |
+| 表格数据行 | 6 |
+| 风格生效 | `data-style=editorial`，衬线字体与卡片顶部粗线均生效 |
+| 警告条 | 正常展示 |
+
+即：**「服务端渲染报告 → 浏览器显示图表」这一段已实测通过**，截图确认六种图型全部可见。
+
+### 5.4 ⚠️ 仍未验证的一段
+
+**「AI 产出真实 Chart Spec」这一步未实测**——需要真实模型凭据并消耗配额。上表证明的是：一旦拿到合法 Chart Spec，后续到浏览器显示的整条链路都是通的。
+
+若需人工补完这一步：
 
 ```bash
-mvn spring-boot:run            # 起后端
+mvn spring-boot:run            # 起后端（需 DASHSCOPE_API_KEY / AGNES_AI_API_KEY）
 cd frontend && npm run dev     # 起前端
 # 浏览器打开 /skill/data-visualization-report
 # 1) 粘贴 CSV → 选 style=glance → 执行 → 阶段标签应显示中文
-# 2) 确认后等待 → 报告应以内嵌 iframe 呈现（不是 JSON 串）
-# 3) 检查 iframe 内：图表、单位、来源、警告条
+# 2) 确认 AI 产出的 chartSpecs 是否落在六种白名单内
+# 3) 报告应以内嵌 iframe 呈现（不是 JSON 串）；检查图表、单位、来源、警告条
 # 4) 切 style=mono / editorial 重跑，确认报告整体视觉变化
 # 5) 下载 HTML（双击可离线打开）、下载 PNG
 ```
+
+> 注意：本地 MySQL 的 `skill_execution.status` 需为 `varchar(30)`，否则 HITL 阶段落库失败（见 Phase 1 文档第 8 条）。
 
 ---
 
