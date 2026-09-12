@@ -130,14 +130,16 @@ cd frontend && npx eslint src/services/vibecodingWorkflow.ts tests/vibecoding-wo
 # 退出码 0
 ```
 
-### 5.5 ⚠️ type-check 当前不绿（与本次交付无关）
+### 5.5 类型检查
 
 ```bash
 cd frontend && npm run type-check
-# 29 处报错，全部来自 src/pages/skill/components/SkillResultVibecoding.vue
+# 无输出，退出码 0（vue-tsc --build 通过）
 ```
 
-该文件（621 行）不属于本次交付，是另一条工作线（应用内 Skill 形态）正在生成的产物，当前**文件内反引号全部缺失**，导致其中所有模板字符串语法非法。本次交付的文件零报错。**在该文件修复前，`npm run check` 与 CI 的 type-check 门禁无法通过。**
+**接线后才发现的一处真实缺陷**：`VibecodingWorkflowPage.vue` 中的 `SAMPLE_PRD` 是一个跨 17 行的示例 PRD 文本，但**缺少包裹它的反引号**，导致文件语法非法。该文件此前无人 import，`vue-tsc` 不检查未接入依赖图的文件，因此缺陷被掩盖；本次把它接进路由后立刻暴露。已修复（补上反引号）。
+
+这条经验已沉淀为 `CLAUDE.md` 暗坑 #19。
 
 ---
 
