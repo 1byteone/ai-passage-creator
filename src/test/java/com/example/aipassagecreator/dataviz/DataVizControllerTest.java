@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -102,6 +103,18 @@ class DataVizControllerTest {
     }
 
     @Test
+    @DisplayName("HTML 端点同样做归属校验 → NO_AUTH_ERROR(40101)")
+    void getHtml_otherUsersExecution_denied() {
+        stubExecution(OTHER_ID);
+
+        BusinessException e = assertThrows(BusinessException.class,
+                () -> controller.getHtml(EXEC_ID, request));
+
+        assertEquals(ErrorCode.NO_AUTH_ERROR.getCode(), e.getCode());
+        assertEquals("无权访问该报告", e.getMessage());
+    }
+
+    @Test
     @DisplayName("admin → 放行他人执行记录")
     void getArtifact_admin_canReadOthers() {
         when(userService.getLoginUser(any())).thenReturn(user(OWNER_ID, "admin"));
@@ -143,7 +156,7 @@ class DataVizControllerTest {
     }
 
     @Test
-    @DisplayName("HTML 已生成 → text/html 原样返回")
+    @DisplayName("HTML 已生成 → text/html;charset=UTF-8 + nosniff 原样返回")
     void getHtml_ready_returnsHtml() {
         stubExecution(OWNER_ID);
         byte[] html = "<html>报告</html>".getBytes(StandardCharsets.UTF_8);
@@ -151,7 +164,9 @@ class DataVizControllerTest {
 
         ResponseEntity<byte[]> response = controller.getHtml(EXEC_ID, request);
 
-        assertEquals(MediaType.TEXT_HTML, response.getHeaders().getContentType());
+        assertEquals(MediaType.parseMediaType("text/html;charset=UTF-8"),
+                response.getHeaders().getContentType());
+        assertEquals("nosniff", response.getHeaders().getFirst("X-Content-Type-Options"));
         assertArrayEquals(html, response.getBody());
     }
 
@@ -182,14 +197,21 @@ class DataVizControllerTest {
     }
 
     @Test
-    @DisplayName("非 UUID 标识 → 路径白名单拒绝，不触发任何查询")
+    @DisplayName("非 UUID 标识 → PARAMS_ERROR(40000)，且不触发任何查询")
     void nonUuidExecutionId_rejectedByWhitelist() {
         DataVizController real =
                 new DataVizController(new DataVizStorageService(), executionMapper, userService);
 
-        assertThrows(IllegalArgumentException.class, () -> real.getArtifact("../../etc", request));
-        assertThrows(IllegalArgumentException.class, () -> real.getHtml("exec/../escape", request));
-        assertThrows(IllegalArgumentException.class, () -> real.getPng("..", request));
+        // 三个端点都必须把 StorageService 的 IllegalArgumentException 转成 40000，而不是漏成 50000
+        for (BusinessException e : new BusinessException[]{
+                assertThrows(BusinessException.class, () -> real.getArtifact("../../etc", request)),
+                assertThrows(BusinessException.class, () -> real.getHtml("exec/../escape", request)),
+                assertThrows(BusinessException.class, () -> real.getPng("..", request))}) {
+            assertEquals(ErrorCode.PARAMS_ERROR.getCode(), e.getCode());
+            assertEquals("非法的报告标识", e.getMessage());
+        }
+        // 格式校验先于查库：非法标识不得触碰会话与执行记录
+        verifyNoInteractions(executionMapper, userService);
     }
 
     private void stubExecution(Long ownerId) {

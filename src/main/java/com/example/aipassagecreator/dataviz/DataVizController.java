@@ -39,6 +39,9 @@ public class DataVizController {
     private static final String HTML_FILE = "report.html";
     private static final String PNG_FILE = "report.png";
 
+    /** HTML 含中文，显式带 charset，避免浏览器按 ISO-8859-1 猜错编码 */
+    private static final MediaType HTML_UTF8 = MediaType.parseMediaType("text/html;charset=UTF-8");
+
     private final DataVizStorageService storage;
     private final SkillExecutionMapper executionMapper;
     private final UserService userService;
@@ -64,7 +67,11 @@ public class DataVizController {
         if (body == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "报告尚未生成，请稍后刷新");
         }
-        return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(body);
+        return ResponseEntity.ok()
+                .contentType(HTML_UTF8)
+                // 纵深防御：同源回吐用户可控 HTML，禁止浏览器按嗅探结果改判类型
+                .header("X-Content-Type-Options", "nosniff")
+                .body(body);
     }
 
     @GetMapping("/{executionId}/png")
@@ -81,9 +88,17 @@ public class DataVizController {
 
     /**
      * 先过路径白名单再查归属：非法标识在任何 DB 访问前就被拒，{@code ../} 无从进入执行记录查询。
+     * <p>
+     * 标识格式是调用方输入错误而非系统故障，故把 {@link IllegalArgumentException} 转成 40000；
+     * 否则全局处理器会兜成 50000，前端无法区分「参数写错」与「服务端故障」。
      */
     private Path artifactDirOf(String executionId, HttpServletRequest request) {
-        Path dir = storage.artifactDir(executionId);
+        Path dir;
+        try {
+            dir = storage.artifactDir(executionId);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "非法的报告标识");
+        }
         ownedExecution(executionId, request);
         return dir;
     }
