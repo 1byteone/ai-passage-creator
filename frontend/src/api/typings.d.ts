@@ -756,7 +756,14 @@ declare namespace API {
 
   type BaseResponseListKnowledgeHit = {
     code?: number
-    data?: KnowledgeHit[]
+    data?: KnowledgeSearchResult
+    message?: string
+  }
+
+  type KnowledgeSearchResult = {
+    hits?: KnowledgeHit[]
+    confirmed?: boolean
+    status?: 'CONFIRMED' | 'UNCONFIRMED'
     message?: string
   }
 

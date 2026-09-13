@@ -96,6 +96,7 @@ public class RagController {
     public static class RagDocumentRequest {
         @Size(max = 200, message = "标题过长（≤200）")
         private String title;     // 文档标题（检索展示）
+        @NotBlank(message = "source 不能为空")
         @Size(max = 512, message = "source 过长（≤512）")
         private String source;    // 来源标识（幂等键，重复上传覆盖）
         @NotBlank(message = "文档内容不能为空")
@@ -126,10 +127,10 @@ public class RagController {
     @PostMapping("/knowledge/search")
     @Operation(summary = "研发知识库只读混合检索")
     @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
-    public BaseResponse<List<RagKnowledgeBaseService.KnowledgeHit>> knowledgeSearch(
+    public BaseResponse<RagKnowledgeBaseService.KnowledgeSearchResult> knowledgeSearch(
             @Valid @RequestBody RagSearchRequest request, HttpServletRequest httpRequest) {
         User loginUser = userService.getLoginUser(httpRequest);
-        return ResultUtils.success(ragKnowledgeBaseService.search(request.getQuery(), loginUser.getId(),
+        return ResultUtils.success(ragKnowledgeBaseService.searchWithStatus(request.getQuery(), loginUser.getId(),
                 request.getTopK() == null ? 5 : request.getTopK()));
     }
 

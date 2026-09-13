@@ -67,16 +67,18 @@ class RagKnowledgeControllerTest {
                 "standard", "project-rule", "ACTIVE", "abc", "工程规范",
                 9L, "ai-passage-creator", "GIT", "dev_rag", 12, 24);
         when(userService.getLoginUser(request)).thenReturn(admin);
-        when(knowledgeBase.search("SSE 生命周期", 1L, 5)).thenReturn(List.of(hit));
+        when(knowledgeBase.searchWithStatus("SSE 生命周期", 1L, 5)).thenReturn(
+                new RagKnowledgeBaseService.KnowledgeSearchResult(List.of(hit), true, "CONFIRMED", "已确认"));
 
         var response = controller.knowledgeSearch(input, request);
 
         assertEquals(0, response.getCode());
         assertNotNull(response.getData());
-        assertEquals("CLAUDE.md", response.getData().get(0).sourcePath());
-        assertEquals(12, response.getData().get(0).lineStart());
-        assertEquals(24, response.getData().get(0).lineEnd());
-        verify(knowledgeBase).search("SSE 生命周期", 1L, 5);
+        assertEquals(true, response.getData().confirmed());
+        assertEquals("CLAUDE.md", response.getData().hits().get(0).sourcePath());
+        assertEquals(12, response.getData().hits().get(0).lineStart());
+        assertEquals(24, response.getData().hits().get(0).lineEnd());
+        verify(knowledgeBase).searchWithStatus("SSE 生命周期", 1L, 5);
     }
 
     @Test

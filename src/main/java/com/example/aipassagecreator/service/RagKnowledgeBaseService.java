@@ -33,6 +33,10 @@ public class RagKnowledgeBaseService {
         }
     }
 
+    public record KnowledgeSearchResult(List<KnowledgeHit> hits, boolean confirmed,
+                                       String status, String message) {
+    }
+
     /** 关键词和向量召回合并，按 source 去重，返回可直接展示的引用信息。 */
     public List<KnowledgeHit> search(String query, Long userId, int topK) {
         int limit = Math.max(1, Math.min(topK <= 0 ? 5 : topK, 20));
@@ -43,9 +47,12 @@ public class RagKnowledgeBaseService {
                     (existing, candidate) -> candidate.score() > existing.score() ? candidate : existing);
         }
         for (RagService.RagHit hit : ragService.searchKnowledge(query, userId, recallLimit, documentStore.activeBatchId())) {
-            KnowledgeHit vectorHit = new KnowledgeHit(hit.title(), hit.content(), hit.score(),
-                    hit.refId(), "", "", "reference", "ACTIVE", "", "",
-                    null, "ai-passage-creator", "GIT", "", null, null);
+            RagDocument sourceDocument = documentStore.findActiveBySource(hit.refId());
+            KnowledgeHit vectorHit = sourceDocument == null
+                    ? new KnowledgeHit(hit.title(), hit.content(), hit.score(), hit.refId(),
+                    "", "", "reference", "ACTIVE", "", "", null,
+                    "ai-passage-creator", "GIT", "", null, null)
+                    : fromVectorHit(sourceDocument, hit);
             merged.merge(hit.refId(), vectorHit,
                     (existing, candidate) -> candidate.score() > existing.score() ? candidate : existing);
         }
@@ -55,8 +62,24 @@ public class RagKnowledgeBaseService {
                 .toList();
     }
 
+    /** 检索结果显式区分已确认命中和知识库未确认，避免空数组被误解为回答依据。 */
+    public KnowledgeSearchResult searchWithStatus(String query, Long userId, int topK) {
+        List<KnowledgeHit> hits = search(query, userId, topK);
+        return hits.isEmpty()
+                ? new KnowledgeSearchResult(List.of(), false, "UNCONFIRMED", "知识库未确认该问题，请补充范围或提供新的事实来源")
+                : new KnowledgeSearchResult(hits, true, "CONFIRMED", "已找到可引用的项目知识");
+    }
+
     private KnowledgeHit fromDocument(RagDocument document, double score) {
         return new KnowledgeHit(document.getTitle(), document.getText(), score, document.getSource(),
+                document.getSourcePath(), document.getDomain(), document.getDocumentKind(), document.getStatus(),
+                document.getCommitSha(), document.getSectionPath(), document.getId(),
+                document.getProjectKey(), document.getSourceType(), document.getBranchName(),
+                document.getLineStart(), document.getLineEnd());
+    }
+
+    private KnowledgeHit fromVectorHit(RagDocument document, RagService.RagHit hit) {
+        return new KnowledgeHit(document.getTitle(), hit.content(), hit.score(), hit.refId(),
                 document.getSourcePath(), document.getDomain(), document.getDocumentKind(), document.getStatus(),
                 document.getCommitSha(), document.getSectionPath(), document.getId(),
                 document.getProjectKey(), document.getSourceType(), document.getBranchName(),

@@ -61,4 +61,18 @@ class RagDocumentStoreKnowledgeTest {
         org.junit.jupiter.api.Assertions.assertEquals("embedding timeout", document.getIndexError());
         org.junit.jupiter.api.Assertions.assertEquals(1, document.getIndexAttempts());
     }
+
+    @Test
+    void approve_rejectsAlreadyIndexedDocumentWithoutReindexing() {
+        RagDocumentMapper mapper = mock(RagDocumentMapper.class);
+        RagService ragService = mock(RagService.class);
+        RagDocument document = RagDocument.builder().id(9L).source("manual:indexed")
+                .status(RagDocumentStore.STATUS_INDEXED).build();
+        when(mapper.selectOneById(9L)).thenReturn(document);
+        RagDocumentStore store = new RagDocumentStore(mapper, ragService);
+
+        org.junit.jupiter.api.Assertions.assertFalse(store.approve(9L, 1L));
+
+        verify(ragService, never()).indexDocument(any(), any(), any(), any());
+    }
 }

@@ -85,4 +85,20 @@ class RagKnowledgeBaseServiceTest {
         assertEquals(1, hits.size());
         assertEquals(1.2, hits.get(0).score());
     }
+
+    @Test
+    void searchWithStatus_explicitlyMarksUnconfirmedWhenNoEvidence() {
+        RagDocumentStore documentStore = mock(RagDocumentStore.class);
+        RagService ragService = mock(RagService.class);
+        when(documentStore.searchActive(anyString(), anyInt())).thenReturn(List.of());
+        when(ragService.searchKnowledge(anyString(), anyLong(), anyInt(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of());
+
+        RagKnowledgeBaseService.KnowledgeSearchResult result =
+                new RagKnowledgeBaseService(documentStore, ragService).searchWithStatus("未知问题", 1L, 5);
+
+        assertEquals(false, result.confirmed());
+        assertEquals("UNCONFIRMED", result.status());
+        assertEquals("知识库未确认该问题，请补充范围或提供新的事实来源", result.message());
+    }
 }

@@ -268,6 +268,26 @@ public class RagDocumentStore {
         return mapper.selectListByQuery(wrapper).stream().limit(Math.max(1, Math.min(limit, 20))).toList();
     }
 
+    /** 根据向量命中的 source 反查当前有效文档，补齐引用治理字段。 */
+    public RagDocument findActiveBySource(String source) {
+        if (source == null || source.isBlank()) return null;
+        String activeBatch = activeBatchId();
+        QueryWrapper wrapper = QueryWrapper.create()
+                .eq(RagDocument::getSource, source)
+                .in(RagDocument::getStatus, STATUS_ACTIVE, STATUS_INDEXED)
+                .and((Consumer<QueryWrapper>) q -> {
+                    q.eq(RagDocument::getSourceType, "MANUAL");
+                    if (activeBatch != null) {
+                        q.or((Consumer<QueryWrapper>) r -> r.eq(RagDocument::getBatchId, activeBatch));
+                    } else {
+                        q.or((Consumer<QueryWrapper>) r -> r.isNull(RagDocument::getBatchId));
+                    }
+                })
+                .orderBy(RagDocument::getUpdateTime, false)
+                .limit(1);
+        return mapper.selectOneByQuery(wrapper);
+    }
+
     /** 分页列表（keyword 模糊匹配 title/source） */
     public Page<RagDocument> page(long pageNum, long pageSize, String keyword) {
         QueryWrapper wrapper = QueryWrapper.create();
