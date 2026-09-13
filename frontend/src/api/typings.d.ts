@@ -626,6 +626,16 @@ declare namespace API {
     quotaConsumed?: number
     successRate?: number
     totalTokenUsage?: number
+    ragTotalReferences?: number
+    ragAvgScore?: number
+    ragStageDistribution?: Record<string, number>
+    ragRefTypeDistribution?: Record<string, number>
+    ragHotQueries?: Array<{
+      query?: string
+      hitCount?: number
+      avgScore?: number
+      lastHitTime?: string
+    }>
   }
 
   type BaseResponseAnalyticsVO = {

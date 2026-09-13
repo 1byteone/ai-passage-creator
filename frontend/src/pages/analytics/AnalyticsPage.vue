@@ -107,6 +107,44 @@
         </div>
       </section>
 
+      <section v-if="isAdmin && data.ragTotalReferences != null" class="rag-section" aria-labelledby="rag-analytics-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">RAG</span>
+            <h2 id="rag-analytics-title">知识库质量</h2>
+          </div>
+        </div>
+        <div class="metric-grid rag-metric-grid">
+          <div class="metric-card">
+            <span class="metric-value">{{ data.ragTotalReferences }}</span>
+            <span class="metric-label">已记录引用</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-value">{{ formatScore(data.ragAvgScore) }}</span>
+            <span class="metric-label">平均相关度</span>
+          </div>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-card">
+            <h3>引用阶段分布</h3>
+            <div ref="ragStageChartRef" class="chart-container" />
+            <div v-if="!hasData(data.ragStageDistribution)" class="chart-empty">暂无引用记录</div>
+          </div>
+          <div class="chart-card">
+            <h3>参考类型分布</h3>
+            <div ref="ragTypeChartRef" class="chart-container" />
+            <div v-if="!hasData(data.ragRefTypeDistribution)" class="chart-empty">暂无引用记录</div>
+          </div>
+          <div class="chart-card chart-wide">
+            <h3>高频参考源</h3>
+            <a-table :data-source="data.ragHotQueries ?? []" :pagination="false" row-key="query" size="small">
+              <a-table-column title="参考源" data-index="query" ellipsis />
+              <a-table-column title="引用次数" data-index="hitCount" :width="120" />
+            </a-table>
+          </div>
+        </div>
+      </section>
+
       <a-alert v-if="isAdmin && statError" type="warning" show-icon closable class="page-feedback" :message="statError" @close="statError = ''" />
     </template>
 
@@ -152,11 +190,14 @@ const skillChartRef = ref<HTMLElement>()
 const modelChartRef = ref<HTMLElement>()
 const dailyChartRef = ref<HTMLElement>()
 const userChartRef = ref<HTMLElement>()
+const ragStageChartRef = ref<HTMLElement>()
+const ragTypeChartRef = ref<HTMLElement>()
 
 const formatPercent = (v?: number) => v != null ? `${v.toFixed(1)}%` : '—'
 const formatToken = (v?: number) => v != null ? (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)) : '—'
 const formatDuration = (ms: number) => (ms < 1000 ? `${ms} 毫秒` : `${(ms / 1000).toFixed(1)} 秒`)
 const formatNumber = (v: number) => new Intl.NumberFormat('zh-CN').format(v)
+const formatScore = (v?: number) => v != null ? v.toFixed(2) : '—'
 const hasData = (m?: Record<string, number>) => m && Object.keys(m).length > 0
 
 // ── 图表渲染 ──
@@ -235,6 +276,8 @@ const renderAllCharts = () => {
     if (skillChartRef.value && data.value.skillUsageTop) renderBar(skillChartRef.value, data.value.skillUsageTop)
     if (modelChartRef.value && data.value.modelUsage) renderBar(modelChartRef.value, data.value.modelUsage)
     if (dailyChartRef.value && data.value.dailyActiveUsers) renderDailyLine(dailyChartRef.value, data.value.dailyActiveUsers)
+    if (isAdmin.value && ragStageChartRef.value && data.value.ragStageDistribution) renderPie(ragStageChartRef.value, data.value.ragStageDistribution)
+    if (isAdmin.value && ragTypeChartRef.value && data.value.ragRefTypeDistribution) renderPie(ragTypeChartRef.value, data.value.ragRefTypeDistribution)
     // admin 系统统计：用户构成饼图（复用 renderPie，实例统一入 chartInstances 管理）
     if (isAdmin.value && userChartRef.value && statData.value?.totalUserCount) {
       renderPie(userChartRef.value, {
@@ -329,6 +372,28 @@ onBeforeUnmount(() => {
 }
 
 .page-feedback { margin-bottom: 24px; }
+
+.rag-section {
+  width: min(100%, 1120px);
+  margin: 0 auto 28px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: end;
+  margin: 0 0 16px;
+
+  h2 { margin: 2px 0 0; color: var(--text-strong); font-size: 20px; font-weight: 700; }
+}
+
+.section-kicker {
+  color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: 0;
+}
+
+.rag-metric-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+}
 
 // ── 指标卡片 ──
 

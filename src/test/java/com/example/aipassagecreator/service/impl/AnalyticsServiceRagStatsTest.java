@@ -87,4 +87,19 @@ class AnalyticsServiceRagStatsTest {
         assertEquals("热门标题", vo.getRagHotQueries().get(0).query());
         assertEquals(2L, vo.getRagHotQueries().get(0).hitCount());
     }
+
+    @Test
+    @DisplayName("RAG 统计：个人分析不返回全站引用聚合")
+    void ragStats_userAnalyticsDoesNotExposeGlobalStatistics() {
+        RagReferenceMapper mapper = mock(RagReferenceMapper.class);
+        AnalyticsServiceImpl service = serviceWithMocks(mapper);
+
+        AnalyticsVO vo = service.getUserAnalytics(1001L);
+
+        assertNull(vo.getRagTotalReferences());
+        assertNull(vo.getRagAvgScore());
+        assertNull(vo.getRagStageDistribution());
+        assertNull(vo.getRagRefTypeDistribution());
+        assertNull(vo.getRagHotQueries());
+    }
 }

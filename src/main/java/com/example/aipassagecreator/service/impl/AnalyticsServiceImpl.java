@@ -150,11 +150,12 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .mapToLong(com.example.aipassagecreator.model.po.SkillExecutionPo::getTokenUsage)
                 .sum();
 
-        // ── RAG 统计（阶段三）──
-        List<RagReference> allRefs = ragReferenceMapper.selectListByQuery(
-                QueryWrapper.create()
-                        .select("stage", "ref_type", "score", "ref_title", "create_time"));
-        long ragTotalRefs = allRefs.size();
+        // RAG 引用属于全站运维指标，仅由管理员的全站分析接口返回。
+        List<RagReference> allRefs = userId == null
+                ? ragReferenceMapper.selectListByQuery(QueryWrapper.create()
+                .select("stage", "ref_type", "score", "ref_title", "create_time"))
+                : List.of();
+        Long ragTotalRefs = userId == null ? (long) allRefs.size() : null;
         Double ragAvgScore = null;
         Map<String, Long> ragStageDistribution = null;
         Map<String, Long> ragRefTypeDistribution = null;
