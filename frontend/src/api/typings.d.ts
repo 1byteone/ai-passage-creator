@@ -756,6 +756,25 @@ declare namespace API {
     message?: string
   }
 
+  type RagKnowledgeHealth = {
+    status?: 'HEALTHY' | 'DEGRADED' | 'EMPTY'
+    projectKey?: string
+    activeBatchId?: number
+    activeCommitSha?: string
+    activeBranchName?: string
+    totalDocuments?: number
+    indexedDocuments?: number
+    indexingDocuments?: number
+    failedDocuments?: number
+    pendingReviewDocuments?: number
+  }
+
+  type BaseResponseRagKnowledgeHealth = {
+    code?: number
+    data?: RagKnowledgeHealth
+    message?: string
+  }
+
   type RagSyncResult = {
     files?: number
     sections?: number

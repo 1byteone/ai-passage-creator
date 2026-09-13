@@ -16,6 +16,7 @@ import com.example.aipassagecreator.service.RagDocumentStore;
 import com.example.aipassagecreator.service.RagKnowledgeBaseService;
 import com.example.aipassagecreator.service.RagKnowledgeSyncService;
 import com.example.aipassagecreator.service.RagKnowledgeSyncJobService;
+import com.example.aipassagecreator.service.RagKnowledgeHealthService;
 import com.example.aipassagecreator.service.RagReferenceStore;
 import com.example.aipassagecreator.service.RagService;
 import com.example.aipassagecreator.service.UserService;
@@ -74,6 +75,9 @@ public class RagController {
 
     @Resource
     private RagKnowledgeSyncJobService ragKnowledgeSyncJobService;
+
+    @Resource
+    private RagKnowledgeHealthService ragKnowledgeHealthService;
 
     /** 检索请求 */
     @Data
@@ -159,6 +163,14 @@ public class RagController {
         RagSyncJob job = ragKnowledgeSyncJobService.get(id);
         ThrowUtils.throwIf(job == null, ErrorCode.NOT_FOUND_ERROR, "同步任务不存在");
         return ResultUtils.success(job);
+    }
+
+    /** 查询当前项目知识库索引治理健康状态（仅 admin）。 */
+    @GetMapping("/knowledge/health")
+    @Operation(summary = "查询研发知识库健康状态")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<RagKnowledgeHealthService.Health> knowledgeHealth() {
+        return ResultUtils.success(ragKnowledgeHealthService.getHealth());
     }
 
     /** 失败同步任务创建新批次重试，旧失败批次不会复用。 */

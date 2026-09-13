@@ -6,6 +6,7 @@ import com.example.aipassagecreator.service.RagDocumentStore;
 import com.example.aipassagecreator.service.RagKnowledgeBaseService;
 import com.example.aipassagecreator.service.RagKnowledgeSyncService;
 import com.example.aipassagecreator.service.RagKnowledgeSyncJobService;
+import com.example.aipassagecreator.service.RagKnowledgeHealthService;
 import com.example.aipassagecreator.service.RagService;
 import com.example.aipassagecreator.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +41,8 @@ class RagKnowledgeControllerTest {
     private RagKnowledgeSyncService syncService;
     @Mock
     private RagKnowledgeSyncJobService syncJobService;
+    @Mock
+    private RagKnowledgeHealthService healthService;
 
     @InjectMocks
     private RagController controller;
@@ -85,6 +88,21 @@ class RagKnowledgeControllerTest {
         assertEquals(0, response.getCode());
         assertEquals(RagSyncJob.STATUS_QUEUED, response.getData().getStatus());
         verify(syncJobService).start(1L);
+    }
+
+    @Test
+    void knowledgeHealth_returnsIndexGovernanceSnapshot() {
+        RagKnowledgeHealthService.Health health = new RagKnowledgeHealthService.Health(
+                "HEALTHY", "ai-passage-creator", 8L, "abc123", "dev_rag",
+                10, 10, 0, 0, 0);
+        when(healthService.getHealth()).thenReturn(health);
+
+        var response = controller.knowledgeHealth();
+
+        assertEquals(0, response.getCode());
+        assertEquals("HEALTHY", response.getData().status());
+        assertEquals("abc123", response.getData().activeCommitSha());
+        verify(healthService).getHealth();
     }
 
     @Test

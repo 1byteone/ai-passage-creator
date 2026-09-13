@@ -52,6 +52,11 @@ export async function getRagSyncJob(id: number) {
   return request<API.BaseResponseRagSyncJob>(`/rag/knowledge/sync/${id}`, { method: 'GET' })
 }
 
+/** 查询研发知识库索引治理健康状态（admin）GET /rag/knowledge/health */
+export async function getRagKnowledgeHealth() {
+  return request<API.BaseResponseRagKnowledgeHealth>('/rag/knowledge/health', { method: 'GET' })
+}
+
 /** 重试失败的当前项目 Git 文档同步任务 POST /rag/knowledge/sync/{id}/retry */
 export async function retryRagSyncJob(id: number) {
   return request<API.BaseResponseRagSyncJob>(`/rag/knowledge/sync/${id}/retry`, { method: 'POST' })

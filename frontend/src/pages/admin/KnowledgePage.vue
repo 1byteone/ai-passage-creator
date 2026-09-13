@@ -8,6 +8,15 @@
       </div>
     </header>
 
+    <section class="health-strip" aria-label="知识库健康状态">
+      <div><span class="section-label">索引状态</span><strong>{{ health?.status || '加载中' }}</strong></div>
+      <span>当前版本：{{ health?.activeCommitSha || '暂无 active 批次' }}</span>
+      <span>已索引 {{ health?.indexedDocuments ?? 0 }} / {{ health?.totalDocuments ?? 0 }}</span>
+      <span v-if="health?.failedDocuments">失败 {{ health.failedDocuments }}</span>
+      <span v-if="health?.pendingReviewDocuments">待审核 {{ health.pendingReviewDocuments }}</span>
+      <a-button size="small" :loading="healthLoading" @click="loadHealth">刷新状态</a-button>
+    </section>
+
     <!-- 上传区 -->
     <section class="panel" aria-labelledby="upload-title">
       <div class="panel-heading">
@@ -83,7 +92,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { UploadOutlined, FileOutlined, SyncOutlined } from '@ant-design/icons-vue'
-import { listRagDocuments, deleteRagDocument, uploadRagDocument, approveRagDocument, reindexRagDocument, syncRagKnowledge, getRagSyncJob, retryRagSyncJob } from '@/api/ragController'
+import { listRagDocuments, deleteRagDocument, uploadRagDocument, approveRagDocument, reindexRagDocument, syncRagKnowledge, getRagSyncJob, retryRagSyncJob, getRagKnowledgeHealth } from '@/api/ragController'
 
 const records = ref<API.RagDocument[]>([])
 const totalRow = ref(0)
@@ -94,8 +103,23 @@ const pageSize = 20
 const submitting = ref(false)
 const syncing = ref(false)
 const syncJob = ref<API.RagSyncJob | null>(null)
+const health = ref<API.RagKnowledgeHealth | null>(null)
+const healthLoading = ref(false)
 let syncTimer: number | undefined
 const form = ref({ title: '', source: '', text: '' })
+
+const loadHealth = async () => {
+  healthLoading.value = true
+  try {
+    const res = await getRagKnowledgeHealth()
+    if (res.data.code !== 0) throw new Error(res.data.message || '健康状态加载失败')
+    health.value = res.data.data ?? null
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '健康状态加载失败')
+  } finally {
+    healthLoading.value = false
+  }
+}
 
 const loadDocuments = async () => {
   loading.value = true
@@ -117,7 +141,8 @@ const handleApprove = async (id?: number) => {
     const res = await approveRagDocument(id)
     if (res.data.code !== 0) throw new Error(res.data.message || '审核失败')
     message.success('审核通过，已建立向量索引')
-    loadDocuments()
+    await loadDocuments()
+    await loadHealth()
   } catch (e) {
     message.error(e instanceof Error ? e.message : '审核失败')
   }
@@ -129,7 +154,8 @@ const handleReindex = async (id?: number) => {
     const res = await reindexRagDocument(id)
     if (res.data.code !== 0 || !res.data.data) throw new Error(res.data.message || '重试索引失败')
     message.success('已重新开始建立向量索引')
-    loadDocuments()
+    await loadDocuments()
+    await loadHealth()
   } catch (e) {
     message.error(e instanceof Error ? e.message : '重试索引失败')
   }
@@ -165,7 +191,8 @@ const pollSyncJob = () => {
       if (status === 'SUCCEEDED') {
         syncing.value = false
         message.success(`Git 文档同步完成：${job.totalFiles ?? 0} 个文件，${job.indexedSections ?? 0} 个章节`)
-        loadDocuments()
+        await loadDocuments()
+        await loadHealth()
       } else if (status === 'FAILED') {
         syncing.value = false
         message.error(job.errorMessage || 'Git 文档同步失败，旧版本仍保持可用')
@@ -207,7 +234,8 @@ const handleUpload = async () => {
     if (res.data.code !== 0) throw new Error(res.data.message || '上传失败')
     message.success('文档已提交审核，审核通过后进入检索')
     form.value = { title: '', source: '', text: '' }
-    loadDocuments()
+    await loadDocuments()
+    await loadHealth()
   } catch (e) {
     message.error(e instanceof Error ? e.message : '上传失败')
   } finally {
@@ -220,7 +248,8 @@ const handleDelete = async (id: number) => {
     const res = await deleteRagDocument(id)
     if (res.data.code !== 0) throw new Error(res.data.message || '删除失败')
     message.success('已删除')
-    loadDocuments()
+    await loadDocuments()
+    await loadHealth()
   } catch (e) {
     message.error(e instanceof Error ? e.message : '删除失败')
   }
@@ -243,7 +272,10 @@ const handleFile = async (file: File) => {
   return false
 }
 
-onMounted(loadDocuments)
+onMounted(() => {
+  void loadDocuments()
+  void loadHealth()
+})
 onUnmounted(() => {
   if (syncTimer) window.clearTimeout(syncTimer)
 })
@@ -255,6 +287,22 @@ onUnmounted(() => {
 }
 .page-heading {
   margin-bottom: 24px;
+}
+.health-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 8px;
+  background: var(--color-bg-container);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+
+  div { display: flex; align-items: center; gap: 8px; }
+  strong { color: var(--color-text); }
 }
 .page-kicker {
   font-size: 12px;
