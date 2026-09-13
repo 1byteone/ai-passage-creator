@@ -35,6 +35,7 @@
           <span>同步任务 #{{ syncJob.id }}：{{ syncJob.status }}</span>
           <span v-if="syncJob.totalFiles">{{ syncJob.processedFiles ?? 0 }}/{{ syncJob.totalFiles }} 个文件，{{ syncJob.indexedSections ?? 0 }}/{{ syncJob.totalSections ?? 0 }} 个章节</span>
           <span v-if="syncJob.status === 'FAILED'" class="sync-error">{{ syncJob.errorMessage }}</span>
+          <a-button v-if="syncJob.status === 'FAILED'" size="small" :loading="syncing" @click="handleRetrySync">重试同步</a-button>
         </div>
       </a-space>
     </section>
@@ -79,7 +80,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { UploadOutlined, FileOutlined, SyncOutlined } from '@ant-design/icons-vue'
-import { listRagDocuments, deleteRagDocument, uploadRagDocument, approveRagDocument, syncRagKnowledge, getRagSyncJob } from '@/api/ragController'
+import { listRagDocuments, deleteRagDocument, uploadRagDocument, approveRagDocument, syncRagKnowledge, getRagSyncJob, retryRagSyncJob } from '@/api/ragController'
 
 const records = ref<API.RagDocument[]>([])
 const totalRow = ref(0)
@@ -162,6 +163,22 @@ const pollSyncJob = () => {
       message.error(e instanceof Error ? e.message : '同步状态查询失败')
     }
   }, 1000)
+}
+
+const handleRetrySync = async () => {
+  const id = syncJob.value?.id
+  if (!id) return
+  syncing.value = true
+  try {
+    const res = await retryRagSyncJob(id)
+    if (res.data.code !== 0) throw new Error(res.data.message || '重试失败')
+    syncJob.value = res.data.data ?? null
+    message.info('已创建新的同步批次')
+    pollSyncJob()
+  } catch (e) {
+    syncing.value = false
+    message.error(e instanceof Error ? e.message : '重试失败')
+  }
 }
 
 const handleUpload = async () => {

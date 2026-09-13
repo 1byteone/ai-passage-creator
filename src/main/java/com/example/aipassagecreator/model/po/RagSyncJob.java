@@ -35,6 +35,8 @@ public class RagSyncJob {
     private String errorMessage;
     private Boolean active;
     private Long createdBy;
+    private Integer retryCount;
+    private Long retryOfJobId;
     private LocalDateTime startedAt;
     private LocalDateTime finishedAt;
     private LocalDateTime createTime;

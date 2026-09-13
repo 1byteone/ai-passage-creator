@@ -161,6 +161,17 @@ public class RagController {
         return ResultUtils.success(job);
     }
 
+    /** 失败同步任务创建新批次重试，旧失败批次不会复用。 */
+    @PostMapping("/knowledge/sync/{id}/retry")
+    @Operation(summary = "重试失败的研发知识库同步任务")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<RagSyncJob> retrySync(@PathVariable Long id, HttpServletRequest httpRequest) {
+        User loginUser = userService.getLoginUser(httpRequest);
+        RagSyncJob retry = ragKnowledgeSyncJobService.retry(id, loginUser.getId());
+        ThrowUtils.throwIf(retry == null, ErrorCode.OPERATION_ERROR, "仅能重试当前项目的失败同步任务");
+        return ResultUtils.success(retry);
+    }
+
     /** 手工文档审核通过后才允许进入正式检索。 */
     @PostMapping("/document/{id}/approve")
     @Operation(summary = "审核知识文档")

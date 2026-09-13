@@ -329,12 +329,15 @@ create table if not exists rag_sync_job (
     error_message varchar(2000) null,
     active boolean default false not null,
     created_by bigint null,
+    retry_count int default 0 not null,
+    retry_of_job_id bigint null,
     started_at datetime null,
     finished_at datetime null,
     create_time datetime default CURRENT_TIMESTAMP not null,
     update_time datetime default CURRENT_TIMESTAMP not null
 );
 create index if not exists idx_rag_sync_job_project_status on rag_sync_job(project_key, status, active);
+create index if not exists idx_rag_sync_job_retry_of on rag_sync_job(retry_of_job_id);
 
 -- 漫画手帐三表（与 V9__create_comic_tables.sql 同步维护）
 create table if not exists comic_book (

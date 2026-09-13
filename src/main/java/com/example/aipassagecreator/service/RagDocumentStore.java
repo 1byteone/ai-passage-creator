@@ -172,6 +172,13 @@ public class RagDocumentStore {
         return job == null || job.getId() == null ? null : String.valueOf(job.getId());
     }
 
+    /** 清理未激活同步批次的索引残留，调用方必须先完成 active 状态校验。 */
+    public void deleteBatch(String batchId) {
+        if (batchId == null || batchId.isBlank()) return;
+        mapper.deleteByQuery(QueryWrapper.create().eq(RagDocument::getBatchId, batchId));
+        ragService.deleteByBatchId(batchId);
+    }
+
     /** 文件重新同步前清除该文件产生的章节记录和向量。 */
     public void deleteBySourcePrefix(String sourcePrefix) {
         if (sourcePrefix == null || sourcePrefix.isBlank()) {

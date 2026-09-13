@@ -320,6 +320,18 @@ public class RagService {
         }
     }
 
+    /** 删除指定同步批次的向量；只用于未激活的失败/过期批次清理。 */
+    public void deleteByBatchId(String batchId) {
+        if (batchId == null || batchId.isBlank()) return;
+        try {
+            Filter.Expression filter = new FilterExpressionBuilder().eq("batchId", batchId).build();
+            vectorStore.delete(filter);
+            log.info("RAG 已清理同步批次向量: batchId={}", batchId);
+        } catch (Exception e) {
+            log.warn("RAG 清理同步批次向量失败: batchId={}, err={}", batchId, e.getMessage());
+        }
+    }
+
     /** 异步索引入口（供文章/Skill 完成点调用，失败静默不影响主流程） */
     @Async("ragExecutor")
     public void indexArticleAsync(Article article) {

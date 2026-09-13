@@ -586,6 +586,10 @@ declare namespace API {
     methodologyName?: string
     publishedAt?: string
     createdBy?: number
+    retryCount?: number
+    retryOfJobId?: number
+    retryCount?: number
+    retryOfJobId?: number
     createTime?: string
   }
 

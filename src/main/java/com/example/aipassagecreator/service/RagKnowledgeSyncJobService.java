@@ -43,7 +43,7 @@ public class RagKnowledgeSyncJobService {
                 .projectKey(PROJECT_KEY)
                 .status(RagSyncJob.STATUS_QUEUED)
                 .totalFiles(0).processedFiles(0).totalSections(0).indexedSections(0)
-                .active(false).createdBy(createdBy).createTime(now).updateTime(now).build();
+                .active(false).retryCount(0).createdBy(createdBy).createTime(now).updateTime(now).build();
         mapper.insert(job);
         (selfProxy == null ? this : selfProxy).executeAsync(job.getId());
         return job;
@@ -81,6 +81,36 @@ public class RagKnowledgeSyncJobService {
 
     public RagSyncJob get(Long jobId) {
         return mapper.selectOneById(jobId);
+    }
+
+    /**
+     * 从失败任务创建全新的批次重试，绝不复用失败 batchId，避免旧章节残留进入新版本。
+     */
+    public RagSyncJob retry(Long failedJobId, Long createdBy) {
+        RagSyncJob failed = mapper.selectOneById(failedJobId);
+        if (failed == null || !PROJECT_KEY.equals(failed.getProjectKey())
+                || !RagSyncJob.STATUS_FAILED.equals(failed.getStatus())) {
+            return null;
+        }
+        RagSyncJob running = mapper.selectOneByQuery(QueryWrapper.create()
+                .eq(RagSyncJob::getProjectKey, PROJECT_KEY)
+                .in(RagSyncJob::getStatus, RagSyncJob.STATUS_QUEUED, RagSyncJob.STATUS_RUNNING)
+                .orderBy(RagSyncJob::getCreateTime, false).limit(1));
+        if (running != null) return running;
+
+        // 失败批次从未被激活，清理其半成品，避免积累无引用向量。
+        documentStore.deleteBatch(String.valueOf(failedJobId));
+        LocalDateTime now = LocalDateTime.now();
+        RagSyncJob retry = RagSyncJob.builder()
+                .projectKey(PROJECT_KEY)
+                .status(RagSyncJob.STATUS_QUEUED)
+                .totalFiles(0).processedFiles(0).totalSections(0).indexedSections(0)
+                .active(false).createdBy(createdBy)
+                .retryCount((failed.getRetryCount() == null ? 0 : failed.getRetryCount()) + 1)
+                .retryOfJobId(failedJobId).createTime(now).updateTime(now).build();
+        mapper.insert(retry);
+        (selfProxy == null ? this : selfProxy).executeAsync(retry.getId());
+        return retry;
     }
 
     private void markRunning(RagSyncJob job) {

@@ -47,6 +47,11 @@ export async function getRagSyncJob(id: number) {
   return request<API.BaseResponseRagSyncJob>(`/rag/knowledge/sync/${id}`, { method: 'GET' })
 }
 
+/** 重试失败的当前项目 Git 文档同步任务 POST /rag/knowledge/sync/{id}/retry */
+export async function retryRagSyncJob(id: number) {
+  return request<API.BaseResponseRagSyncJob>(`/rag/knowledge/sync/${id}/retry`, { method: 'POST' })
+}
+
 /** 当前项目研发知识库只读混合检索 POST /rag/knowledge/search */
 export async function searchRagKnowledge(params: { query: string; topK?: number }) {
   return request<API.BaseResponseListKnowledgeHit>('/rag/knowledge/search', { method: 'POST', data: params })
