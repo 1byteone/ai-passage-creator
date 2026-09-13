@@ -189,7 +189,7 @@ public class RagService {
                 ? b.or(b.eq("sourceType", "MANUAL"), b.eq("batchId", ""))
                 : b.or(b.eq("sourceType", "MANUAL"), b.eq("batchId", activeBatchId));
         Filter.Expression filter = b.and(
-                b.and(b.and(b.eq("type", "document"), b.eq("status", "ACTIVE")),
+                b.and(b.and(b.eq("type", "document"), b.or(b.eq("status", "ACTIVE"), b.eq("status", "INDEXED"))),
                         b.eq("projectKey", "ai-passage-creator")), scope).build();
         return doSearchWithFilter(query, k, defaultThreshold, filter).stream()
                 .map(c -> new RagHit(c.refId(), c.title(), truncate(c.content(), 300), c.score(), c.type()))

@@ -37,6 +37,11 @@ export async function approveRagDocument(id: number) {
   return request<API.BaseResponseBoolean>(`/rag/document/${id}/approve`, { method: 'POST' })
 }
 
+/** 重试失败的手工文档索引 POST /rag/document/{id}/reindex */
+export async function reindexRagDocument(id: number) {
+  return request<API.BaseResponseBoolean>(`/rag/document/${id}/reindex`, { method: 'POST' })
+}
+
 /** 同步当前项目 Git 文档 POST /rag/knowledge/sync */
 export async function syncRagKnowledge() {
   return request<API.BaseResponseRagSyncJob>('/rag/knowledge/sync', { method: 'POST' })

@@ -60,12 +60,15 @@
           <template #default="{ record }">{{ (record.text || '').length }}</template>
         </a-table-column>
         <a-table-column title="状态" data-index="status" />
+        <a-table-column title="索引尝试" data-index="indexAttempts" />
+        <a-table-column title="索引异常" data-index="indexError" ellipsis />
         <a-table-column title="来源" data-index="sourceType" />
         <a-table-column title="路径" data-index="sourcePath" ellipsis />
         <a-table-column title="上传时间" data-index="createTime" />
         <a-table-column title="操作">
           <template #default="{ record }">
             <a-button v-if="record.status === 'PENDING_REVIEW'" type="link" size="small" @click="handleApprove(record.id)">审核通过</a-button>
+            <a-button v-if="record.status === 'INDEX_FAILED'" type="link" size="small" @click="handleReindex(record.id)">重试索引</a-button>
             <a-popconfirm title="确认删除该文档？删除后向量索引同步清除。" @confirm="handleDelete(record.id)">
               <a-button type="link" danger size="small">删除</a-button>
             </a-popconfirm>
@@ -80,7 +83,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { UploadOutlined, FileOutlined, SyncOutlined } from '@ant-design/icons-vue'
-import { listRagDocuments, deleteRagDocument, uploadRagDocument, approveRagDocument, syncRagKnowledge, getRagSyncJob, retryRagSyncJob } from '@/api/ragController'
+import { listRagDocuments, deleteRagDocument, uploadRagDocument, approveRagDocument, reindexRagDocument, syncRagKnowledge, getRagSyncJob, retryRagSyncJob } from '@/api/ragController'
 
 const records = ref<API.RagDocument[]>([])
 const totalRow = ref(0)
@@ -117,6 +120,18 @@ const handleApprove = async (id?: number) => {
     loadDocuments()
   } catch (e) {
     message.error(e instanceof Error ? e.message : '审核失败')
+  }
+}
+
+const handleReindex = async (id?: number) => {
+  if (!id) return
+  try {
+    const res = await reindexRagDocument(id)
+    if (res.data.code !== 0 || !res.data.data) throw new Error(res.data.message || '重试索引失败')
+    message.success('已重新开始建立向量索引')
+    loadDocuments()
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '重试索引失败')
   }
 }
 

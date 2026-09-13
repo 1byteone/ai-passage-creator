@@ -310,6 +310,8 @@ create table if not exists rag_document (
     indexed_at datetime null,
     batch_id varchar(64) null,
     project_key varchar(128) not null default 'ai-passage-creator',
+    index_error varchar(2000) null,
+    index_attempts int default 0 not null,
     create_time datetime default CURRENT_TIMESTAMP not null,
     update_time datetime default CURRENT_TIMESTAMP not null
 );

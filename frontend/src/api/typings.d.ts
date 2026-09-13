@@ -705,6 +705,8 @@ declare namespace API {
     updateTime?: string
     batchId?: string
     projectKey?: string
+    indexError?: string
+    indexAttempts?: number
   }
 
   type PageRagDocument = {

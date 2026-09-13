@@ -36,6 +36,9 @@ public class RagDocumentStore {
 
     public static final String STATUS_PENDING_REVIEW = "PENDING_REVIEW";
     public static final String STATUS_ACTIVE = "ACTIVE";
+    public static final String STATUS_INDEXING = "INDEXING";
+    public static final String STATUS_INDEXED = "INDEXED";
+    public static final String STATUS_INDEX_FAILED = "INDEX_FAILED";
 
     /** 手工上传/覆盖：同 source 幂等，先进入待审核，不写入正式向量索引。 */
     public void upsert(String title, String source, String text, Long userId) {
@@ -54,6 +57,7 @@ public class RagDocumentStore {
                     .domain("business")
                     .documentKind("reference")
                     .status(STATUS_PENDING_REVIEW)
+                    .indexAttempts(0)
                     .projectKey("ai-passage-creator")
                     .createTime(LocalDateTime.now())
                     .updateTime(LocalDateTime.now())
@@ -73,22 +77,53 @@ public class RagDocumentStore {
         if (doc == null || !STATUS_PENDING_REVIEW.equals(doc.getStatus())) {
             return false;
         }
+        return indexApprovedDocument(doc, reviewerId);
+    }
+
+    /** 重试索引失败的手工文档。 */
+    public boolean retryIndex(Long id, Long reviewerId) {
+        RagDocument doc = mapper.selectOneById(id);
+        if (doc == null || !STATUS_INDEX_FAILED.equals(doc.getStatus())) return false;
+        return indexApprovedDocument(doc, reviewerId);
+    }
+
+    private boolean indexApprovedDocument(RagDocument doc, Long reviewerId) {
         LocalDateTime now = LocalDateTime.now();
-        doc.setStatus(STATUS_ACTIVE);
+        doc.setStatus(STATUS_INDEXING);
         doc.setReviewerId(reviewerId);
         doc.setReviewedAt(now);
+        doc.setIndexError(null);
+        doc.setIndexAttempts((doc.getIndexAttempts() == null ? 0 : doc.getIndexAttempts()) + 1);
         doc.setUpdateTime(now);
         mapper.update(doc);
-        ragService.indexDocument(doc.getTitle(), doc.getSource(), doc.getText(), java.util.Map.of(
-                "sourceType", doc.getSourceType(),
-                "domain", doc.getDomain(),
-                "documentKind", doc.getDocumentKind(),
-                "status", doc.getStatus(),
-                "sourcePath", doc.getSourcePath() == null ? "" : doc.getSourcePath(),
-                "projectKey", "ai-passage-creator"));
-        doc.setIndexedAt(now);
-        mapper.update(doc);
-        return true;
+        try {
+            java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+            metadata.put("sourceType", doc.getSourceType());
+            metadata.put("domain", doc.getDomain());
+            metadata.put("documentKind", doc.getDocumentKind());
+            metadata.put("status", STATUS_INDEXED);
+            metadata.put("sourcePath", doc.getSourcePath() == null ? "" : doc.getSourcePath());
+            metadata.put("projectKey", "ai-passage-creator");
+            ragService.indexDocument(doc.getTitle(), doc.getSource(), doc.getText(), metadata);
+            doc.setStatus(STATUS_INDEXED);
+            doc.setIndexedAt(LocalDateTime.now());
+            doc.setUpdateTime(LocalDateTime.now());
+            mapper.update(doc);
+            return true;
+        } catch (Exception e) {
+            doc.setStatus(STATUS_INDEX_FAILED);
+            doc.setIndexError(safeIndexError(e));
+            doc.setUpdateTime(LocalDateTime.now());
+            mapper.update(doc);
+            log.warn("RAG 手工文档索引失败: id={}, err={}", doc.getId(), e.getMessage());
+            return false;
+        }
+    }
+
+    private String safeIndexError(Exception e) {
+        String message = e.getMessage();
+        if (message == null || message.isBlank()) return e.getClass().getSimpleName();
+        return message.length() > 1900 ? message.substring(0, 1900) : message;
     }
 
     /** Git 同步入口：Git 文档已由提交评审，直接作为当前项目有效知识。 */
@@ -195,7 +230,7 @@ public class RagDocumentStore {
     public List<RagDocument> searchActive(String keyword, int limit) {
         String value = keyword == null ? "" : keyword.trim();
         String activeBatch = activeBatchId();
-        QueryWrapper wrapper = QueryWrapper.create().eq(RagDocument::getStatus, STATUS_ACTIVE)
+        QueryWrapper wrapper = QueryWrapper.create().in(RagDocument::getStatus, STATUS_ACTIVE, STATUS_INDEXED)
                 .and((Consumer<QueryWrapper>) q -> {
                     q.eq(RagDocument::getSourceType, "MANUAL");
                     if (activeBatch != null) {

@@ -181,6 +181,15 @@ public class RagController {
         return ResultUtils.success(ragDocumentStore.approve(id, loginUser.getId()));
     }
 
+    /** 重试索引失败的手工知识文档。 */
+    @PostMapping("/document/{id}/reindex")
+    @Operation(summary = "重试知识文档索引")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> reindexDocument(@PathVariable Long id, HttpServletRequest httpRequest) {
+        User loginUser = userService.getLoginUser(httpRequest);
+        return ResultUtils.success(ragDocumentStore.retryIndex(id, loginUser.getId()));
+    }
+
     /** 知识库文档列表（仅 admin） */
     @GetMapping("/documents")
     @Operation(summary = "知识库文档列表（仅管理员）")
