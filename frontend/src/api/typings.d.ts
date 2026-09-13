@@ -699,6 +699,8 @@ declare namespace API {
     indexedAt?: string
     createTime?: string
     updateTime?: string
+    batchId?: string
+    projectKey?: string
   }
 
   type PageRagDocument = {
@@ -746,6 +748,29 @@ declare namespace API {
     code?: number
     data?: RagSyncResult
     message?: string
+  }
+
+  type RagSyncJob = {
+    id?: number
+    projectKey?: string
+    branchName?: string
+    commitSha?: string
+    status?: 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
+    totalFiles?: number
+    processedFiles?: number
+    totalSections?: number
+    indexedSections?: number
+    errorMessage?: string
+    active?: boolean
+    createdBy?: number
+    startedAt?: string
+    finishedAt?: string
+  }
+
+  type BaseResponseRagSyncJob = {
+    code?: number
+    message?: string
+    data?: RagSyncJob
   }
 
   // ── Workspace 协作空间 ──

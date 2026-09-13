@@ -39,7 +39,12 @@ export async function approveRagDocument(id: number) {
 
 /** 同步当前项目 Git 文档 POST /rag/knowledge/sync */
 export async function syncRagKnowledge() {
-  return request<API.BaseResponseRagSyncResult>('/rag/knowledge/sync', { method: 'POST' })
+  return request<API.BaseResponseRagSyncJob>('/rag/knowledge/sync', { method: 'POST' })
+}
+
+/** 查询当前项目 Git 文档同步任务 GET /rag/knowledge/sync/{id} */
+export async function getRagSyncJob(id: number) {
+  return request<API.BaseResponseRagSyncJob>(`/rag/knowledge/sync/${id}`, { method: 'GET' })
 }
 
 /** 当前项目研发知识库只读混合检索 POST /rag/knowledge/search */

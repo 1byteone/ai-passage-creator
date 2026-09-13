@@ -31,6 +31,11 @@
             <a-button><template #icon><FileOutlined /></template>上传 .md/.txt 文件</a-button>
           </a-upload>
         </a-space>
+        <div v-if="syncJob" class="sync-status" role="status">
+          <span>同步任务 #{{ syncJob.id }}：{{ syncJob.status }}</span>
+          <span v-if="syncJob.totalFiles">{{ syncJob.processedFiles ?? 0 }}/{{ syncJob.totalFiles }} 个文件，{{ syncJob.indexedSections ?? 0 }}/{{ syncJob.totalSections ?? 0 }} 个章节</span>
+          <span v-if="syncJob.status === 'FAILED'" class="sync-error">{{ syncJob.errorMessage }}</span>
+        </div>
       </a-space>
     </section>
 
@@ -71,10 +76,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { UploadOutlined, FileOutlined, SyncOutlined } from '@ant-design/icons-vue'
-import { listRagDocuments, deleteRagDocument, uploadRagDocument, approveRagDocument, syncRagKnowledge } from '@/api/ragController'
+import { listRagDocuments, deleteRagDocument, uploadRagDocument, approveRagDocument, syncRagKnowledge, getRagSyncJob } from '@/api/ragController'
 
 const records = ref<API.RagDocument[]>([])
 const totalRow = ref(0)
@@ -84,6 +89,8 @@ const pageNum = ref(1)
 const pageSize = 20
 const submitting = ref(false)
 const syncing = ref(false)
+const syncJob = ref<API.RagSyncJob | null>(null)
+let syncTimer: number | undefined
 const form = ref({ title: '', source: '', text: '' })
 
 const loadDocuments = async () => {
@@ -117,13 +124,44 @@ const handleSync = async () => {
   try {
     const res = await syncRagKnowledge()
     if (res.data.code !== 0) throw new Error(res.data.message || '同步失败')
-    message.success(`Git 文档已同步：${res.data.data?.files ?? 0} 个文件，${res.data.data?.sections ?? 0} 个章节`)
-    loadDocuments()
+    syncJob.value = res.data.data ?? null
+    message.info('Git 文档同步任务已创建，后台将持续处理')
+    pollSyncJob()
   } catch (e) {
     message.error(e instanceof Error ? e.message : '同步失败')
   } finally {
-    syncing.value = false
+    if (!syncJob.value || ['SUCCEEDED', 'FAILED'].includes(syncJob.value.status || '')) syncing.value = false
   }
+}
+
+const pollSyncJob = () => {
+  if (syncTimer) window.clearTimeout(syncTimer)
+  const id = syncJob.value?.id
+  if (!id) return
+  syncTimer = window.setTimeout(async () => {
+    try {
+      const res = await getRagSyncJob(id)
+      if (res.data.code !== 0) throw new Error(res.data.message || '同步状态查询失败')
+      syncJob.value = res.data.data ?? syncJob.value
+      const job = syncJob.value
+      if (!job) throw new Error('同步任务不存在')
+      const status = job?.status
+      if (status === 'SUCCEEDED') {
+        syncing.value = false
+        message.success(`Git 文档同步完成：${job.totalFiles ?? 0} 个文件，${job.indexedSections ?? 0} 个章节`)
+        loadDocuments()
+      } else if (status === 'FAILED') {
+        syncing.value = false
+        message.error(job.errorMessage || 'Git 文档同步失败，旧版本仍保持可用')
+      } else {
+        syncing.value = true
+        pollSyncJob()
+      }
+    } catch (e) {
+      syncing.value = false
+      message.error(e instanceof Error ? e.message : '同步状态查询失败')
+    }
+  }, 1000)
 }
 
 const handleUpload = async () => {
@@ -174,6 +212,9 @@ const handleFile = async (file: File) => {
 }
 
 onMounted(loadDocuments)
+onUnmounted(() => {
+  if (syncTimer) window.clearTimeout(syncTimer)
+})
 </script>
 
 <style scoped lang="scss">
@@ -211,6 +252,16 @@ h1 {
   font-size: 12px;
   color: var(--color-primary);
   font-weight: 500;
+}
+.sync-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+.sync-error {
+  color: var(--color-error);
 }
 .panel-heading h2 {
   margin: 2px 0 0;
