@@ -43,6 +43,7 @@
 | RAG-030 | 无答案问题 | 明确返回未确认，不编造 | 待问答层实现 |
 | RAG-031 | 管理员查看知识库健康状态 | 返回 active 批次、索引状态分布和失败数量；不伪装成外部向量服务连通性 | 已执行 |
 | RAG-032 | 干净 Git commit 重复同步 | 复用已成功批次，不重复创建任务；工作树有变化时允许新同步 | 已执行 |
+| RAG-033 | Markdown 结构化章节解析 | 代码块内标题不切章节，嵌套标题返回稳定的父子 sectionPath | 已执行 |
 
 ## 执行命令
 
@@ -71,3 +72,4 @@ npm run build-only
 - 关键词与向量命中同一 `source` 时保留分数更高的结果，并保留唯一引用。
 - 知识库引用响应携带 `documentId`、`projectKey`、`sourceType`、`branchName`、`sourcePath`、`sectionPath` 和 `commitSha`；向量兜底命中也明确标记项目与来源类型。
 - 当前基线是确定性字段评分，不宣称已经达到 Recall@5 或 MRR 门槛；正式门禁仍需人工审核 40 条 gold set。
+- Markdown 章节解析会忽略 fenced code block 内的伪标题，并以 `父章节 > 子章节` 形式返回层级路径。

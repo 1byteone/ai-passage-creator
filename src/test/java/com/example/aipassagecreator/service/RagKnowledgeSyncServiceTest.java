@@ -3,16 +3,24 @@ package com.example.aipassagecreator.service;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Paths;
+import java.nio.file.Files;
 import java.util.List;
+import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 
 class RagKnowledgeSyncServiceTest {
+
+    @TempDir
+    Path tempDir;
 
     @Test
     void sync_readsFixedProjectDocumentsAndCreatesSectionSources() {
@@ -36,5 +44,30 @@ class RagKnowledgeSyncServiceTest {
         assertTrue(capturedStarts.stream().allMatch(value -> value > 0));
         assertTrue(java.util.stream.IntStream.range(0, capturedStarts.size())
                 .allMatch(index -> capturedEnds.get(index) >= capturedStarts.get(index)));
+    }
+
+    @Test
+    void sync_buildsHierarchyPathAndIgnoresHeadingsInsideFencedCode() throws Exception {
+        Files.writeString(tempDir.resolve("AGENTS.md"), """
+                # Project Rules
+                overview
+                ## Sync Flow
+                sync details
+                ```java
+                # Not a heading
+                ```
+                """);
+        RagDocumentStore store = mock(RagDocumentStore.class);
+        RagKnowledgeSyncService service = new RagKnowledgeSyncService(store, tempDir.toString(), "dev_rag");
+
+        RagKnowledgeSyncService.SyncResult result = service.sync();
+
+        assertEquals(2, result.sections());
+        ArgumentCaptor<String> paths = ArgumentCaptor.forClass(String.class);
+        verify(store, times(2)).upsertGit(anyString(), anyString(), anyString(), anyString(), anyString(),
+                anyString(), anyString(), anyString(), paths.capture(), anyString(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+        assertTrue(paths.getAllValues().contains("Project Rules"));
+        assertTrue(paths.getAllValues().contains("Project Rules > Sync Flow"));
     }
 }

@@ -14,6 +14,8 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -149,26 +151,53 @@ public class RagKnowledgeSyncService {
         Matcher matcher = HEADING.matcher(text);
         List<Heading> headings = new ArrayList<>();
         while (matcher.find()) {
-            headings.add(new Heading(matcher.start(), matcher.end(), matcher.group(1).length(), matcher.group(2).trim()));
+            if (!isInsideCodeFence(text, matcher.start())) {
+                headings.add(new Heading(matcher.start(), matcher.end(), matcher.group(1).length(), matcher.group(2).trim()));
+            }
         }
         if (headings.isEmpty()) {
             return text.isBlank() ? List.of() : List.of(new Section("文档", text.trim(), 1, lineCount(text)));
         }
+        Deque<Heading> hierarchy = new ArrayDeque<>();
         for (int i = 0; i < headings.size(); i++) {
             Heading heading = headings.get(i);
             int end = i + 1 < headings.size() ? headings.get(i + 1).start() : text.length();
+            while (!hierarchy.isEmpty() && hierarchy.peek().level() >= heading.level()) {
+                hierarchy.pop();
+            }
+            hierarchy.push(heading);
             String sectionText = text.substring(heading.start(), end).trim();
             if (!sectionText.isBlank()) {
-                sections.add(new Section(heading.title(), sectionText,
+                String sectionPath = hierarchy.stream()
+                        .sorted(Comparator.comparingInt(Heading::level))
+                        .map(Heading::title)
+                        .reduce((left, right) -> left + " > " + right)
+                        .orElse(heading.title());
+                sections.add(new Section(sectionPath, sectionText,
                         lineNumber(text, heading.start()), lineNumber(text, Math.max(heading.start(), end - 1))));
             }
         }
         return sections;
     }
 
+    /** Markdown fenced code blocks are data, so headings inside them must not create sections. */
+    private boolean isInsideCodeFence(String text, int offset) {
+        boolean fenced = false;
+        int lineStart = 0;
+        while (lineStart < offset) {
+            int lineEnd = text.indexOf('\n', lineStart);
+            if (lineEnd < 0 || lineEnd > offset) lineEnd = offset;
+            String line = text.substring(lineStart, lineEnd).trim();
+            if (line.startsWith("```") || line.startsWith("~~~")) fenced = !fenced;
+            lineStart = lineEnd + 1;
+        }
+        return fenced;
+    }
+
     private String titleOf(String relative, String text) {
         Matcher matcher = HEADING.matcher(text);
-        if (matcher.find()) {
+        while (matcher.find()) {
+            if (isInsideCodeFence(text, matcher.start())) continue;
             return matcher.group(2).trim();
         }
         Path path = Paths.get(relative);
