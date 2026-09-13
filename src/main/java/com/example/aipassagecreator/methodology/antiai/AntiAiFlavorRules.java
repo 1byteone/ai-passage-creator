@@ -2,25 +2,32 @@ package com.example.aipassagecreator.methodology.antiai;
 
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
- * 去AI味规则库：识别并替换 AI 写作的常见痕迹。
+ * 表达质量规则库：识别影响自然度、清晰度和可信度的常见写作模式。
  * <p>规则来源：vibe-hub.org/anti-ai-flavor 及自媒体爆款实践经验。</p>
  *
- * <h3>七大规则维度</h3>
+ * <h3>内容质量规则维度</h3>
  * <ol>
  *   <li>AI 高频禁用词检测（"首先/其次/总的来说/值得注意的是"）</li>
  *   <li>句式模板化（"让我们来…"、"在…中/上/下"、"随着…的…"）</li>
  *   <li>过度修饰词（"非常/极其/更加/愈发/相当"）</li>
  *   <li>完美逻辑链（"因为…所以…从而…" 无断裂）</li>
- *   <li>缺乏个人视角（无"我"、"我觉得"、"但我发现"）</li>
- *   <li>情绪真空（无情感词、感叹、反问、口语化表达）</li>
- *   <li>段落节奏均匀（每段 3-5 句，无长短变化）</li>
+ *   <li>模糊归因、聊天式客套、免责声明和空泛结论</li>
+ *   <li>机械排比、格式过度和段落节奏均匀</li>
  * </ol>
  */
 public class AntiAiFlavorRules {
 
     private AntiAiFlavorRules() {}
+
+    /** Humanizer-zh 来源版本：只吸收规则与编辑原则，不运行外部仓库代码。 */
+    public static final String HUMANIZER_SOURCE_REPOSITORY =
+            "https://github.com/op7418/Humanizer-zh";
+    public static final String HUMANIZER_SOURCE_COMMIT = "91f3d394db8419c20d67ebe22a96cf8fee0a404b";
+    public static final String HUMANIZER_SOURCE_LICENSE = "MIT";
+    public static final String HUMANIZER_RULE_VERSION = "humanizer-zh@91f3d394";
 
     // ============== 1. AI 高频禁用词 ==============
     public static final List<String> AI_FORBIDDEN_WORDS = List.of(
@@ -34,7 +41,11 @@ public class AntiAiFlavorRules {
             "正如前文所述", "如上所述", "如前所述",
             "这意味着", "这也就意味着",
             "基于此", "在此基础上", "在此背景下",
-            "与此同时", "除此之外", "除此之外"
+            "与此同时", "除此之外", "除此之外",
+            // Humanizer-zh：高频 AI 词汇
+            "至关重要", "深入探讨", "持久的", "培养", "相互作用",
+            "复杂性", "格局", "织锦", "宝贵的", "充满活力的",
+            "彰显", "凸显", "不可磨灭的印记"
     );
 
     // ============== 2. 句式模板 ==============
@@ -59,8 +70,35 @@ public class AntiAiFlavorRules {
             "确实", "的确", "显然", "显然地",
             "毫无疑问", "毫无疑义",
             "实际上", "事实上", "本质上",
-            "真正地", "真正意义上的"
+            "真正地", "真正意义上的",
+            // Humanizer-zh：宣传性和广告式修饰
+            "无缝", "直观", "强大", "令人叹为观止", "开创性的",
+            "著名的", "必游之地", "迷人的", "自然之美"
     );
+
+    /** Humanizer-zh：模糊归因、协作话术、免责声明和空泛结论。 */
+    public static final List<String> HUMANIZER_VAGUE_ATTRIBUTION_PATTERNS = List.of(
+            "行业报告显示", "观察者指出", "专家认为", "一些批评者认为",
+            "多个来源", "多个出版物", "广泛认为"
+    );
+    public static final List<String> HUMANIZER_CONVERSATIONAL_PATTERNS = List.of(
+            "希望这对您有帮助", "您说得完全正确", "请告诉我",
+            "这是个好问题", "如果您想让我", "我很乐意为您"
+    );
+    public static final List<String> HUMANIZER_DISCLAIMER_PATTERNS = List.of(
+            "根据我最后的训练", "我的知识截止于", "我的知识更新至",
+            "基于可用信息", "现成资料中没有广泛记录"
+    );
+    public static final List<String> HUMANIZER_GENERIC_CONCLUSION_PATTERNS = List.of(
+            "未来看起来光明", "激动人心的时代即将到来", "追求卓越的旅程",
+            "向正确方向迈出的重要一步", "继续蓬勃发展"
+    );
+
+    private static final Pattern NOT_ONLY_PATTERN =
+            Pattern.compile("不仅(?:仅是|只是)?[^。！？\\n]{0,40}(?:而且|还|更|而是)");
+    private static final Pattern INLINE_HEADING_LIST_PATTERN =
+            Pattern.compile("(?m)^\\s*[-*]\\s+\\*\\*[^*\\n]+\\*\\*\\s*[：:]");
+    private static final Pattern BOLD_PATTERN = Pattern.compile("\\*\\*[^*\\n]+\\*\\*");
 
     // ============== 4. 替换建议 ==============
     public static final Map<String, String> REPLACEMENT_MAP = Map.ofEntries(
@@ -126,10 +164,10 @@ public class AntiAiFlavorRules {
 
     // ============== 5. 创作引导 Prompt 段 ==============
 
-    /** 标题生成去AI味引导 */
+    /** 标题生成质量引导 */
     public static final String TITLE_GUIDANCE = """
-            【去AI味要求】
-            标题必须避免以下AI常见套路：
+            【标题表达质量要求】
+            标题必须避免以下常见模板和空泛修饰：
             - 不用"揭秘"、"干货"、"必看"、"建议收藏"等烂大街词
             - 不用"如何…"、"…的方法"、"…的技巧"等模板句式
             - 标题要有态度、有情绪、有具体数字
@@ -138,57 +176,64 @@ public class AntiAiFlavorRules {
             - 例（差）："如何提高小红书写作效率的几种方法"
             """;
 
-    /** 正文创作去AI味引导 */
+    /** 正文创作质量引导 */
     public static final String CONTENT_GUIDANCE = """
-            【去AI味写作要求】
-            请严格遵循以下规则，让文章读起来像真人写的：
+            【正文表达质量要求】
+            请严格遵循以下规则，让文章清晰、准确、自然，并符合目标读者和文章体裁：
 
-            ❌ 避免的AI词：
+            避免空泛、夸大和模板化表达：
             - 首先/其次/最后 / 总的来说/总而言之 / 值得注意的是
             - 在…中/上/下 / 随着…的… / 对…产生了深远影响
             - 非常/极其/十分/相当 / 显然/毫无疑问/毋庸置疑
             - 导致/因此/从而/并且 / 例如/此外/与此同时
 
-            ✅ 替换为口语化表达：
-            - "但"替代"然而"；"所以"替代"因此"；"其实"替代"事实上"
-            - "说白了"替代"总的来说"；"比如"替代"例如"
-            - "说个有意思的"替代"值得注意的是"
-            - "我"替代"作者"或省略
-
-            ✅ 段落节奏：
-            - 每段不超过 3-5 行，长短交替
-            - 用短句开头，偶尔用感叹句或反问
-            - 加入个人视角（"我"、"我见过"、"我试过"、"但我发现"）
-            - 有情绪：共鸣、愤怒、惊喜、怀疑——不要"理性客观"
-
-            ✅ 让文章"活"起来：
-            - 加入具体场景和细节，不说空话
-            - 用具体数字替代模糊描述
-            - 有观点、有态度、有立场
-            - 结尾要"扎心"或"爽"，不要"希望本文对你有帮助"
+            表达与结构：
+            - 优先使用准确的动词、名词和具体细节；能删掉的修饰词直接删掉
+            - 只保留确有逻辑作用的因果、转折和递进连接词
+            - 混合长短句和段落长度，但不刻意制造残句、感叹句或反问句
+            - 是否使用第一人称取决于文章体裁和原文事实，不强制加入个人经历
+            - 保持正式度、专业性、立场和目标读者，不为追求口语化而牺牲准确性
             """;
 
-    /** 改写去AI味指令 */
+    /** 改写质量指令 */
     public static final String REWRITE_INSTRUCTION = """
-            请对以下文章进行"去AI味"改写。目标是让文章读起来像真人写的，而不是AI生成的。
+            请对以下文章进行内容质量改写。目标是让表达更准确、清晰、自然，而不是伪装作者身份或绕过检测器。
 
             改写规则：
-            1. 删除所有AI高频词汇（首先/其次/总的来说/值得注意的是/毋庸置疑/由此可见等）
-            2. 把"导致/因此/从而"替换为"让/所以/那"
-            3. 把"例如/此外"替换为"比如/还有"
-            4. 加入个人视角：用"我"、"我见过"、"我试过"
-            5. 加入情感词和口语化表达
-            6. 打乱段落节奏：长短交替，不要每段3-5句
-            7. 删除过度修饰词（非常/极其/十分/相当）
-            8. 每个段落只传达一个核心信息
-            9. 开头要有钩子，结尾要有情绪
-            10. 读一遍：像不像真人说出来的话？
+            1. 删除没有信息增量的开场、总结、宣传性形容词和机械连接词
+            2. 使用具体、准确的动词和名词，必要时保留专业术语
+            3. 合并重复句式，调整段落节奏，但不刻意添加残句、口语或情绪
+            4. 只保留原文已有的事实、来源、数字、案例、立场和限定条件
+            5. 不加入个人经历、引用、数据、观点或无法核验的来源
+            6. 保留原文 Markdown 结构和信息层级
             """;
+
+    /**
+     * Humanizer-zh 的生成阶段约束。
+     * <p>它是编辑质量标准，不要求每篇文章都使用第一人称，也不允许为了“像真人”
+     * 凭空添加经历、数据、引用或事实。</p>
+     */
+    public static final String HUMANIZER_GENERATION_GUIDANCE = """
+
+            【Humanizer-zh 写作质量标准】
+            本段要求用于提升自然度、清晰度和可信度，不以绕过任何检测器为目标。
+            - 直接陈述事实，删掉空泛的开场、总结和宣传性形容词。
+            - 少用“作为……的证明”“标志着”“彰显”“不断演变的格局”等夸大意义的表达。
+            - 不使用“专家认为”“行业报告显示”等模糊归因；需要归因时给出具体来源，无法确认就不要编造。
+            - 避免机械的“不仅……而且……”、三项排比、连续相同句式和过密连接词。
+            - 混合长短句，段落长短自然变化；破折号、粗体、列表只在确有信息价值时使用。
+            - 保留原文事实、限定条件和 Markdown 结构，不擅自加入个人经历、数字、案例或观点。
+            - 适当表达判断和不确定性，但不要用空泛的乐观结尾或聊天式客套话收尾。
+            """;
+
+    /** 完整正文生成质量标准，供不同正文生成入口复用。 */
+    public static final String CONTENT_QUALITY_GUIDANCE =
+            CONTENT_GUIDANCE + HUMANIZER_GENERATION_GUIDANCE;
 
     // ============== 检测方法 ==============
 
     /**
-     * 检测文本中的AI味指标。
+     * 检测文本中的表达质量风险。
      * @return 违规项列表，格式 "[规则名] 违规词/句式: ..."
      */
     public static List<String> detect(String text) {
@@ -213,11 +258,8 @@ public class AntiAiFlavorRules {
                 violations.add("[过度修饰] 发现: 「" + adv + "」");
             }
         }
-        // 规则4：缺少个人视角（"我"）
-        if (!text.contains("我") && !text.contains("我见过") && !text.contains("我试过")) {
-            violations.add("[缺个人视角] 全文无「我」——建议加入个人经历");
-        }
-        // 规则5：段落节奏均匀（每段字数相近）
+        detectHumanizerPatterns(text, violations);
+        // 规则4：段落节奏均匀（每段字数相近）
         checkParagraphRhythm(text, violations);
 
         return violations;
@@ -242,5 +284,53 @@ public class AntiAiFlavorRules {
         if (uniformCount >= lengths.length - 1) {
             violations.add("[段落节奏] 段落字数过于均匀——建议改为长短交替");
         }
+    }
+
+    private static void detectHumanizerPatterns(String text, List<String> violations) {
+        for (String pattern : HUMANIZER_VAGUE_ATTRIBUTION_PATTERNS) {
+            if (text.contains(pattern)) {
+                violations.add("[模糊归因] 发现: 「" + pattern + "」");
+            }
+        }
+        for (String pattern : HUMANIZER_CONVERSATIONAL_PATTERNS) {
+            if (text.contains(pattern)) {
+                violations.add("[协作话术] 发现: 「" + pattern + "」");
+            }
+        }
+        for (String pattern : HUMANIZER_DISCLAIMER_PATTERNS) {
+            if (text.contains(pattern)) {
+                violations.add("[免责声明] 发现: 「" + pattern + "」");
+            }
+        }
+        for (String pattern : HUMANIZER_GENERIC_CONCLUSION_PATTERNS) {
+            if (text.contains(pattern)) {
+                violations.add("[空泛结论] 发现: 「" + pattern + "」");
+            }
+        }
+        if (NOT_ONLY_PATTERN.matcher(text).find()) {
+            violations.add("[否定式排比] 发现「不仅……而且/还/更/而是」结构");
+        }
+        if (countDashes(text) >= 3) {
+            violations.add("[破折号过度] 破折号使用次数过多——建议改用句号或逗号");
+        }
+        if (BOLD_PATTERN.matcher(text).results().count() >= 5) {
+            violations.add("[粗体过度] 粗体强调过密——只保留真正需要强调的内容");
+        }
+        if (INLINE_HEADING_LIST_PATTERN.matcher(text).results().count() >= 2) {
+            violations.add("[内联标题列表] 多个列表项使用“粗体标题：解释”模板");
+        }
+        if (containsEmoji(text)) {
+            violations.add("[表情符号] 正文含装饰性表情符号——按正式度删除或减少");
+        }
+    }
+
+    private static long countDashes(String text) {
+        return text.chars().filter(c -> c == '—' || c == '–').count();
+    }
+
+    private static boolean containsEmoji(String text) {
+        return text.codePoints().anyMatch(codePoint ->
+                (codePoint >= 0x1F300 && codePoint <= 0x1FAFF)
+                        || (codePoint >= 0x2600 && codePoint <= 0x27BF));
     }
 }

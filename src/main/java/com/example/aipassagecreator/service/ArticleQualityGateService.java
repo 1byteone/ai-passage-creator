@@ -3,6 +3,7 @@ package com.example.aipassagecreator.service;
 import com.example.aipassagecreator.constant.UserConstant;
 import com.example.aipassagecreator.mapper.ArticleQualityMapper;
 import com.example.aipassagecreator.methodology.antiai.AntiAiFlavorChecker;
+import com.example.aipassagecreator.methodology.antiai.AntiAiFlavorRules;
 import com.example.aipassagecreator.model.dto.article.ArticleState;
 import com.example.aipassagecreator.model.po.ArticleQuality;
 import com.example.aipassagecreator.model.po.User;
@@ -18,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 创作质量门 — 生成完成后自动检测反AI味，未通过则触发 ai-detox skill 自动改写。
+ * 创作质量门 — 生成完成后自动进行表达质量审计，未通过则触发内容质量 Skill 自动优化。
  * <p>
  * 质量门报告经 QUALITY_CHECKED SSE 推送至前端，ALL_COMPLETE 之前。
  * 爆款评分仅 VIP/管理员在 COMPLETED 状态后才能调用，由调用方 {@link ArticleAsyncService} 编排。
@@ -49,13 +50,13 @@ public class ArticleQualityGateService {
     private int passThreshold;
 
     /**
-     * 质量门检测结果
+     * 表达质量门检测结果
      */
     public record GateResult(int score, boolean passed, boolean detoxed, List<String> violations) {
     }
 
     /**
-     * 检测文章反AI味，未通过且自动改写开启时同步调 ai-detox skill 改写。
+     * 审计文章表达质量，未通过且自动优化开启时同步调用内容质量 Skill。
      * <p>改写后的内容直接写入 state，调用方在最终 saveArticleContent 时保存。</p>
      *
      * @param state  当前文章状态（内容可能被改写）
@@ -75,11 +76,12 @@ public class ArticleQualityGateService {
             return new GateResult(100, true, false, List.of());
         }
 
-        AntiAiFlavorChecker.AiFlavorReport report = AntiAiFlavorChecker.check(text);
+        AntiAiFlavorChecker.AiFlavorReport report = AntiAiFlavorChecker.check(text, passThreshold);
         boolean detoxed = false;
+        String finalText = text;
 
         if (!report.passed() && autoDetoxEnabled) {
-            log.info("AI味检测未通过 (score={}, violations={}), 触发自动改写: taskId={}",
+            log.info("表达质量未通过 (score={}, violations={}), 触发表达优化: taskId={}",
                     report.score(), report.violations().size(), taskId);
             try {
                 String detoxedContent = invokeDetox(text, userId);
@@ -87,18 +89,19 @@ public class ArticleQualityGateService {
                     state.setFullContent(detoxedContent);
                     state.setContent(detoxedContent);
                     detoxed = true;
-                    report = AntiAiFlavorChecker.check(detoxedContent);
-                    log.info("改写后AI味检测: score={}, passed={}: taskId={}",
+                    finalText = detoxedContent;
+                    report = AntiAiFlavorChecker.check(detoxedContent, passThreshold);
+                    log.info("表达优化后复检: score={}, passed={}: taskId={}",
                             report.score(), report.passed(), taskId);
                 } else {
                     log.info("改写无变化或产出为空，保留原文: taskId={}", taskId);
                 }
             } catch (Exception e) {
-                log.error("ai-detox 改写异常，保留原文: taskId={}", taskId, e);
+                log.error("内容质量优化异常，保留原文: taskId={}", taskId, e);
             }
         }
 
-        persistQuality(taskId, userId, text, report, detoxed);
+        persistQuality(taskId, userId, finalText, report, detoxed);
         return new GateResult(report.score(), report.passed(), detoxed, report.violations());
     }
 
@@ -128,7 +131,7 @@ public class ArticleQualityGateService {
     }
 
     /**
-     * 同步调用 ai-detox skill 改写文章。
+     * 同步调用 ai-detox Skill 优化文章表达。
      * <p>镜像 {@code SkillExecutionChain.executeSync} 的用法：createExecution → prepare → execute → getPersistedOutput。</p>
      */
     private String invokeDetox(String text, Long userId) {
@@ -153,19 +156,20 @@ public class ArticleQualityGateService {
         // 建议文本以换行分隔违规项
         String suggestions = report.hasViolations()
                 ? String.join("\n", report.violations())
-                : (detoxed ? "已自动降AI味改写" : "通过");
+                : (detoxed ? "已自动优化表达" : "通过");
 
         ArticleQuality quality = ArticleQuality.builder()
                 .taskId(taskId)
                 .userId(userId)
                 .scoreType("AI_FLAVOR")
                 .overallScore(report.score())
-                .suggestions(suggestions)
+                .suggestions("规则集: " + AntiAiFlavorRules.HUMANIZER_RULE_VERSION + "\n" + suggestions)
                 .articleContentSnapshot(snapshot.length() > 4000 ? snapshot.substring(0, 4000) : snapshot)
+                .methodologyUsed(AntiAiFlavorRules.HUMANIZER_RULE_VERSION)
                 .build();
 
         articleQualityMapper.insert(quality);
-        log.info("AI_FLAVOR 评分已持久化: taskId={}, score={}, passed={}, detoxed={}",
+        log.info("表达质量评分已持久化: taskId={}, score={}, passed={}, optimized={}",
                 taskId, report.score(), report.passed(), detoxed);
     }
 }

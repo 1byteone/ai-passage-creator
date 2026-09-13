@@ -7,6 +7,7 @@ import com.example.aipassagecreator.constant.PromptConstant;
 import com.example.aipassagecreator.agent.context.StreamHandlerContext;
 import com.example.aipassagecreator.enums.ArticleStyleEnum;
 import com.example.aipassagecreator.methodology.MethodologyPromptAssembler;
+import com.example.aipassagecreator.methodology.antiai.AntiAiFlavorRules;
 import com.example.aipassagecreator.enums.SseMessageTypeEnum;
 import com.example.aipassagecreator.model.dto.article.ArticleState;
 import com.example.aipassagecreator.service.RagAugmentationService;
@@ -80,7 +81,9 @@ public class ContentGeneratorAgent implements NodeAction {
                 .replace("{subTitle}", subTitle)
                 .replace("{outlineText}", outlineText)
                 + getStylePrompt(style)
-                + methodologyPromptAssembler.buildContentGuidance(methodology);
+                + methodologyPromptAssembler.buildContentGuidance(methodology)
+                + (methodology == null || methodology.isBlank()
+                ? AntiAiFlavorRules.CONTENT_QUALITY_GUIDANCE : "");
 
         // RAG 参考增强：以主标题+大纲章节作 query，检索该用户历史文章/共享文档作软参考
         Long userId = state.value(INPUT_USER_ID).map(v -> Long.valueOf(v.toString())).orElse(null);

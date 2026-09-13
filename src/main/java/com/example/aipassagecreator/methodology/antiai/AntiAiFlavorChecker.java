@@ -3,14 +3,14 @@ package com.example.aipassagecreator.methodology.antiai;
 import java.util.List;
 
 /**
- * 去AI味检测器：对文章内容进行 AI 味扫描，输出合规报告。
+ * 表达质量检查器：对文章内容进行质量风险扫描，输出可解释报告。
  */
 public class AntiAiFlavorChecker {
 
     public static class AiFlavorReport {
         private final List<String> violations;
         private final boolean passed;
-        private final int score; // 0-100, 越高越像真人
+        private final int score; // 0-100, 越高表示命中风险越少
 
         public AiFlavorReport(List<String> violations, boolean passed, int score) {
             this.violations = violations;
@@ -25,13 +25,23 @@ public class AntiAiFlavorChecker {
     }
 
     /**
-     * 检测文本的 AI 味程度。
-     * <p>评分规则：基础分 100，每处违规扣 10 分，违规 ≥ 5 项判定不通过。</p>
+     * 检测文本的表达质量风险。
+     * <p>评分规则：基础分 100，每处风险扣 10 分；通过与否由质量门阈值决定。</p>
      */
     public static AiFlavorReport check(String text) {
+        return check(text, 50);
+    }
+
+    /**
+     * 按质量门配置的阈值判定。
+     *
+     * @param passThreshold 通过阈值，自动限制在 0-100
+     */
+    public static AiFlavorReport check(String text, int passThreshold) {
         List<String> violations = AntiAiFlavorRules.detect(text);
         int score = Math.max(0, 100 - violations.size() * 10);
-        boolean passed = violations.size() < 5;
+        int threshold = Math.max(0, Math.min(100, passThreshold));
+        boolean passed = score >= threshold;
         return new AiFlavorReport(violations, passed, score);
     }
 }

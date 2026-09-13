@@ -37,7 +37,7 @@ public class ContentQualityServiceImpl implements ContentQualityService {
             评分维度：
             - structure（结构）：段落划分是否合理，逻辑递进是否清晰
             - logic（逻辑）：论点是否有据可依，论证是否严密
-            - language（语言）：表达是否流畅自然，有无 AI 痕迹过重
+            - language（语言）：表达是否流畅自然，有无空泛、夸大或模板化表达
             - seo（SEO）：标题和关键词布局是否合理
             - readability（可读性）：排版是否舒适，信息密度是否适中
 
@@ -64,7 +64,7 @@ public class ContentQualityServiceImpl implements ContentQualityService {
             评分维度：
             - structure（结构）：段落划分是否合理，逻辑递进是否清晰
             - logic（逻辑）：论点是否有据可依，论证是否严密
-            - language（语言）：表达是否流畅自然，有无 AI 痕迹过重
+            - language（语言）：表达是否流畅自然，有无空泛、夸大或模板化表达
             - seo（SEO）：标题和关键词布局是否合理
             - readability（可读性）：排版是否舒适，信息密度是否适中
 

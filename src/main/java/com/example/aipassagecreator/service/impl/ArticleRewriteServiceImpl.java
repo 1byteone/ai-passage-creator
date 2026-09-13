@@ -47,12 +47,13 @@ public class ArticleRewriteServiceImpl implements ArticleRewriteService {
 
     private static final String AUTO_IMPROVE_INSTRUCTION = """
             请从以下维度优化这篇文章：
-            1. 提升语言流畅度，减少 AI 痕迹
+            1. 提升语言流畅度，减少空泛、夸大和模板化表达
             2. 优化段落结构，确保逻辑递进
-            3. 丰富论据和案例，增强说服力
+            3. 让现有论据和案例表达得更清楚，不得凭空补充事实
             4. 改善开头和结尾，提升吸引力
             5. 控制句子长度节奏，提高可读性
-            6. 去除AI味：用口语化表达替换书面语，加入个人视角""";
+            6. 保持原文的事实、来源、限定条件、立场和 Markdown 结构
+            7. 不添加原文没有的个人经历、数字、案例、引用或观点""";
 
     private static final String ANTI_AI_REWRITE_INSTRUCTION =
             com.example.aipassagecreator.methodology.antiai.AntiAiFlavorRules.REWRITE_INSTRUCTION;

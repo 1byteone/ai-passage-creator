@@ -53,7 +53,8 @@ public class MethodologyPromptAssembler {
             sb.append("- ").append(d.getName()).append("：").append(d.getGuidance()).append("\n");
         }
         // 追加去AI味引导
-        sb.append("\n").append(com.example.aipassagecreator.methodology.antiai.AntiAiFlavorRules.CONTENT_GUIDANCE);
+        sb.append("\n")
+                .append(com.example.aipassagecreator.methodology.antiai.AntiAiFlavorRules.CONTENT_QUALITY_GUIDANCE);
         return sb.toString();
     }
 }
