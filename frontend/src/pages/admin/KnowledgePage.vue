@@ -73,6 +73,11 @@
         <a-table-column title="索引异常" data-index="indexError" ellipsis />
         <a-table-column title="来源" data-index="sourceType" />
         <a-table-column title="路径" data-index="sourcePath" ellipsis />
+        <a-table-column title="行号">
+          <template #default="{ record }">
+            {{ record.lineStart && record.lineEnd ? `${record.lineStart}-${record.lineEnd}` : '-' }}
+          </template>
+        </a-table-column>
         <a-table-column title="上传时间" data-index="createTime" />
         <a-table-column title="操作">
           <template #default="{ record }">

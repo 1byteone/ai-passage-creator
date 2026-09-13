@@ -31,6 +31,8 @@ public class RagDocument {
     private String commitSha;
     private String sourcePath;
     private String sectionPath;
+    private Integer lineStart;
+    private Integer lineEnd;
     private String checksum;
     private String batchId;
     private String projectKey;

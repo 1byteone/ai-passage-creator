@@ -65,7 +65,7 @@ class RagKnowledgeControllerTest {
         RagKnowledgeBaseService.KnowledgeHit hit = new RagKnowledgeBaseService.KnowledgeHit(
                 "项目规范", "引用内容", 0.9, "git:CLAUDE.md#1", "CLAUDE.md",
                 "standard", "project-rule", "ACTIVE", "abc", "工程规范",
-                9L, "ai-passage-creator", "GIT", "dev_rag");
+                9L, "ai-passage-creator", "GIT", "dev_rag", 12, 24);
         when(userService.getLoginUser(request)).thenReturn(admin);
         when(knowledgeBase.search("SSE 生命周期", 1L, 5)).thenReturn(List.of(hit));
 
@@ -74,6 +74,8 @@ class RagKnowledgeControllerTest {
         assertEquals(0, response.getCode());
         assertNotNull(response.getData());
         assertEquals("CLAUDE.md", response.getData().get(0).sourcePath());
+        assertEquals(12, response.getData().get(0).lineStart());
+        assertEquals(24, response.getData().get(0).lineEnd());
         verify(knowledgeBase).search("SSE 生命周期", 1L, 5);
     }
 

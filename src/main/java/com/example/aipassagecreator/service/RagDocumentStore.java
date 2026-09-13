@@ -131,12 +131,26 @@ public class RagDocumentStore {
                           String branchName, String commitSha, String sourcePath, String sectionPath,
                           String checksum) {
         upsertGit(title, source, text, domain, documentKind, branchName, commitSha, sourcePath, sectionPath,
-                checksum, null);
+                checksum, null, null, null);
     }
 
     public void upsertGit(String title, String source, String text, String domain, String documentKind,
                           String branchName, String commitSha, String sourcePath, String sectionPath,
                           String checksum, String batchId) {
+        upsertGit(title, source, text, domain, documentKind, branchName, commitSha, sourcePath, sectionPath,
+                checksum, batchId, null, null);
+    }
+
+    public void upsertGit(String title, String source, String text, String domain, String documentKind,
+                          String branchName, String commitSha, String sourcePath, String sectionPath,
+                          String checksum, Integer lineStart, Integer lineEnd) {
+        upsertGit(title, source, text, domain, documentKind, branchName, commitSha, sourcePath, sectionPath,
+                checksum, null, lineStart, lineEnd);
+    }
+
+    public void upsertGit(String title, String source, String text, String domain, String documentKind,
+                          String branchName, String commitSha, String sourcePath, String sectionPath,
+                          String checksum, String batchId, Integer lineStart, Integer lineEnd) {
         if (source == null || source.isBlank() || text == null || text.isBlank()) {
             return;
         }
@@ -159,6 +173,8 @@ public class RagDocumentStore {
                 .commitSha(commitSha)
                 .sourcePath(sourcePath)
                 .sectionPath(sectionPath)
+                .lineStart(lineStart)
+                .lineEnd(lineEnd)
                 .checksum(checksum)
                 .batchId(batchId)
                 .projectKey("ai-passage-creator")
@@ -181,6 +197,8 @@ public class RagDocumentStore {
         metadata.put("commitSha", commitSha == null ? "" : commitSha);
         metadata.put("sourcePath", sourcePath == null ? "" : sourcePath);
         metadata.put("sectionPath", sectionPath == null ? "" : sectionPath);
+        if (lineStart != null) metadata.put("lineStart", lineStart);
+        if (lineEnd != null) metadata.put("lineEnd", lineEnd);
         metadata.put("batchId", batchId == null ? "" : batchId);
         metadata.put("projectKey", "ai-passage-creator");
         metadata.put("vectorSource", vectorSource);

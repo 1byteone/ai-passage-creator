@@ -707,6 +707,8 @@ declare namespace API {
     commitSha?: string
     sourcePath?: string
     sectionPath?: string
+    lineStart?: number
+    lineEnd?: number
     checksum?: string
     reviewerId?: number
     reviewedAt?: string
@@ -744,6 +746,8 @@ declare namespace API {
     status?: string
     commitSha?: string
     sectionPath?: string
+    lineStart?: number
+    lineEnd?: number
     documentId?: number
     projectKey?: string
     sourceType?: string

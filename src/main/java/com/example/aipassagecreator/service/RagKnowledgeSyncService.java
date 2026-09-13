@@ -101,10 +101,10 @@ public class RagKnowledgeSyncService {
                 String source = prefix + i;
                 if (batchId == null) {
                     documentStore.upsertGit(title, source, section.text(), domain, kind, branch, commit,
-                            relative, section.path(), checksum);
+                            relative, section.path(), checksum, section.lineStart(), section.lineEnd());
                 } else {
                     documentStore.upsertGit(title, source, section.text(), domain, kind, branch, commit,
-                            relative, section.path(), checksum, batchId);
+                            relative, section.path(), checksum, batchId, section.lineStart(), section.lineEnd());
                 }
                 sections++;
                 sources.add(source);
@@ -152,14 +152,15 @@ public class RagKnowledgeSyncService {
             headings.add(new Heading(matcher.start(), matcher.end(), matcher.group(1).length(), matcher.group(2).trim()));
         }
         if (headings.isEmpty()) {
-            return text.isBlank() ? List.of() : List.of(new Section("文档", text.trim()));
+            return text.isBlank() ? List.of() : List.of(new Section("文档", text.trim(), 1, lineCount(text)));
         }
         for (int i = 0; i < headings.size(); i++) {
             Heading heading = headings.get(i);
             int end = i + 1 < headings.size() ? headings.get(i + 1).start() : text.length();
             String sectionText = text.substring(heading.start(), end).trim();
             if (!sectionText.isBlank()) {
-                sections.add(new Section(heading.title(), sectionText));
+                sections.add(new Section(heading.title(), sectionText,
+                        lineNumber(text, heading.start()), lineNumber(text, Math.max(heading.start(), end - 1))));
             }
         }
         return sections;
@@ -230,9 +231,21 @@ public class RagKnowledgeSyncService {
         }
     }
 
+    private int lineNumber(String text, int offset) {
+        int line = 1;
+        for (int i = 0; i < Math.min(offset, text.length()); i++) {
+            if (text.charAt(i) == '\n') line++;
+        }
+        return line;
+    }
+
+    private int lineCount(String text) {
+        return lineNumber(text, text.length());
+    }
+
     private record Heading(int start, int end, int level, String title) {
     }
 
-    private record Section(String path, String text) {
+    private record Section(String path, String text, int lineStart, int lineEnd) {
     }
 }

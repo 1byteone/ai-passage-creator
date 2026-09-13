@@ -304,6 +304,8 @@ create table if not exists rag_document (
     commit_sha varchar(64) null,
     source_path varchar(512) null,
     section_path varchar(256) null,
+    line_start int null,
+    line_end int null,
     checksum varchar(64) null,
     reviewer_id bigint null,
     reviewed_at datetime null,
