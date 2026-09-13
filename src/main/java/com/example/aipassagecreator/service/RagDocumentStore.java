@@ -7,6 +7,7 @@ import com.example.aipassagecreator.model.po.RagSyncJob;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -26,6 +27,7 @@ public class RagDocumentStore {
         this(mapper, ragService, null);
     }
 
+    @Autowired
     public RagDocumentStore(RagDocumentMapper mapper, RagService ragService, RagSyncJobMapper syncJobMapper) {
         this.mapper = mapper;
         this.ragService = ragService;
