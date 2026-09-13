@@ -20,7 +20,9 @@ public class RagKnowledgeBaseService {
 
     public record KnowledgeHit(String title, String content, double score, String source,
                                String sourcePath, String domain, String documentKind,
-                               String status, String commitSha, String sectionPath) {
+                               String status, String commitSha, String sectionPath,
+                               Long documentId, String projectKey, String sourceType,
+                               String branchName) {
     }
 
     /** 关键词和向量召回合并，按 source 去重，返回可直接展示的引用信息。 */
@@ -34,7 +36,8 @@ public class RagKnowledgeBaseService {
         }
         for (RagService.RagHit hit : ragService.searchKnowledge(query, userId, recallLimit, documentStore.activeBatchId())) {
             KnowledgeHit vectorHit = new KnowledgeHit(hit.title(), hit.content(), hit.score(),
-                    hit.refId(), "", "", "reference", "ACTIVE", "", "");
+                    hit.refId(), "", "", "reference", "ACTIVE", "", "",
+                    null, "ai-passage-creator", "GIT", "");
             merged.merge(hit.refId(), vectorHit,
                     (existing, candidate) -> candidate.score() > existing.score() ? candidate : existing);
         }
@@ -47,7 +50,8 @@ public class RagKnowledgeBaseService {
     private KnowledgeHit fromDocument(RagDocument document, double score) {
         return new KnowledgeHit(document.getTitle(), document.getText(), score, document.getSource(),
                 document.getSourcePath(), document.getDomain(), document.getDocumentKind(), document.getStatus(),
-                document.getCommitSha(), document.getSectionPath());
+                document.getCommitSha(), document.getSectionPath(), document.getId(),
+                document.getProjectKey(), document.getSourceType(), document.getBranchName());
     }
 
     private double keywordScore(RagDocument document, String query) {

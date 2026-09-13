@@ -20,9 +20,10 @@ class RagKnowledgeBaseServiceTest {
         RagDocumentStore documentStore = mock(RagDocumentStore.class);
         RagService ragService = mock(RagService.class);
         RagDocument document = RagDocument.builder()
-                .title("项目规范").source("git:AGENTS.md#0").text("安全和质量规则")
+                .id(7L).title("项目规范").source("git:AGENTS.md#0").text("安全和质量规则")
                 .sourcePath("AGENTS.md").domain("standard").documentKind("project-rule")
-                .status(RagDocumentStore.STATUS_ACTIVE).commitSha("abc").sectionPath("项目规范").build();
+                .status(RagDocumentStore.STATUS_ACTIVE).commitSha("abc").sectionPath("项目规范")
+                .projectKey("ai-passage-creator").sourceType("GIT").branchName("dev_rag").build();
         when(documentStore.searchActive(anyString(), anyInt())).thenReturn(List.of(document));
         when(ragService.search(anyString(), anyString(), anyLong(), anyInt()))
                 .thenReturn(List.of(new RagService.RagHit("git:AGENTS.md#0", "项目规范", "安全和质量规则", 0.8, "document")));
@@ -33,6 +34,10 @@ class RagKnowledgeBaseServiceTest {
         assertEquals(1, hits.size());
         assertEquals("AGENTS.md", hits.get(0).sourcePath());
         assertEquals("abc", hits.get(0).commitSha());
+        assertEquals(7L, hits.get(0).documentId());
+        assertEquals("ai-passage-creator", hits.get(0).projectKey());
+        assertEquals("GIT", hits.get(0).sourceType());
+        assertEquals("dev_rag", hits.get(0).branchName());
     }
 
     @Test

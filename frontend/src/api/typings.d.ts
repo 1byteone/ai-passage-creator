@@ -744,6 +744,10 @@ declare namespace API {
     status?: string
     commitSha?: string
     sectionPath?: string
+    documentId?: number
+    projectKey?: string
+    sourceType?: string
+    branchName?: string
   }
 
   type BaseResponseListKnowledgeHit = {

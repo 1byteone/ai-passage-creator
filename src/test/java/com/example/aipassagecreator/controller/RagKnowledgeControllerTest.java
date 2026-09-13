@@ -61,7 +61,8 @@ class RagKnowledgeControllerTest {
         input.setQuery("SSE 生命周期");
         RagKnowledgeBaseService.KnowledgeHit hit = new RagKnowledgeBaseService.KnowledgeHit(
                 "项目规范", "引用内容", 0.9, "git:CLAUDE.md#1", "CLAUDE.md",
-                "standard", "project-rule", "ACTIVE", "abc", "工程规范");
+                "standard", "project-rule", "ACTIVE", "abc", "工程规范",
+                9L, "ai-passage-creator", "GIT", "dev_rag");
         when(userService.getLoginUser(request)).thenReturn(admin);
         when(knowledgeBase.search("SSE 生命周期", 1L, 5)).thenReturn(List.of(hit));
 

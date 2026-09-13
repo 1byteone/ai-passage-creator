@@ -67,4 +67,5 @@ npm run build-only
 - 关键词召回池为最终 `topK` 的最多 3 倍，最终返回数量仍不超过 `topK`。
 - 字段优先级为：标题精确命中、标题包含命中、来源路径/来源标识、章节路径、正文。
 - 关键词与向量命中同一 `source` 时保留分数更高的结果，并保留唯一引用。
+- 知识库引用响应携带 `documentId`、`projectKey`、`sourceType`、`branchName`、`sourcePath`、`sectionPath` 和 `commitSha`；向量兜底命中也明确标记项目与来源类型。
 - 当前基线是确定性字段评分，不宣称已经达到 Recall@5 或 MRR 门槛；正式门禁仍需人工审核 40 条 gold set。
