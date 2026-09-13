@@ -19,6 +19,8 @@ public class SkillDefinition {
     private List<String> requiredRoles;
     /** 是否多轮交互 */
     private boolean multiRound;
+    /** 来源与适配信息，用于可追溯交付和运行时展示 */
+    private Map<String, Object> metadata;
     /** 全局变量声明 */
     private Map<String, VariableDef> variables;
     /** 阶段定义列表 */

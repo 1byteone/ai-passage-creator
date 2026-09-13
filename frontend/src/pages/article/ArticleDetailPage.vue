@@ -4,7 +4,7 @@
       <a-button @click="goBack"><template #icon><ArrowLeftOutlined /></template>返回历史</a-button>
       <div class="primary-actions">
         <a-button v-if="hasContent" @click="detoxLauncherOpen = true">
-          <template #icon><FileTextOutlined /></template>降AI味改写
+          <template #icon><FileTextOutlined /></template>表达质量优化
         </a-button>
         <a-button v-if="hasContent" @click="seedLauncherOpen = true">
           <template #icon><SmileOutlined /></template>种草文案

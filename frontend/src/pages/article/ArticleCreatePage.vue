@@ -379,7 +379,7 @@
                 <span class="quality-score">{{ qualityReport.score }} 分</span>
               </span>
               <template v-if="qualityReport.detoxed">
-                <a-tag color="processing" class="quality-tag">已自动降AI味改写</a-tag>
+                <a-tag color="processing" class="quality-tag">已自动优化表达</a-tag>
               </template>
               <template v-if="qualityReport.viralScore != null">
                 <a-tag color="blue" class="quality-tag">爆款分 {{ qualityReport.viralScore }}</a-tag>
@@ -387,7 +387,7 @@
             </template>
             <template v-if="qualityReport.violations.length > 0" #description>
               <div class="quality-violations">
-                <span class="violations-label">AI 味违规项 ({{ qualityReport.violations.length }})：</span>
+                <span class="violations-label">表达质量问题 ({{ qualityReport.violations.length }})：</span>
                 <ul>
                   <li v-for="(v, idx) in qualityReport.violations" :key="idx">{{ v }}</li>
                 </ul>
@@ -1284,7 +1284,7 @@ const handleSSEMessage = (msg: SSEMessage) => {
       }
       const qr = qualityReport.value!
       addLog(
-        `质量检测: ${qr.score} 分${qr.passed ? ' ✓通过' : ' ✗未通过'}${qr.detoxed ? '（已自动降AI味改写）' : ''}${qr.viralScore != null ? ` | 爆款分: ${qr.viralScore}` : ''}`,
+        `表达质量检测: ${qr.score} 分${qr.passed ? ' ✓通过' : ' ✗未通过'}${qr.detoxed ? '（已自动优化表达）' : ''}${qr.viralScore != null ? ` | 爆款分: ${qr.viralScore}` : ''}`,
         qr.passed ? 'success' : 'warning'
       )
       break

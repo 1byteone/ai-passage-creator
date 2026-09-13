@@ -71,7 +71,7 @@ public enum SseMessageTypeEnum {
     QUALITY_SCORED("QUALITY_SCORED", "内容质量评分完成"),
 
     /**
-     * 质量门检测完成 — 携带反AI味评分/是否触发改写/violations/viralScore
+     * 质量门检测完成 — 携带表达质量评分/是否触发优化/violations/viralScore
      */
     QUALITY_CHECKED("QUALITY_CHECKED", "质量门检测完成"),
 

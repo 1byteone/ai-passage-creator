@@ -1,8 +1,14 @@
 name: ai-detox
-description: 降低文章 AI 检测率，通过句法变异、词汇替换、段落节奏调整使内容更自然
+description: 审计并优化文章的自然度、清晰度和可信度，保留事实与 Markdown 结构
 category: writing
 requiredRoles: [user]
 multiRound: false
+
+metadata:
+  sourceRepository: https://github.com/op7418/Humanizer-zh
+  sourceCommit: 91f3d394db8419c20d67ebe22a96cf8fee0a404b
+  sourceLicense: MIT
+  adaptation: 仅吸收公开编辑原则与规则；不复制外部代码，不以绕过检测器为目标
 
 variables:
   articleContent:
@@ -10,10 +16,10 @@ variables:
     required: true
     source: INPUT
     uiType: textarea
-    placeholder: 粘贴需要降低 AI 检测率的文章
+    placeholder: 粘贴需要提升表达质量的文章
     maxLength: 20000
   intensity:
-    description: 优化强度（轻度/中度/重度）
+    description: 编辑强度（轻度/中度/重度）
     required: false
     source: INPUT
     uiType: select

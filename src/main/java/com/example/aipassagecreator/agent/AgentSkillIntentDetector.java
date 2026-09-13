@@ -18,7 +18,7 @@ public final class AgentSkillIntentDetector {
             Map.entry("seeding-copy", List.of("种草", "带货文案")),
             Map.entry("seo-optimizer", List.of("seo", "搜索引擎优化")),
             Map.entry("proofreading", List.of("审校", "校对")),
-            Map.entry("ai-detox", List.of("去ai味", "降ai检测", "ai味")),
+            Map.entry("ai-detox", List.of("去ai味", "降ai检测", "ai味", "表达优化", "内容质量优化", "自然表达")),
             Map.entry("article-to-x", List.of("社交文案", "浓缩成", "长文浓缩")));
 
     private AgentSkillIntentDetector() {

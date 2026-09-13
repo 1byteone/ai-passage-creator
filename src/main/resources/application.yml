@@ -159,7 +159,7 @@ article:
     orchestrator:
       enabled: true
     max-iterations: 10
-  # 创作质量门 — 生成后自动检测反AI味，未通过则触发改写
+  # 创作质量门 — 生成后自动审计表达质量，未通过则触发优化
   quality-gate:
     enabled: true
     auto-detox: true

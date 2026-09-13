@@ -84,7 +84,7 @@ public class CardComplianceChecker {
             }
         }
 
-        // 规则 4: AI味检测（warning 级，仅全文检测一次）
+        // 规则 4: 表达质量检测（warning 级，仅全文检测一次）
         var aiReport = com.example.aipassagecreator.methodology.antiai.AntiAiFlavorChecker.check(
                 mainTitle + " " + pages.stream().map(PagePlan::getContentMd).reduce("", (a, b) -> a + " " + b));
         if (aiReport.hasViolations()) {

@@ -506,7 +506,7 @@ public class ArticleController {
     }
 
     /**
-     * 利用已完成的文章内容一键执行 Skill（降AI味改写 / 文章转稿 / 种草文案等）。
+     * 利用已完成的文章内容一键执行 Skill（表达质量优化 / 文章转稿 / 种草文案等）。
      * <p>
      * 文章归属校验 + COMPLETED 状态校验后走公共派发，进度走既有 /skill/{executionId}/progress SSE。
      */
