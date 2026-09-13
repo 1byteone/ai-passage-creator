@@ -62,10 +62,20 @@ public class RagKnowledgeSyncService {
         return syncInternal(batchId);
     }
 
+    /** 当前 Git 提交；非 Git 工作树返回 working-tree，供同步任务幂等判断。 */
+    public String currentCommit() {
+        return gitValue("rev-parse HEAD", "working-tree");
+    }
+
+    /** 只有干净工作树才允许按 commit 复用已成功批次。 */
+    public boolean isWorkingTreeClean() {
+        return gitValueAllowBlank("status --porcelain --untracked-files=no").isBlank();
+    }
+
     private SyncResult syncInternal(String batchId) {
         List<Path> files = discoverFiles();
         String branch = gitValue("branch --show-current", configuredBranch);
-        String commit = gitValue("rev-parse HEAD", "working-tree");
+        String commit = currentCommit();
         int sections = 0;
         List<String> sources = new ArrayList<>();
         for (Path file : files) {
@@ -185,6 +195,11 @@ public class RagKnowledgeSyncService {
     }
 
     private String gitValue(String arguments, String fallback) {
+        String value = gitValueAllowBlank(arguments);
+        return value.isBlank() ? fallback : value;
+    }
+
+    private String gitValueAllowBlank(String arguments) {
         try {
             List<String> command = new ArrayList<>();
             command.add("git");
@@ -195,12 +210,12 @@ public class RagKnowledgeSyncService {
                     .start();
             if (!process.waitFor(Duration.ofSeconds(2).toMillis(), TimeUnit.MILLISECONDS)) {
                 process.destroyForcibly();
-                return fallback;
+                return "";
             }
             String value = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
-            return process.exitValue() == 0 && !value.isBlank() ? value : fallback;
+            return process.exitValue() == 0 ? value : "";
         } catch (Exception e) {
-            return fallback;
+            return "";
         }
     }
 

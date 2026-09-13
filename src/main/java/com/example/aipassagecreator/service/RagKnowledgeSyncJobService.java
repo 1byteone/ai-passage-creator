@@ -38,6 +38,18 @@ public class RagKnowledgeSyncJobService {
                 .orderBy(RagSyncJob::getCreateTime, false).limit(1));
         if (running != null) return running;
 
+        String currentCommit = syncService.currentCommit();
+        if (currentCommit != null && !currentCommit.isBlank()
+                && !"working-tree".equals(currentCommit)
+                && syncService.isWorkingTreeClean()) {
+            RagSyncJob completed = mapper.selectOneByQuery(QueryWrapper.create()
+                    .eq(RagSyncJob::getProjectKey, PROJECT_KEY)
+                    .eq(RagSyncJob::getCommitSha, currentCommit)
+                    .eq(RagSyncJob::getStatus, RagSyncJob.STATUS_SUCCEEDED)
+                    .orderBy(RagSyncJob::getFinishedAt, false).limit(1));
+            if (completed != null) return completed;
+        }
+
         LocalDateTime now = LocalDateTime.now();
         RagSyncJob job = RagSyncJob.builder()
                 .projectKey(PROJECT_KEY)

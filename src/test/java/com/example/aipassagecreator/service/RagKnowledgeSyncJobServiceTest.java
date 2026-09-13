@@ -18,6 +18,24 @@ import static org.mockito.Mockito.when;
 class RagKnowledgeSyncJobServiceTest {
 
     @Test
+    void start_reusesSuccessfulBatchForCleanCommit() {
+        RagSyncJobMapper mapper = mock(RagSyncJobMapper.class);
+        RagKnowledgeSyncService syncService = mock(RagKnowledgeSyncService.class);
+        RagDocumentStore documentStore = mock(RagDocumentStore.class);
+        RagKnowledgeSyncJobService service = new RagKnowledgeSyncJobService(mapper, syncService, documentStore);
+        RagSyncJob completed = RagSyncJob.builder().id(6L).projectKey("ai-passage-creator")
+                .commitSha("abc123").status(RagSyncJob.STATUS_SUCCEEDED).active(true).build();
+        when(syncService.currentCommit()).thenReturn("abc123");
+        when(syncService.isWorkingTreeClean()).thenReturn(true);
+        when(mapper.selectOneByQuery(any())).thenReturn(null, completed);
+
+        RagSyncJob result = service.start(1L);
+
+        assertEquals(6L, result.getId());
+        verify(mapper, never()).insert(any());
+    }
+
+    @Test
     void executeAsync_successActivatesOnlyCompletedBatch() {
         RagSyncJobMapper mapper = mock(RagSyncJobMapper.class);
         RagKnowledgeSyncService syncService = mock(RagKnowledgeSyncService.class);
