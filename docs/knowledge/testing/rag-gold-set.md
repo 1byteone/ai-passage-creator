@@ -27,30 +27,30 @@
 | B03 | 业务 | 普通用户和管理员的 RAG 可见范围是什么？ | `src/main/java/com/example/aipassagecreator/service/RagService.java`; `src/test/java/com/example/aipassagecreator/service/RagServiceTest.java` | 项目、用户和状态过滤 |
 | B04 | 业务 | RAG 检索失败是否阻断文章生成？ | `src/main/java/com/example/aipassagecreator/service/RagService.java`; `src/test/java/com/example/aipassagecreator/service/RagServiceTest.java` | 熔断和无参考降级 |
 | B05 | 业务 | 文档覆盖上传如何避免旧向量残留？ | `src/main/java/com/example/aipassagecreator/service/RagDocumentStore.java`; `src/test/java/com/example/aipassagecreator/service/RagServiceTest.java` | source 幂等和精确删除 |
-| B06 | 业务 | 手工文档审核前能否被检索？ | `RagDocumentStore.java`; `RagDocumentStoreKnowledgeTest.java` | PENDING_REVIEW 不可检索 |
-| B07 | 业务 | 审核后索引失败如何恢复？ | `RagDocumentStore.java`; `RagDocumentStoreKnowledgeTest.java` | INDEX_FAILED 和重试 |
-| B08 | 业务 | 同步失败时旧知识版本是否继续服务？ | `RagKnowledgeSyncJobService.java`; `RagKnowledgeSyncJobServiceTest.java` | active 批次不被覆盖 |
-| B09 | 业务 | 删除文章后异步索引如何处理？ | `RagService.java`; `RagServiceTest.java` | 不产生僵尸向量 |
-| B10 | 业务 | 知识库没有答案时应该如何回复？ | `docs/2026-09-12-rag-研发知识库调研与交付方案.md`; `RagKnowledgeBaseService.java` | 明确“知识库未确认” |
-| D01 | 开发 | 修改 RAG 文档状态需要哪些文件？ | `V13__rag_knowledge_governance.sql`; `V16__rag_document_index_status.sql`; `RagDocument.java`; `RagDocumentStore.java` | 迁移到测试的顺序 |
-| D02 | 开发 | 混合检索如何合并关键词和向量结果？ | `RagKnowledgeBaseService.java`; `RagKnowledgeBaseServiceTest.java` | 召回、过滤、排序、去重 |
-| D03 | 开发 | 修改分块策略后如何重建和回滚？ | `docs/2026-09-13-rag-phase2-优化与实施交付方案.md`; `RagService.java` | 版本隔离和离线评测 |
-| D04 | 开发 | 如何给检索结果生成完整引用？ | `RagKnowledgeBaseService.java`; `RagController.java` | path/section/commit |
-| D05 | 开发 | 如何排查同步任务失败？ | `RagKnowledgeSyncJobService.java`; `RagSyncJob.java`; `KnowledgePage.vue` | taskId、状态、错误和旧批次 |
-| D06 | 开发 | 如何增加一个只读 RAG 接口？ | `RagController.java`; `RagKnowledgeControllerTest.java` | 权限、参数和降级 |
-| D07 | 开发 | 如何保证同一同步任务幂等？ | `RagKnowledgeSyncJobService.java`; `RagKnowledgeSyncJobRetryTest.java` | commit 去重 |
-| D08 | 开发 | 如何为 embedding 模型升级建索引？ | `docs/2026-09-13-rag-phase2-优化与实施交付方案.md`; `RagService.java` | 新 indexVersion |
+| B06 | 业务 | 手工文档审核前能否被检索？ | `src/main/java/com/example/aipassagecreator/service/RagDocumentStore.java`; `src/test/java/com/example/aipassagecreator/service/RagDocumentStoreKnowledgeTest.java` | PENDING_REVIEW 不可检索 |
+| B07 | 业务 | 审核后索引失败如何恢复？ | `src/main/java/com/example/aipassagecreator/service/RagDocumentStore.java`; `src/test/java/com/example/aipassagecreator/service/RagDocumentStoreKnowledgeTest.java` | INDEX_FAILED 和重试 |
+| B08 | 业务 | 同步失败时旧知识版本是否继续服务？ | `src/main/java/com/example/aipassagecreator/service/RagKnowledgeSyncJobService.java`; `src/test/java/com/example/aipassagecreator/service/RagKnowledgeSyncJobServiceTest.java` | active 批次不被覆盖 |
+| B09 | 业务 | 删除文章后异步索引如何处理？ | `src/main/java/com/example/aipassagecreator/service/RagService.java`; `src/test/java/com/example/aipassagecreator/service/RagServiceTest.java` | 不产生僵尸向量 |
+| B10 | 业务 | 知识库没有答案时应该如何回复？ | `docs/2026-09-12-rag-研发知识库调研与交付方案.md`; `src/main/java/com/example/aipassagecreator/service/RagKnowledgeBaseService.java` | 明确“知识库未确认” |
+| D01 | 开发 | 修改 RAG 文档状态需要哪些文件？ | `src/main/resources/db/migration/V13__rag_knowledge_governance.sql`; `src/main/resources/db/migration/V16__rag_document_index_status.sql`; `src/main/java/com/example/aipassagecreator/model/po/RagDocument.java`; `src/main/java/com/example/aipassagecreator/service/RagDocumentStore.java` | 迁移到测试的顺序 |
+| D02 | 开发 | 混合检索如何合并关键词和向量结果？ | `src/main/java/com/example/aipassagecreator/service/RagKnowledgeBaseService.java`; `src/test/java/com/example/aipassagecreator/service/RagKnowledgeBaseServiceTest.java` | 召回、过滤、排序、去重 |
+| D03 | 开发 | 修改分块策略后如何重建和回滚？ | `docs/2026-09-13-rag-phase2-优化与实施交付方案.md`; `src/main/java/com/example/aipassagecreator/service/RagService.java` | 版本隔离和离线评测 |
+| D04 | 开发 | 如何给检索结果生成完整引用？ | `src/main/java/com/example/aipassagecreator/service/RagKnowledgeBaseService.java`; `src/main/java/com/example/aipassagecreator/controller/RagController.java` | path/section/commit |
+| D05 | 开发 | 如何排查同步任务失败？ | `src/main/java/com/example/aipassagecreator/service/RagKnowledgeSyncJobService.java`; `src/main/java/com/example/aipassagecreator/model/po/RagSyncJob.java`; `frontend/src/pages/admin/KnowledgePage.vue` | taskId、状态、错误和旧批次 |
+| D06 | 开发 | 如何增加一个只读 RAG 接口？ | `src/main/java/com/example/aipassagecreator/controller/RagController.java`; `src/test/java/com/example/aipassagecreator/controller/RagKnowledgeControllerTest.java` | 权限、参数和降级 |
+| D07 | 开发 | 如何保证同一同步任务幂等？ | `src/main/java/com/example/aipassagecreator/service/RagKnowledgeSyncJobService.java`; `src/test/java/com/example/aipassagecreator/service/RagKnowledgeSyncJobRetryTest.java` | commit 去重 |
+| D08 | 开发 | 如何为 embedding 模型升级建索引？ | `docs/2026-09-13-rag-phase2-优化与实施交付方案.md`; `src/main/java/com/example/aipassagecreator/service/RagService.java` | 新 indexVersion |
 | D09 | 开发 | 如何定位文章阶段改动影响的 Agent 和前端状态？ | `PROJECT_ARCHITECTURE.md`; `src/main/java/com/example/aipassagecreator/agent`; `frontend/src/pages/article` | 文件清单和测试证据 |
-| D10 | 开发 | 如何把稳定事实回写四类知识文档？ | `docs/knowledge/index.md`; `docs/knowledge/*/README.md` | 事实、决策、计划分离 |
-| T01 | 测试 | 手工文档上传要覆盖哪些场景？ | `docs/knowledge/testing/rag-mvp-test-cases.md`; `RagDocumentStoreKnowledgeTest.java` | 正常/异常/重复/超长 |
-| T02 | 测试 | 如何验证普通用户不能越权检索？ | `RagServiceTest.java`; `RagKnowledgeControllerTest.java` | fail-closed |
-| T03 | 测试 | 如何测试 embedding 超时和索引重试？ | `RagDocumentStoreKnowledgeTest.java`; `RagKnowledgeSyncJobRetryTest.java` | 错误、次数和恢复 |
-| T04 | 测试 | 如何测试 pgvector 不可用？ | `RagServiceTest.java`; `RagAugmentationServiceTest.java` | 熔断和主流程降级 |
-| T05 | 测试 | Recall@5 和 MRR@5 如何计算？ | `RagRetrievalEvaluator.java`; `rag-gold-set.md` | gold source 和排序位置 |
-| T06 | 测试 | 如何验证引用字段完整？ | `RagKnowledgeBaseServiceTest.java`; `RagKnowledgeControllerTest.java` | sourcePath/sectionPath/commitSha |
-| T07 | 测试 | 如何验证旧 active 批次不会被失败同步覆盖？ | `RagKnowledgeSyncJobServiceTest.java`; `RagKnowledgeSyncJobRetryTest.java` | staging 失败回归 |
-| T08 | 测试 | 如何验证同源结果去重且取高分？ | `RagKnowledgeBaseServiceTest.java` | 关键词/向量合并 |
-| T09 | 测试 | 如何验证无答案问题不被编造？ | `rag-gold-set.md`; `RagRetrievalEvaluatorTest.java` | 拒答率 |
+| D10 | 开发 | 如何把稳定事实回写四类知识文档？ | `docs/knowledge/index.md`; `docs/knowledge/standards/README.md`; `docs/knowledge/business/README.md`; `docs/knowledge/development/README.md`; `docs/knowledge/testing/README.md` | 事实、决策、计划分离 |
+| T01 | 测试 | 手工文档上传要覆盖哪些场景？ | `docs/knowledge/testing/rag-mvp-test-cases.md`; `src/test/java/com/example/aipassagecreator/service/RagDocumentStoreKnowledgeTest.java` | 正常/异常/重复/超长 |
+| T02 | 测试 | 如何验证普通用户不能越权检索？ | `src/test/java/com/example/aipassagecreator/service/RagServiceTest.java`; `src/test/java/com/example/aipassagecreator/controller/RagKnowledgeControllerTest.java` | fail-closed |
+| T03 | 测试 | 如何测试 embedding 超时和索引重试？ | `src/test/java/com/example/aipassagecreator/service/RagDocumentStoreKnowledgeTest.java`; `src/test/java/com/example/aipassagecreator/service/RagKnowledgeSyncJobRetryTest.java` | 错误、次数和恢复 |
+| T04 | 测试 | 如何测试 pgvector 不可用？ | `src/test/java/com/example/aipassagecreator/service/RagServiceTest.java`; `src/test/java/com/example/aipassagecreator/service/RagAugmentationServiceTest.java` | 熔断和主流程降级 |
+| T05 | 测试 | Recall@5 和 MRR@5 如何计算？ | `src/main/java/com/example/aipassagecreator/service/RagRetrievalEvaluator.java`; `docs/knowledge/testing/rag-gold-set.md` | gold source 和排序位置 |
+| T06 | 测试 | 如何验证引用字段完整？ | `src/test/java/com/example/aipassagecreator/service/RagKnowledgeBaseServiceTest.java`; `src/test/java/com/example/aipassagecreator/controller/RagKnowledgeControllerTest.java` | sourcePath/sectionPath/commitSha |
+| T07 | 测试 | 如何验证旧 active 批次不会被失败同步覆盖？ | `src/test/java/com/example/aipassagecreator/service/RagKnowledgeSyncJobServiceTest.java`; `src/test/java/com/example/aipassagecreator/service/RagKnowledgeSyncJobRetryTest.java` | staging 失败回归 |
+| T08 | 测试 | 如何验证同源结果去重且取高分？ | `src/test/java/com/example/aipassagecreator/service/RagKnowledgeBaseServiceTest.java` | 关键词/向量合并 |
+| T09 | 测试 | 如何验证无答案问题不被编造？ | `docs/knowledge/testing/rag-gold-set.md`; `src/test/java/com/example/aipassagecreator/service/RagRetrievalEvaluatorTest.java` | 拒答率 |
 | T10 | 测试 | 测试没有证据时能否标记完成？ | `AGENTS.md`; `docs/knowledge/testing/README.md` | 必须保持待验证 |
 
 ## 发布门槛
