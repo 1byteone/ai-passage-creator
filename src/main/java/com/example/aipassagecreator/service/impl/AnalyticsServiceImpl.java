@@ -2,11 +2,15 @@ package com.example.aipassagecreator.service.impl;
 
 import com.example.aipassagecreator.mapper.ArticleMapper;
 import com.example.aipassagecreator.mapper.ArticleQualityMapper;
+import com.example.aipassagecreator.mapper.RagReferenceMapper;
 import com.example.aipassagecreator.mapper.SkillExecutionMapper;
 import com.example.aipassagecreator.model.po.Article;
 import com.example.aipassagecreator.model.po.ArticleQuality;
+import com.example.aipassagecreator.model.po.RagReference;
+import com.example.aipassagecreator.model.po.SkillExecutionPo;
 import com.example.aipassagecreator.model.vo.AnalyticsVO;
 import com.example.aipassagecreator.service.AnalyticsService;
+import com.example.aipassagecreator.service.RagService;
 import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +33,12 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Resource
     private SkillExecutionMapper skillExecutionMapper;
+
+    @Resource
+    private RagReferenceMapper ragReferenceMapper;
+
+    @Resource
+    private RagService ragService;
 
     @Override
     public AnalyticsVO getContentAnalytics() {
@@ -140,6 +150,37 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .mapToLong(com.example.aipassagecreator.model.po.SkillExecutionPo::getTokenUsage)
                 .sum();
 
+        // ── RAG 统计（阶段三）──
+        List<RagReference> allRefs = ragReferenceMapper.selectListByQuery(
+                QueryWrapper.create()
+                        .select("stage", "ref_type", "score", "ref_title", "create_time"));
+        long ragTotalRefs = allRefs.size();
+        Double ragAvgScore = null;
+        Map<String, Long> ragStageDistribution = null;
+        Map<String, Long> ragRefTypeDistribution = null;
+        List<AnalyticsVO.RagHotQuery> ragHotQueries = null;
+        if (!allRefs.isEmpty()) {
+            ragAvgScore = allRefs.stream()
+                    .filter(r -> r.getScore() != null)
+                    .mapToDouble(RagReference::getScore)
+                    .average().orElse(0.0);
+            ragStageDistribution = allRefs.stream()
+                    .filter(r -> r.getStage() != null)
+                    .collect(Collectors.groupingBy(RagReference::getStage, Collectors.counting()));
+            ragRefTypeDistribution = allRefs.stream()
+                    .filter(r -> r.getRefType() != null)
+                    .collect(Collectors.groupingBy(RagReference::getRefType, Collectors.counting()));
+            ragHotQueries = allRefs.stream()
+                    .filter(r -> r.getRefTitle() != null)
+                    .collect(Collectors.groupingBy(RagReference::getRefTitle, Collectors.counting()))
+                    .entrySet().stream()
+                    .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                    .limit(10)
+                    .map(e -> new AnalyticsVO.RagHotQuery(
+                            e.getKey(), e.getValue(), 0.0, ""))
+                    .toList();
+        }
+
         return AnalyticsVO.builder()
                 .totalArticles((long) articles.size())
                 .styleDistribution(styleDistribution)
@@ -151,6 +192,11 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .dailyActiveUsers(dailyActiveUsers)
                 .successRate(successRate)
                 .totalTokenUsage(totalTokens)
+                .ragTotalReferences(ragTotalRefs)
+                .ragAvgScore(ragAvgScore)
+                .ragStageDistribution(ragStageDistribution)
+                .ragRefTypeDistribution(ragRefTypeDistribution)
+                .ragHotQueries(ragHotQueries)
                 .build();
     }
 }

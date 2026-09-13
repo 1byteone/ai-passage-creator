@@ -12,6 +12,8 @@ import com.example.aipassagecreator.model.po.RagReference;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.service.ArticleService;
 import com.example.aipassagecreator.service.RagDocumentStore;
+import com.example.aipassagecreator.service.RagKnowledgeBaseService;
+import com.example.aipassagecreator.service.RagKnowledgeSyncService;
 import com.example.aipassagecreator.service.RagReferenceStore;
 import com.example.aipassagecreator.service.RagService;
 import com.example.aipassagecreator.service.UserService;
@@ -62,6 +64,12 @@ public class RagController {
     @Resource
     private RagDocumentStore ragDocumentStore;
 
+    @Resource
+    private RagKnowledgeBaseService ragKnowledgeBaseService;
+
+    @Resource
+    private RagKnowledgeSyncService ragKnowledgeSyncService;
+
     /** 检索请求 */
     @Data
     public static class RagSearchRequest {
@@ -105,6 +113,17 @@ public class RagController {
         return ResultUtils.success(ragService.search(request.getQuery(), request.getType(), userId, topK));
     }
 
+    /** 当前项目研发知识库只读混合检索：关键词命中与向量命中合并后返回引用。 */
+    @PostMapping("/knowledge/search")
+    @Operation(summary = "研发知识库只读混合检索")
+    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    public BaseResponse<List<RagKnowledgeBaseService.KnowledgeHit>> knowledgeSearch(
+            @Valid @RequestBody RagSearchRequest request, HttpServletRequest httpRequest) {
+        User loginUser = userService.getLoginUser(httpRequest);
+        return ResultUtils.success(ragKnowledgeBaseService.search(request.getQuery(), loginUser.getId(),
+                request.getTopK() == null ? 5 : request.getTopK()));
+    }
+
     /**
      * 上传文档入知识库（仅 admin）— 全站共享，按 source 幂等
      */
@@ -116,6 +135,23 @@ public class RagController {
         User loginUser = userService.getLoginUser(httpRequest);
         ragDocumentStore.upsert(request.getTitle(), request.getSource(), request.getText(), loginUser.getId());
         return ResultUtils.success(true);
+    }
+
+    /** Git 工作树文档只读扫描并重建当前项目知识索引。 */
+    @PostMapping("/knowledge/sync")
+    @Operation(summary = "同步当前项目 Git 知识文档")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<RagKnowledgeSyncService.SyncResult> syncKnowledge() {
+        return ResultUtils.success(ragKnowledgeSyncService.sync());
+    }
+
+    /** 手工文档审核通过后才允许进入正式检索。 */
+    @PostMapping("/document/{id}/approve")
+    @Operation(summary = "审核知识文档")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> approveDocument(@PathVariable Long id, HttpServletRequest httpRequest) {
+        User loginUser = userService.getLoginUser(httpRequest);
+        return ResultUtils.success(ragDocumentStore.approve(id, loginUser.getId()));
     }
 
     /** 知识库文档列表（仅 admin） */

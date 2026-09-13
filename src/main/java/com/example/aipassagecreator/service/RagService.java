@@ -239,6 +239,15 @@ public class RagService {
      * （重复上传同 source 先清旧向量再插入，避免累积）。</p>
      */
     public void indexDocument(String title, String source, String text) {
+        indexDocument(title, source, text, Map.of(
+                "sourceType", "MANUAL",
+                "domain", "business",
+                "documentKind", "reference",
+                "status", "ACTIVE"));
+    }
+
+    /** 研发知识文档索引：保留来源、领域、版本和章节信息，供只读知识库检索使用。 */
+    public void indexDocument(String title, String source, String text, Map<String, Object> knowledgeMetadata) {
         if (text == null || text.isBlank()) {
             return;
         }
@@ -254,10 +263,13 @@ public class RagService {
         List<Document> docs = new ArrayList<>();
         for (Document chunkDoc : splitter.split(new Document(text))) {
             String chunk = chunkDoc.getText();
-            Map<String, Object> metadata = Map.of(
+            java.util.Map<String, Object> metadata = new java.util.HashMap<>(Map.of(
                     "type", "document",
                     "title", title == null ? "" : title,
-                    "source", source == null ? "" : source);
+                    "source", source == null ? "" : source));
+            if (knowledgeMetadata != null) {
+                metadata.putAll(knowledgeMetadata);
+            }
             docs.add(new Document(chunk, metadata));
         }
         if (!docs.isEmpty()) {

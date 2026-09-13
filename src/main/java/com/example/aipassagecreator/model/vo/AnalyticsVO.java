@@ -43,4 +43,15 @@ public class AnalyticsVO {
 
     /** Token 总消耗 */
     private Long totalTokenUsage;
+
+    /** RAG 知识库统计（阶段三新增） */
+    private Long ragTotalReferences;
+    private Double ragAvgScore;
+    private Map<String, Long> ragStageDistribution;
+    private Map<String, Long> ragRefTypeDistribution;
+    private List<RagHotQuery> ragHotQueries;
+
+    /** 热门参考源 */
+    public record RagHotQuery(String query, Long hitCount, Double avgScore, String lastHitTime) {
+    }
 }

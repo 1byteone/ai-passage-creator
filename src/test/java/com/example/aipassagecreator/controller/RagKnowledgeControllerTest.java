@@ -1,0 +1,97 @@
+package com.example.aipassagecreator.controller;
+
+import com.example.aipassagecreator.model.po.User;
+import com.example.aipassagecreator.service.RagDocumentStore;
+import com.example.aipassagecreator.service.RagKnowledgeBaseService;
+import com.example.aipassagecreator.service.RagKnowledgeSyncService;
+import com.example.aipassagecreator.service.RagService;
+import com.example.aipassagecreator.service.UserService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class RagKnowledgeControllerTest {
+
+    @Mock
+    private RagService ragService;
+    @Mock
+    private UserService userService;
+    @Mock
+    private RagDocumentStore documentStore;
+    @Mock
+    private RagKnowledgeBaseService knowledgeBase;
+    @Mock
+    private RagKnowledgeSyncService syncService;
+
+    @InjectMocks
+    private RagController controller;
+
+    private MockHttpServletRequest request;
+    private User admin;
+
+    @BeforeEach
+    void setUp() {
+        request = new MockHttpServletRequest();
+        admin = new User();
+        admin.setId(1L);
+        admin.setUserRole("admin");
+    }
+
+    @Test
+    void knowledgeSearch_defaultsTopKAndReturnsCitations() {
+        RagController.RagSearchRequest input = new RagController.RagSearchRequest();
+        input.setQuery("SSE 生命周期");
+        RagKnowledgeBaseService.KnowledgeHit hit = new RagKnowledgeBaseService.KnowledgeHit(
+                "项目规范", "引用内容", 0.9, "git:CLAUDE.md#1", "CLAUDE.md",
+                "standard", "project-rule", "ACTIVE", "abc", "工程规范");
+        when(userService.getLoginUser(request)).thenReturn(admin);
+        when(knowledgeBase.search("SSE 生命周期", 1L, 5)).thenReturn(List.of(hit));
+
+        var response = controller.knowledgeSearch(input, request);
+
+        assertEquals(0, response.getCode());
+        assertNotNull(response.getData());
+        assertEquals("CLAUDE.md", response.getData().get(0).sourcePath());
+        verify(knowledgeBase).search("SSE 生命周期", 1L, 5);
+    }
+
+    @Test
+    void syncKnowledge_delegatesToReadOnlySyncService() {
+        RagKnowledgeSyncService.SyncResult result =
+                new RagKnowledgeSyncService.SyncResult(6, 18, "dev_rag", "abc", List.of("git:README.md#0"));
+        when(syncService.sync()).thenReturn(result);
+
+        var response = controller.syncKnowledge();
+
+        assertEquals(0, response.getCode());
+        assertEquals(18, response.getData().sections());
+        verify(syncService).sync();
+    }
+
+    @Test
+    void approveDocument_passesReviewerIdentity() {
+        request = new MockHttpServletRequest();
+        when(userService.getLoginUser(request)).thenReturn(admin);
+        when(documentStore.approve(9L, 1L)).thenReturn(true);
+
+        var response = controller.approveDocument(9L, request);
+
+        assertEquals(0, response.getCode());
+        assertEquals(true, response.getData());
+        verify(documentStore).approve(eq(9L), eq(1L));
+    }
+}

@@ -23,6 +23,18 @@ public class RagDocument {
     private String source;
     private String text;
     private Long userId;
+    private String sourceType;
+    private String domain;
+    private String documentKind;
+    private String status;
+    private String branchName;
+    private String commitSha;
+    private String sourcePath;
+    private String sectionPath;
+    private String checksum;
+    private Long reviewerId;
+    private LocalDateTime reviewedAt;
+    private LocalDateTime indexedAt;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }
