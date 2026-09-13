@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 去AI味检测器测试。
- * <p>覆盖：禁用词检测 / 模板句式 / 过度修饰 / 个人视角 / 段落节奏 / 替换映射 / 评分</p>
+ * <p>覆盖：禁用词检测 / 模板句式 / 过度修饰 / 内容质量规则 / 段落节奏 / 替换映射 / 评分</p>
  */
 class AntiAiFlavorCheckerTest {
 
@@ -52,22 +52,35 @@ class AntiAiFlavorCheckerTest {
         assertTrue(violations.stream().anyMatch(v -> v.contains("毫无疑问")), "应检测到「毫无疑问」");
     }
 
-    // ============= 规则4: 个人视角 =============
+    @Test
+    void detect_humanizerQualityPatterns_found() {
+        String text = "我看过行业报告显示的结论，专家认为这个方案很强大。未来看起来光明。"
+                + "不仅功能完整，而且部署很快。——补充——再补充——最后说明。😀";
+        List<String> violations = AntiAiFlavorRules.detect(text);
+        assertTrue(violations.stream().anyMatch(v -> v.contains("模糊归因")));
+        assertTrue(violations.stream().anyMatch(v -> v.contains("过度修饰")));
+        assertTrue(violations.stream().anyMatch(v -> v.contains("空泛结论")));
+        assertTrue(violations.stream().anyMatch(v -> v.contains("否定式排比")));
+        assertTrue(violations.stream().anyMatch(v -> v.contains("破折号过度")));
+        assertTrue(violations.stream().anyMatch(v -> v.contains("表情符号")));
+    }
+
+    // ============= 规则4: 体裁适配 =============
 
     @Test
-    void detect_noPersonalPerspective_found() {
+    void detect_formalText_withoutFirstPerson_isNotPenalized() {
         String text = "本文将从三个维度分析这个问题。作者认为这是一个值得关注的方向。";
         List<String> violations = AntiAiFlavorRules.detect(text);
-        assertTrue(violations.stream().anyMatch(v -> v.contains("缺个人视角")),
-                "应检测到缺少「我」");
+        assertTrue(violations.stream().noneMatch(v -> v.contains("缺个人视角")),
+                "正式文本不应因缺少「我」而被扣分");
     }
 
     @Test
-    void detect_withPersonalPerspective_passes() {
+    void detect_withPersonalPerspective_isSupported() {
         String text = "我试过很多方法，最后发现这个最管用。我觉得关键是坚持。";
         List<String> violations = AntiAiFlavorRules.detect(text);
         assertTrue(violations.stream().noneMatch(v -> v.contains("缺个人视角")),
-                "有「我」的文章不应触发缺个人视角");
+                "使用第一人称的文章也不应触发个人视角规则");
     }
 
     // ============= 规则5: 段落节奏 =============
@@ -100,6 +113,17 @@ class AntiAiFlavorCheckerTest {
         var report = AntiAiFlavorChecker.check(text);
         assertTrue(report.passed(), "自然文本应通过检测");
         assertTrue(report.score() >= 80, "自然文本得分应 ≥ 80: " + report.score());
+    }
+
+    @Test
+    void checker_usesConfiguredPassThreshold() {
+        String text = "我首先记录了这次测试结果。";
+        var passesAtScore = AntiAiFlavorChecker.check(text, 90);
+        var failsAboveScore = AntiAiFlavorChecker.check(text, 91);
+
+        assertEquals(90, passesAtScore.score());
+        assertTrue(passesAtScore.passed(), "分数等于阈值时应通过");
+        assertFalse(failsAboveScore.passed(), "分数低于阈值时应不通过");
     }
 
     // ============= 替换映射 =============

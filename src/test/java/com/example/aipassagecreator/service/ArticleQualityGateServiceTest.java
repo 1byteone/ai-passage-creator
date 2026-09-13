@@ -64,7 +64,7 @@ class ArticleQualityGateServiceTest {
     @Test
     @DisplayName("无 AI 味内容 → 不调 detox，持久化通过，返回 passed")
     void checkAndDetox_cleanContent_passesNoDetox() {
-        // 用了「我」，不触发规则4（缺个人视角）；无 AI 禁用词/模板/过度修饰
+        // 使用第一人称只是体裁内容，不应成为质量门的硬性要求
         ArticleState state = stateWith("我昨天去公园跑步了，遇到了一只很可爱的流浪猫。它蹲在长椅下面，"
                 + "我蹲下来看了它好久。它喵了一声就跑掉了。有意思的是，第二天我又在同一个地方看到了它。");
 
@@ -85,7 +85,8 @@ class ArticleQualityGateServiceTest {
         String aiText = "在当今数字化快速发展的时代，人工智能技术正在深刻地改变着我们的生活方式。"
                 + "首先，AI技术提高了生产效率。其次，AI技术改善了用户体验。最后，AI技术创造了新的商业模式。"
                 + "综上所述，人工智能的发展是不可避免的。值得注意的是，我们需要关注其伦理问题。"
-                + "同样重要的是，我们需要加强监管。此外，相关法律法规也需要完善。因此，我们应该积极应对。";
+                + "同样重要的是，我们需要加强监管。此外，相关法律法规也需要完善。因此，我们应该积极应对。"
+                + "专家认为这个方案强大，未来看起来光明。";
         ArticleState state = stateWith(aiText);
 
         SkillExecution mockExec = mock(SkillExecution.class);
@@ -100,7 +101,13 @@ class ArticleQualityGateServiceTest {
         verify(skillRegistry).createExecution(eq("ai-detox"), anyMap());
         verify(mockExec).execute(any(), eq(USER_ID));
         verify(mockExec).getPersistedOutput();
-        verify(articleQualityMapper).insert(any(ArticleQuality.class));
+
+        ArgumentCaptor<ArticleQuality> qualityCaptor = ArgumentCaptor.forClass(ArticleQuality.class);
+        verify(articleQualityMapper).insert(qualityCaptor.capture());
+        ArticleQuality quality = qualityCaptor.getValue();
+        assertEquals("改写后的自然文本", quality.getArticleContentSnapshot());
+        assertEquals("humanizer-zh@91f3d394", quality.getMethodologyUsed());
+        assertTrue(quality.getSuggestions().contains("humanizer-zh@91f3d394"));
     }
 
     @Test
@@ -109,7 +116,8 @@ class ArticleQualityGateServiceTest {
         String aiText = "在当今数字化快速发展的时代，人工智能技术正在深刻地改变着我们的生活方式。"
                 + "首先，AI技术提高了生产效率。其次，AI技术改善了用户体验。最后，AI技术创造了新的商业模式。"
                 + "综上所述，人工智能的发展是不可避免的。值得注意的是，我们需要关注其伦理问题。"
-                + "同样重要的是，我们需要加强监管。此外，相关法律法规也需要完善。因此，我们应该积极应对。";
+                + "同样重要的是，我们需要加强监管。此外，相关法律法规也需要完善。因此，我们应该积极应对。"
+                + "专家认为这个方案强大，未来看起来光明。";
         ArticleState state = stateWith(aiText);
 
         SkillExecution mockExec = mock(SkillExecution.class);
@@ -132,7 +140,8 @@ class ArticleQualityGateServiceTest {
         String aiText = "在当今数字化快速发展的时代，人工智能技术正在深刻地改变着我们的生活方式。"
                 + "首先，AI技术提高了生产效率。其次，AI技术改善了用户体验。最后，AI技术创造了新的商业模式。"
                 + "综上所述，人工智能的发展是不可避免的。值得注意的是，我们需要关注其伦理问题。"
-                + "同样重要的是，我们需要加强监管。此外，相关法律法规也需要完善。因此，我们应该积极应对。";
+                + "同样重要的是，我们需要加强监管。此外，相关法律法规也需要完善。因此，我们应该积极应对。"
+                + "专家认为这个方案强大，未来看起来光明。";
         ArticleState state = stateWith(aiText);
 
         ArticleQualityGateService.GateResult result = service.checkAndDetox(state, "t4", USER_ID);
@@ -142,6 +151,20 @@ class ArticleQualityGateServiceTest {
         assertFalse(result.violations().isEmpty(), "违规列表不应为空");
         verify(skillRegistry, never()).createExecution(anyString(), anyMap());
         verify(articleQualityMapper).insert(any(ArticleQuality.class));
+    }
+
+    @Test
+    @DisplayName("质量门使用配置阈值，而不是固定的 50 分")
+    void checkAndDetox_usesConfiguredThreshold() {
+        ReflectionTestUtils.setField(service, "passThreshold", 91);
+        ReflectionTestUtils.setField(service, "autoDetoxEnabled", false);
+        ArticleState state = stateWith("我首先记录了这次测试结果。");
+
+        ArticleQualityGateService.GateResult result = service.checkAndDetox(state, "t-threshold", USER_ID);
+
+        assertEquals(90, result.score());
+        assertFalse(result.passed());
+        verify(skillRegistry, never()).createExecution(anyString(), anyMap());
     }
 
     // ──────────────────────────── 质量门禁用 ────────────────────────────

@@ -37,6 +37,19 @@ public class SkillEngineIntegrationTest {
     }
 
     @Test
+    void testAiDetoxSkillCarriesHumanizerProvenance() {
+        SkillDefinition def = skillRegistry.getSkill("ai-detox");
+
+        assertNotNull(def);
+        assertEquals("https://github.com/op7418/Humanizer-zh",
+                def.getMetadata().get("sourceRepository"));
+        assertEquals("91f3d394db8419c20d67ebe22a96cf8fee0a404b",
+                def.getMetadata().get("sourceCommit"));
+        assertEquals("MIT", def.getMetadata().get("sourceLicense"));
+        assertTrue(def.getMetadata().get("adaptation").toString().contains("不以绕过检测器为目标"));
+    }
+
+    @Test
     void testTopicGenSkillExists() {
         SkillDefinition def = skillRegistry.getSkill("topic-gen");
         assertNotNull(def);
