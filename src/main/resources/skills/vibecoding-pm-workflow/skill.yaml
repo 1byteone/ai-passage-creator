@@ -1,0 +1,59 @@
+name: vibecoding-pm-workflow
+description: Vibecoding PM 工作流：输入 PRD 需求文档，先提炼交互流程大纲与关键状态，经确认后再生成全流程巡查清单与验收规范
+category: assistant
+requiredRoles: [user]
+multiRound: true
+
+variables:
+  prd:
+    description: PRD 需求文档或功能需求描述
+    required: true
+    source: INPUT
+    uiType: textarea
+    placeholder: 粘贴 PRD 文本，包含业务目标、用户角色、主流程与异常分支
+    maxLength: 50000
+  projectName:
+    description: 项目或功能模块名称
+    required: false
+    source: INPUT
+    uiType: input
+    placeholder: 例如：创作者中心-AI图文生成模块
+  mode:
+    description: 交付侧重点
+    required: true
+    source: INPUT
+    uiType: select
+    defaultValue: all
+    options:
+      - label: 原型流程 + 巡查清单全套 (推荐)
+        value: all
+      - label: 偏重低保真原型与跳转流 (prototype)
+        value: prototype
+      - label: 偏重上线前走查与验收矩阵 (audit)
+        value: audit
+
+phases:
+  - name: extract_flow
+    promptFile: skills/vibecoding-pm-workflow/prompts/phase1_flow.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: flowDraft
+    variables:
+      - name: prd
+      - name: projectName
+      - name: mode
+    requireConfirmation: false
+
+  - name: generate_audit_plan
+    promptFile: skills/vibecoding-pm-workflow/prompts/phase2_audit.md
+    model: agnes
+    streaming: false
+    outputParser: json
+    outputKey: auditPlan
+    variables:
+      - name: flowDraft
+        ref: extract_flow
+      - name: prd
+      - name: mode
+    requireConfirmation: true
