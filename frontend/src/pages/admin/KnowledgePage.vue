@@ -24,6 +24,9 @@
           <a-button type="primary" :loading="submitting" @click="handleUpload">
             <template #icon><UploadOutlined /></template>写入知识库
           </a-button>
+          <a-button :loading="syncing" @click="handleSync">
+            <template #icon><SyncOutlined /></template>同步 Git 文档
+          </a-button>
           <a-upload :before-upload="handleFile" :show-upload-list="false" accept=".md,.txt">
             <a-button><template #icon><FileOutlined /></template>上传 .md/.txt 文件</a-button>
           </a-upload>
@@ -50,9 +53,13 @@
         <a-table-column title="字数" data-index="text">
           <template #default="{ record }">{{ (record.text || '').length }}</template>
         </a-table-column>
+        <a-table-column title="状态" data-index="status" />
+        <a-table-column title="来源" data-index="sourceType" />
+        <a-table-column title="路径" data-index="sourcePath" ellipsis />
         <a-table-column title="上传时间" data-index="createTime" />
         <a-table-column title="操作">
           <template #default="{ record }">
+            <a-button v-if="record.status === 'PENDING_REVIEW'" type="link" size="small" @click="handleApprove(record.id)">审核通过</a-button>
             <a-popconfirm title="确认删除该文档？删除后向量索引同步清除。" @confirm="handleDelete(record.id)">
               <a-button type="link" danger size="small">删除</a-button>
             </a-popconfirm>
@@ -66,8 +73,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { UploadOutlined, FileOutlined } from '@ant-design/icons-vue'
-import { listRagDocuments, deleteRagDocument, uploadRagDocument } from '@/api/ragController'
+import { UploadOutlined, FileOutlined, SyncOutlined } from '@ant-design/icons-vue'
+import { listRagDocuments, deleteRagDocument, uploadRagDocument, approveRagDocument, syncRagKnowledge } from '@/api/ragController'
 
 const records = ref<API.RagDocument[]>([])
 const totalRow = ref(0)
@@ -76,6 +83,7 @@ const keyword = ref('')
 const pageNum = ref(1)
 const pageSize = 20
 const submitting = ref(false)
+const syncing = ref(false)
 const form = ref({ title: '', source: '', text: '' })
 
 const loadDocuments = async () => {
@@ -92,6 +100,32 @@ const loadDocuments = async () => {
   }
 }
 
+const handleApprove = async (id?: number) => {
+  if (!id) return
+  try {
+    const res = await approveRagDocument(id)
+    if (res.data.code !== 0) throw new Error(res.data.message || '审核失败')
+    message.success('审核通过，已建立向量索引')
+    loadDocuments()
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '审核失败')
+  }
+}
+
+const handleSync = async () => {
+  syncing.value = true
+  try {
+    const res = await syncRagKnowledge()
+    if (res.data.code !== 0) throw new Error(res.data.message || '同步失败')
+    message.success(`Git 文档已同步：${res.data.data?.files ?? 0} 个文件，${res.data.data?.sections ?? 0} 个章节`)
+    loadDocuments()
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '同步失败')
+  } finally {
+    syncing.value = false
+  }
+}
+
 const handleUpload = async () => {
   if (!form.value.source.trim()) {
     message.warning('请填写 source')
@@ -101,7 +135,7 @@ const handleUpload = async () => {
   try {
     const res = await uploadRagDocument({ ...form.value })
     if (res.data.code !== 0) throw new Error(res.data.message || '上传失败')
-    message.success('文档已入知识库')
+    message.success('文档已提交审核，审核通过后进入检索')
     form.value = { title: '', source: '', text: '' }
     loadDocuments()
   } catch (e) {
