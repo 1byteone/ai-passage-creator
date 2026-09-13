@@ -32,6 +32,8 @@ public class RagDocument {
     private String sourcePath;
     private String sectionPath;
     private String checksum;
+    private String batchId;
+    private String projectKey;
     private Long reviewerId;
     private LocalDateTime reviewedAt;
     private LocalDateTime indexedAt;

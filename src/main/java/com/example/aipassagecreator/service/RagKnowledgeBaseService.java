@@ -30,7 +30,7 @@ public class RagKnowledgeBaseService {
         for (RagDocument document : documentStore.searchActive(query, limit)) {
             merged.put(document.getSource(), fromDocument(document, keywordScore(document, query)));
         }
-        for (RagService.RagHit hit : ragService.search(query, "document", userId, limit)) {
+        for (RagService.RagHit hit : ragService.searchKnowledge(query, userId, limit, documentStore.activeBatchId())) {
             merged.putIfAbsent(hit.refId(), new KnowledgeHit(hit.title(), hit.content(), hit.score(),
                     hit.refId(), "", "", "reference", "ACTIVE", "", ""));
         }

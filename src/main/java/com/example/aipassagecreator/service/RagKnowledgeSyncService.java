@@ -51,6 +51,18 @@ public class RagKnowledgeSyncService {
     }
 
     public SyncResult sync() {
+        return syncInternal(null);
+    }
+
+    /** 批次同步：新内容先写入指定批次，成功后由任务服务切换 active 批次。 */
+    public SyncResult syncBatch(String batchId) {
+        if (batchId == null || batchId.isBlank()) {
+            throw new IllegalArgumentException("batchId 不能为空");
+        }
+        return syncInternal(batchId);
+    }
+
+    private SyncResult syncInternal(String batchId) {
         List<Path> files = discoverFiles();
         String branch = gitValue("branch --show-current", configuredBranch);
         String commit = gitValue("rev-parse HEAD", "working-tree");
@@ -59,7 +71,9 @@ public class RagKnowledgeSyncService {
         for (Path file : files) {
             String relative = projectRoot.relativize(file).toString().replace('\\', '/');
             String prefix = "git:" + relative + "#";
-            documentStore.deleteBySourcePrefix(prefix);
+            if (batchId == null) {
+                documentStore.deleteBySourcePrefix(prefix);
+            }
             String text;
             try {
                 text = Files.readString(file, StandardCharsets.UTF_8);
@@ -75,8 +89,13 @@ public class RagKnowledgeSyncService {
             for (int i = 0; i < parsed.size(); i++) {
                 Section section = parsed.get(i);
                 String source = prefix + i;
-                documentStore.upsertGit(title, source, section.text(), domain, kind, branch, commit,
-                        relative, section.path(), checksum);
+                if (batchId == null) {
+                    documentStore.upsertGit(title, source, section.text(), domain, kind, branch, commit,
+                            relative, section.path(), checksum);
+                } else {
+                    documentStore.upsertGit(title, source, section.text(), domain, kind, branch, commit,
+                            relative, section.path(), checksum, batchId);
+                }
                 sections++;
                 sources.add(source);
             }

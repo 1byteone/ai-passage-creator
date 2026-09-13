@@ -308,10 +308,33 @@ create table if not exists rag_document (
     reviewer_id bigint null,
     reviewed_at datetime null,
     indexed_at datetime null,
+    batch_id varchar(64) null,
+    project_key varchar(128) not null default 'ai-passage-creator',
     create_time datetime default CURRENT_TIMESTAMP not null,
-    update_time datetime default CURRENT_TIMESTAMP not null,
-    constraint uq_rag_doc_source unique (source)
+    update_time datetime default CURRENT_TIMESTAMP not null
 );
+create index if not exists idx_rag_document_batch_status on rag_document(batch_id, status);
+create index if not exists idx_rag_document_project_source on rag_document(project_key, source_type);
+
+create table if not exists rag_sync_job (
+    id bigint auto_increment primary key,
+    project_key varchar(128) not null,
+    branch_name varchar(128) null,
+    commit_sha varchar(64) null,
+    status varchar(24) not null,
+    total_files int default 0 not null,
+    processed_files int default 0 not null,
+    total_sections int default 0 not null,
+    indexed_sections int default 0 not null,
+    error_message varchar(2000) null,
+    active boolean default false not null,
+    created_by bigint null,
+    started_at datetime null,
+    finished_at datetime null,
+    create_time datetime default CURRENT_TIMESTAMP not null,
+    update_time datetime default CURRENT_TIMESTAMP not null
+);
+create index if not exists idx_rag_sync_job_project_status on rag_sync_job(project_key, status, active);
 
 -- 漫画手帐三表（与 V9__create_comic_tables.sql 同步维护）
 create table if not exists comic_book (

@@ -181,8 +181,29 @@ public class RagService {
         return doSearch(query, type, userId, topK, similarityThreshold);
     }
 
+    /** 当前项目研发知识库检索：只允许有效共享文档和当前 active 批次。 */
+    public List<RagHit> searchKnowledge(String query, Long userId, int topK, String activeBatchId) {
+        int k = Math.max(1, Math.min(topK <= 0 ? 5 : topK, 20));
+        FilterExpressionBuilder b = new FilterExpressionBuilder();
+        FilterExpressionBuilder.Op scope = activeBatchId == null || activeBatchId.isBlank()
+                ? b.or(b.eq("sourceType", "MANUAL"), b.eq("batchId", ""))
+                : b.or(b.eq("sourceType", "MANUAL"), b.eq("batchId", activeBatchId));
+        Filter.Expression filter = b.and(
+                b.and(b.and(b.eq("type", "document"), b.eq("status", "ACTIVE")),
+                        b.eq("projectKey", "ai-passage-creator")), scope).build();
+        return doSearchWithFilter(query, k, defaultThreshold, filter).stream()
+                .map(c -> new RagHit(c.refId(), c.title(), truncate(c.content(), 300), c.score(), c.type()))
+                .toList();
+    }
+
     /** 检索核心：相似度查询 + 归一化分数，返回全文 chunk（截断由上层 search 决定） */
     private List<RagChunk> doSearch(String query, String type, Long userId, int topK, double similarityThreshold) {
+        return doSearchWithFilter(query, Math.max(1, Math.min(topK <= 0 ? 5 : topK, 20)),
+                similarityThreshold, buildFilter(type, userId));
+    }
+
+    private List<RagChunk> doSearchWithFilter(String query, int k, double similarityThreshold,
+                                               Filter.Expression filter) {
         if (query == null || query.isBlank()) {
             return List.of();
         }
@@ -191,13 +212,10 @@ public class RagService {
             log.warn("RAG 检索熔断中，直接返回空");
             return List.of();
         }
-        int k = Math.max(1, Math.min(topK <= 0 ? 5 : topK, 20));
-
         SearchRequest.Builder builder = SearchRequest.builder()
                 .query(query)
                 .topK(k)
                 .similarityThreshold(similarityThreshold);
-        Filter.Expression filter = buildFilter(type, userId);
         if (filter != null) {
             builder.filterExpression(filter);
         }
@@ -253,9 +271,13 @@ public class RagService {
         }
         // 共享文档对全站登录用户开放，入库前必须清洗（防注入/防 XSS）
         text = sanitizeForIndex(text);
-        // 幂等：按 source 清旧向量（失败仅告警，不阻断插入）
-        if (source != null && !source.isBlank()) {
-            deleteBySource(source);
+        // 批次索引使用独立 vectorSource，避免新批次写入时删除旧批次向量。
+        String vectorSource = source;
+        if (knowledgeMetadata != null && knowledgeMetadata.get("vectorSource") != null) {
+            vectorSource = String.valueOf(knowledgeMetadata.get("vectorSource"));
+        }
+        if (vectorSource != null && !vectorSource.isBlank()) {
+            deleteBySource(vectorSource);
         }
         if (text.length() > 30000) {
             text = truncate(text, 30000);
@@ -266,7 +288,8 @@ public class RagService {
             java.util.Map<String, Object> metadata = new java.util.HashMap<>(Map.of(
                     "type", "document",
                     "title", title == null ? "" : title,
-                    "source", source == null ? "" : source));
+                    "source", source == null ? "" : source,
+                    "vectorSource", vectorSource == null ? "" : vectorSource));
             if (knowledgeMetadata != null) {
                 metadata.putAll(knowledgeMetadata);
             }

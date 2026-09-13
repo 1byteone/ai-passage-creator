@@ -9,11 +9,13 @@ import com.example.aipassagecreator.exception.ThrowUtils;
 import com.example.aipassagecreator.model.po.Article;
 import com.example.aipassagecreator.model.po.RagDocument;
 import com.example.aipassagecreator.model.po.RagReference;
+import com.example.aipassagecreator.model.po.RagSyncJob;
 import com.example.aipassagecreator.model.po.User;
 import com.example.aipassagecreator.service.ArticleService;
 import com.example.aipassagecreator.service.RagDocumentStore;
 import com.example.aipassagecreator.service.RagKnowledgeBaseService;
 import com.example.aipassagecreator.service.RagKnowledgeSyncService;
+import com.example.aipassagecreator.service.RagKnowledgeSyncJobService;
 import com.example.aipassagecreator.service.RagReferenceStore;
 import com.example.aipassagecreator.service.RagService;
 import com.example.aipassagecreator.service.UserService;
@@ -69,6 +71,9 @@ public class RagController {
 
     @Resource
     private RagKnowledgeSyncService ragKnowledgeSyncService;
+
+    @Resource
+    private RagKnowledgeSyncJobService ragKnowledgeSyncJobService;
 
     /** 检索请求 */
     @Data
@@ -141,8 +146,19 @@ public class RagController {
     @PostMapping("/knowledge/sync")
     @Operation(summary = "同步当前项目 Git 知识文档")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<RagKnowledgeSyncService.SyncResult> syncKnowledge() {
-        return ResultUtils.success(ragKnowledgeSyncService.sync());
+    public BaseResponse<RagSyncJob> syncKnowledge(HttpServletRequest httpRequest) {
+        User loginUser = userService.getLoginUser(httpRequest);
+        return ResultUtils.success(ragKnowledgeSyncJobService.start(loginUser.getId()));
+    }
+
+    /** 查询当前项目知识库同步任务进度。 */
+    @GetMapping("/knowledge/sync/{id}")
+    @Operation(summary = "查询研发知识库同步任务")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<RagSyncJob> syncStatus(@PathVariable Long id) {
+        RagSyncJob job = ragKnowledgeSyncJobService.get(id);
+        ThrowUtils.throwIf(job == null, ErrorCode.NOT_FOUND_ERROR, "同步任务不存在");
+        return ResultUtils.success(job);
     }
 
     /** 手工文档审核通过后才允许进入正式检索。 */

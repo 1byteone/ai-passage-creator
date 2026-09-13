@@ -1,9 +1,11 @@
 package com.example.aipassagecreator.controller;
 
 import com.example.aipassagecreator.model.po.User;
+import com.example.aipassagecreator.model.po.RagSyncJob;
 import com.example.aipassagecreator.service.RagDocumentStore;
 import com.example.aipassagecreator.service.RagKnowledgeBaseService;
 import com.example.aipassagecreator.service.RagKnowledgeSyncService;
+import com.example.aipassagecreator.service.RagKnowledgeSyncJobService;
 import com.example.aipassagecreator.service.RagService;
 import com.example.aipassagecreator.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +38,8 @@ class RagKnowledgeControllerTest {
     private RagKnowledgeBaseService knowledgeBase;
     @Mock
     private RagKnowledgeSyncService syncService;
+    @Mock
+    private RagKnowledgeSyncJobService syncJobService;
 
     @InjectMocks
     private RagController controller;
@@ -71,15 +75,15 @@ class RagKnowledgeControllerTest {
 
     @Test
     void syncKnowledge_delegatesToReadOnlySyncService() {
-        RagKnowledgeSyncService.SyncResult result =
-                new RagKnowledgeSyncService.SyncResult(6, 18, "dev_rag", "abc", List.of("git:README.md#0"));
-        when(syncService.sync()).thenReturn(result);
+        RagSyncJob result = RagSyncJob.builder().id(7L).status(RagSyncJob.STATUS_QUEUED).build();
+        when(userService.getLoginUser(request)).thenReturn(admin);
+        when(syncJobService.start(1L)).thenReturn(result);
 
-        var response = controller.syncKnowledge();
+        var response = controller.syncKnowledge(request);
 
         assertEquals(0, response.getCode());
-        assertEquals(18, response.getData().sections());
-        verify(syncService).sync();
+        assertEquals(RagSyncJob.STATUS_QUEUED, response.getData().getStatus());
+        verify(syncJobService).start(1L);
     }
 
     @Test
