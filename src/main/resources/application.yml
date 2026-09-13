@@ -44,7 +44,7 @@ spring:
     dashscope:
       api-key: ${DASHSCOPE_API_KEY:}
     openai:
-      api-key: ${AGNES_AI_API_KEY:}
+      api-key: ${AGNES_API_KEY:${AGNES_AI_API_KEY:}}
       base-url: https://api.agnes-ai.cn
       chat:
         options:
@@ -139,6 +139,10 @@ rag:
     # auto: 有 SUPABASE_DB_URL 凭据 → pgvector，否则内存 SimpleVectorStore
     # pgvector / memory / redis: 强制指定
     active: auto
+  knowledge:
+    # 当前项目工作树；同步器只读取固定根文档和 docs/knowledge/**/*.md
+    source-root: ${RAG_KNOWLEDGE_SOURCE_ROOT:.}
+    branch: ${RAG_KNOWLEDGE_BRANCH:dev_rag}
 
 # Webhook 共享签名密钥（生产必填；留空则 WebhookService 启动失败）
 webhook:

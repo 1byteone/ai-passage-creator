@@ -45,7 +45,7 @@ docker compose ps
 |------|------|------|
 | `DB_ROOT_PASSWORD` / `DB_PASSWORD` / `REDIS_PASSWORD` | ✅ | compose fail-fast，缺失则启动报错 |
 | `DASHSCOPE_API_KEY` | 按需 | 文章创作默认模型（Qwen） |
-| `AGNES_AI_API_KEY` | 按需 | Skill 引擎默认模型 |
+| `AGNES_API_KEY` | 按需 | Agnes AI Skill 引擎默认模型；旧环境可兼容 `AGNES_AI_API_KEY` |
 | `LANGSEARCH_API_KEY` | 可选 | research 技能真实联网搜索；不配则退化为模型知识 |
 | `TENCENT_COS_*` | 按需 | 卡片/配图/手写笔记存储 |
 | `STRIPE_*` / `PEXELS_API_KEY` / `WEBHOOK_SHARED_SECRET` | 按需 | 支付 / 图片 / Webhook |
@@ -74,7 +74,7 @@ docker compose ps
 |------|-----------|
 | 前端页面打开但 API 全 502 | backend 未就绪或崩了：`docker compose logs backend` 排查；frontend 等待 `depends_on` 健康检查 |
 | 登录后 session 很快失效 | Redis 未配置密码导致连不上：核对 `.env` 的 `REDIS_PASSWORD` 与 compose 一致 |
-| 文章生成报「LLM 服务不可用」 | `AGNES_AI_API_KEY` / `DASHSCOPE_API_KEY` 未配置或失效 |
+| 文章生成报「LLM 服务不可用」 | `AGNES_API_KEY` / `DASHSCOPE_API_KEY` 未配置或失效 |
 | research 技能返回「搜索服务未配置」 | 未配置 `LANGSEARCH_API_KEY`；配置后重启 backend |
 | 卡片渲染失败/空白 | 容器内 Playwright 或字体依赖损坏：`docker compose build backend --no-cache` 重建 |
 | 中文乱码（PDF/Word 导出） | 字体缺失，重建镜像确保 `font-noto-cjk` / `wqy-zenhei` 已安装 |

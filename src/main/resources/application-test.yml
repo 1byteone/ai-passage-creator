@@ -24,7 +24,7 @@ spring:
     dashscope:
       api-key: ${DASHSCOPE_API_KEY:test}
     openai:
-      api-key: ${AGNES_AI_API_KEY:test}
+      api-key: ${AGNES_API_KEY:${AGNES_AI_API_KEY:test}}
       base-url: https://api.agnes-ai.cn
       chat:
         options:
