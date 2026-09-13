@@ -25,6 +25,10 @@
     v-else-if="skillName === 'data-visualization-report'"
     :execution-id="executionId"
   />
+  <SkillResultVibecoding
+    v-else-if="skillName === 'vibecoding-pm-workflow'"
+    :output-data="outputData"
+  />
   <SkillResultDefault v-else :output-data="outputData" />
 </template>
 
@@ -36,6 +40,7 @@ import SkillResultDefault from './SkillResultDefault.vue'
 import SkillResultProofreading from './SkillResultProofreading.vue'
 import SkillResultResearch from './SkillResultResearch.vue'
 import SkillResultTopicGen from './SkillResultTopicGen.vue'
+import SkillResultVibecoding from './SkillResultVibecoding.vue'
 
 defineProps<{
   skillName: string

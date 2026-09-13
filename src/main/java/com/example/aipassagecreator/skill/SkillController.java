@@ -51,7 +51,7 @@ public class SkillController {
                     "seo-optimizer", "content-translator", "ai-detox", "seeding-copy",
                     "rewrite-plagiarism", "video-script", "outline-expander",
                     "content-summarizer", "headline-optimizer", "comic-journal",
-                    "data-visualization-report");
+                    "data-visualization-report", "vibecoding-pm-workflow");
 
     private static final String ACTION_APPROVE = "approve";
     private static final String ACTION_MODIFY = "modify";

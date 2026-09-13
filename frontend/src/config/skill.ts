@@ -13,7 +13,7 @@ export interface SkillUiConfig {
   accent: 'blue' | 'green' | 'amber'
 }
 
-export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x', 'research', 'seo-optimizer', 'content-translator', 'ai-detox', 'seeding-copy', 'rewrite-plagiarism', 'video-script', 'outline-expander', 'content-summarizer', 'headline-optimizer', 'data-visualization-report'] as const
+export const PUBLIC_SKILL_ORDER = ['topic-gen', 'proofreading', 'article-to-x', 'research', 'seo-optimizer', 'content-translator', 'ai-detox', 'seeding-copy', 'rewrite-plagiarism', 'video-script', 'outline-expander', 'content-summarizer', 'headline-optimizer', 'data-visualization-report', 'vibecoding-pm-workflow'] as const
 
 export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
   'topic-gen': {
@@ -184,6 +184,18 @@ export const SKILL_UI_CONFIG: Record<string, SkillUiConfig> = {
     categoryLabel: '数据',
     accent: 'blue',
   },
+  'vibecoding-pm-workflow': {
+    name: 'vibecoding-pm-workflow',
+    title: 'PM 流程与巡查',
+    shortTitle: '流程巡查',
+    description: '输入 PRD，先提炼交互流程大纲，确认后生成上线前全流程巡查清单与验收规范。',
+    inputLabel: 'PRD 需求文档',
+    outputLabel: '流程大纲与巡查清单',
+    actionLabel: '提炼流程',
+    icon: 'ideas',
+    categoryLabel: '产品',
+    accent: 'green',
+  },
 }
 
 export const PHASE_LABELS: Record<string, string> = {
@@ -207,6 +219,8 @@ export const PHASE_LABELS: Record<string, string> = {
   generate_headlines: '生成标题方案',
   profile_dataset: '分析数据结构',
   recommend_charts: '生成图表规格',
+  extract_flow: '提炼流程大纲',
+  generate_audit_plan: '生成巡查清单',
 }
 
 const FALLBACK_FIELDS: Record<string, Record<string, API.SkillVariableDef>> = {
@@ -482,6 +496,30 @@ const FALLBACK_FIELDS: Record<string, Record<string, API.SkillVariableDef>> = {
         { label: '黑白灰（保底，适合打印）', value: 'mono' },
         { label: '快速判断（周报、汇报）', value: 'glance' },
         { label: '细节阅读（研究报告、长文）', value: 'editorial' },
+      ],
+    },
+  },
+  'vibecoding-pm-workflow': {
+    prd: {
+      description: 'PRD 需求文档或功能需求描述',
+      required: true,
+      uiType: 'textarea',
+      placeholder: '粘贴 PRD 文本，包含业务目标、用户角色、主流程与异常分支',
+      maxLength: 50000,
+    },
+    projectName: {
+      description: '项目或功能模块名称',
+      uiType: 'input',
+      placeholder: '例如：创作者中心-AI图文生成模块',
+    },
+    mode: {
+      description: '交付侧重点',
+      uiType: 'select',
+      defaultValue: 'all',
+      options: [
+        { label: '原型流程 + 巡查清单全套 (推荐)', value: 'all' },
+        { label: '偏重低保真原型与跳转流', value: 'prototype' },
+        { label: '偏重上线前走查与验收矩阵', value: 'audit' },
       ],
     },
   },
